@@ -125,6 +125,12 @@ land; see `.agents/design.md` (§4).
   sets the fidelity
   ([R/written.R](https://pedrobtz.github.io/zupkpmx/R/written.R)) from
   whether the representation came back identical.
+- **Writers**
+  ([R/write-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/write-rxode2.R),
+  [R/write-nonmem.R](https://pedrobtz.github.io/zupkpmx/R/write-nonmem.R))
+  convert residual error between NONMEM’s sigma variances and rxode2’s
+  standard-deviation parameters; that conversion is why cross-format
+  writes are `equivalent`, not `exact`.
 - **Conditions**
   ([R/errors.R](https://pedrobtz.github.io/zupkpmx/R/errors.R)):
   `zupkpmx_abort()` and the §8 constructors `parse_error()`,
@@ -181,6 +187,16 @@ stage.
 - **Read `run.xml` with an encoding override.** NONMEM declares
   `encoding="ASCII"`, which zuxml (expat) rejects
   ([pedrobtz/zuxml#84](https://github.com/pedrobtz/zuxml/issues/84)).
+- **Fidelity compares numbers within a few ulps** (`same_content()`).
+  Without long double (macOS arm64, `nold`) R’s decimal parser is not
+  correctly rounded, and
+  [`identical()`](https://rdrr.io/r/base/identical.html) turned exact
+  round trips into `equivalent` on those legs only.
+- **Closed forms need names on both sides.** The NONMEM writer aliases
+  an `ADVAN`’s required names (`V2 = V`) and renames model variables
+  that hold one for another purpose; the rxode2 writer renames variables
+  `linCmt()` would take for parameters, with an `x_` prefix, because
+  rxode2 matches those names by prefix.
 - **Exported functions are `pmx_*` (D10),** with
   [`zupkpmx_corpus()`](https://pedrobtz.github.io/zupkpmx/reference/zupkpmx_corpus.md)
   the one package-level exception.

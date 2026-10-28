@@ -93,6 +93,8 @@
 <li>
 <strong>Readers and writers</strong> (<a href="R/read-rxode2.R">R/read-rxode2.R</a>, <a href="R/write-rxode2.R">R/write-rxode2.R</a>): a reader raises <code>zupkpmx_parse_error</code> for anything it does not support, never a model error; a writer reads its own output back and sets the fidelity (<a href="R/written.R">R/written.R</a>) from whether the representation came back identical.</li>
 <li>
+<strong>Writers</strong> (<a href="R/write-rxode2.R">R/write-rxode2.R</a>, <a href="R/write-nonmem.R">R/write-nonmem.R</a>) convert residual error between NONMEM’s sigma variances and rxode2’s standard-deviation parameters; that conversion is why cross-format writes are <code>equivalent</code>, not <code>exact</code>.</li>
+<li>
 <strong>Conditions</strong> (<a href="R/errors.R">R/errors.R</a>): <code>zupkpmx_abort()</code> and the §8 constructors <code>parse_error()</code>, <code>write_error()</code> and <code>engine_error()</code>, each carrying the fields a caller acts on.</li>
 <li>
 <strong>The corpus</strong> (<a href="R/corpus.R">R/corpus.R</a>, <code>inst/corpus/</code>): see Testing conventions.</li>
@@ -126,6 +128,10 @@
 <strong><code>linCmt()</code> has two naming styles.</strong> rxode2’s (<code>cl</code>, <code>v</code>, <code>q</code>, <code>vp</code>) and NONMEM’s numbered <code>TRANS4</code> names, where <code>V2</code> is the central volume when there is a depot. <code>lincmt_aliases()</code> tells them apart; reading <code>V2</code> as a peripheral volume refused every NONMEM-read closed form written back.</li>
 <li>
 <strong>Read <code>run.xml</code> with an encoding override.</strong> NONMEM declares <code>encoding="ASCII"</code>, which zuxml (expat) rejects (<a href="https://github.com/pedrobtz/zuxml/issues/84" class="external-link">pedrobtz/zuxml#84</a>).</li>
+<li>
+<strong>Fidelity compares numbers within a few ulps</strong> (<code>same_content()</code>). Without long double (macOS arm64, <code>nold</code>) R’s decimal parser is not correctly rounded, and <code><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical()</a></code> turned exact round trips into <code>equivalent</code> on those legs only.</li>
+<li>
+<strong>Closed forms need names on both sides.</strong> The NONMEM writer aliases an <code>ADVAN</code>’s required names (<code>V2 = V</code>) and renames model variables that hold one for another purpose; the rxode2 writer renames variables <code>linCmt()</code> would take for parameters, with an <code>x_</code> prefix, because rxode2 matches those names by prefix.</li>
 <li>
 <strong>Exported functions are <code>pmx_*</code> (D10),</strong> with <code><a href="reference/zupkpmx_corpus.html">zupkpmx_corpus()</a></code> the one package-level exception.</li>
 </ul></div>

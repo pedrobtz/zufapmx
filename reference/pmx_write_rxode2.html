@@ -61,9 +61,10 @@ fidelity (see <code><a href="pmx_fidelity.html">pmx_fidelity()</a></code>). Eval
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>rxode2's <code>ini()</code> holds one value per parameter: a model with estimates
 is written with its estimates, and its initial values are recorded as
-lost. Constructs rxode2 cannot hold, such as residual error written as
-an expression over epsilons, stop with an error of class
-<code>zupkpmx_write_error</code>.</p>
+lost. Residual error held as sigma variances, as NONMEM holds it, is
+written as standard-deviation parameters named after the epsilons. Constructs rxode2 cannot hold,
+such as residual error written as an expression over epsilons, stop
+with an error of class <code>zupkpmx_write_error</code>.</p>
     </div>
 
     <div class="section level2">

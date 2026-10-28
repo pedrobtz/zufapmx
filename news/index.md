@@ -2,6 +2,9 @@
 
 ## zupkpmx 0.0.0.9000
 
+- [`pmx_write_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_nonmem.md)
+  writes a NONMEM control stream.
+
 - [`pmx_read_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_nonmem.md)
   reads a NONMEM control stream, with final estimates from `run.xml`,
   the `.ext` file or the `.lst` report.

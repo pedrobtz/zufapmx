@@ -38,6 +38,8 @@ library(zupkpmx)
   : Read a NONMEM control stream
 - [`pmx_read_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_rxode2.md)
   : Read an rxode2 or nlmixr2 model function
+- [`pmx_write_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_nonmem.md)
+  : Write a model as a NONMEM control stream
 - [`pmx_write_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_rxode2.md)
   : Write a model as an rxode2 model function
 - [`zupkpmx_corpus()`](https://pedrobtz.github.io/zupkpmx/reference/zupkpmx_corpus.md)
