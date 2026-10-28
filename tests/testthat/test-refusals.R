@@ -152,7 +152,10 @@ test_that("$NMEXT finds a run by run and project", {
     file.path(project, "101", "101.ext")
   )
   m <- read_cpp(c(
-    sprintf("$NMEXT run = 101, project = \"%s\"", project),
+    sprintf(
+      "$NMEXT run = 101, project = \"%s\"",
+      normalizePath(project, winslash = "/")
+    ),
     "$PKMODEL advan = 4, trans = 4, cmt = \"DEPOT CENT PERIPH\"",
     "$MAIN",
     "double KA = THETA1;",

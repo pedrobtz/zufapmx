@@ -120,7 +120,10 @@ test_that("residual models are recognised in $TABLE", {
 })
 
 test_that("$NMEXT reads a NONMEM run's estimates as parameters", {
-  ext <- normalizePath(test_path("fixtures", "nonmem", "run1.ext"))
+  ext <- normalizePath(
+    test_path("fixtures", "nonmem", "run1.ext"),
+    winslash = "/"
+  )
   m <- read_cpp(c(
     sprintf("$NMEXT path = \"%s\"", ext),
     "$PKMODEL advan = 4, trans = 4, cmt = \"DEPOT CENT PERIPH\"",
@@ -137,7 +140,10 @@ test_that("$NMEXT reads a NONMEM run's estimates as parameters", {
 
   expect_equal(pmx_parameters(m)$estimate, c(1.12, 4.25, 21.5, 2.15, 41.5))
   expect_equal(diag(pmx_omega(m)), c(ETA1 = 0.084, ETA2 = 0.096))
-  expect_equal(unclass(m)$provenance$estimates, ext)
+  expect_equal(
+    normalizePath(unclass(m)$provenance$estimates, winslash = "/"),
+    ext
+  )
 })
 
 test_that("code outside mrgsolve's documented C++ is refused", {
@@ -286,7 +292,10 @@ test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order
 
 test_that("$NMXML needs zuxml", {
   local_mocked_bindings(has_zuxml = function() FALSE)
-  xml <- normalizePath(test_path("fixtures", "nonmem", "run1.xml"))
+  xml <- normalizePath(
+    test_path("fixtures", "nonmem", "run1.xml"),
+    winslash = "/"
+  )
   expect_error(
     read_cpp(c(sprintf("$NMXML path = \"%s\"", xml), cpp_onecmt())),
     class = "zupkpmx_engine_error"
