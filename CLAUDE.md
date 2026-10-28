@@ -93,8 +93,30 @@ before committing it.
 
 ## Architecture
 
-To be written as stages land; see `.agents/design.md` (§4). Pure R:
-there is no `src/` and no native layer.
+Pure R: there is no `src/` and no native layer. The rest grows as stages
+land; see `.agents/design.md` (§4).
+
+- **Expressions**
+  ([R/expr.R](https://pedrobtz.github.io/zupkpmx/R/expr.R)) are R
+  language objects: numbers, names and calls, restricted by
+  `expr_check()` to the operators and function table of design §4.5.
+  Statements are `name <- expr` or `if`/`else` (`stmt_check()`). Every
+  reader builds these and every writer prints them; a construct outside
+  the table is refused, not guessed.
+- **The model**
+  ([R/model.R](https://pedrobtz.github.io/zupkpmx/R/model.R)) is a
+  classed list of the seven components of §4.1. `new_model()` is the
+  only constructor and validates every component; it is internal,
+  because readers are the public way to get a model (§5). The test
+  helper `helper-model.R` builds models directly.
+- **Conditions**
+  ([R/errors.R](https://pedrobtz.github.io/zupkpmx/R/errors.R)):
+  `zupkpmx_abort()` and the §8 constructors `parse_error()`,
+  `write_error()` and `engine_error()`, each carrying the fields a
+  caller acts on.
+- **The corpus**
+  ([R/corpus.R](https://pedrobtz.github.io/zupkpmx/R/corpus.R),
+  `inst/corpus/`): see Testing conventions.
 
 ## Invariants that are easy to break
 

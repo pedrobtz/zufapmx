@@ -83,8 +83,16 @@
 </div>
 <div class="section level2">
 <h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a></h2>
-<p>To be written as stages land; see <code>.agents/design.md</code> (§4). Pure R: there is no <code>src/</code> and no native layer.</p>
-</div>
+<p>Pure R: there is no <code>src/</code> and no native layer. The rest grows as stages land; see <code>.agents/design.md</code> (§4).</p>
+<ul><li>
+<strong>Expressions</strong> (<a href="R/expr.R">R/expr.R</a>) are R language objects: numbers, names and calls, restricted by <code>expr_check()</code> to the operators and function table of design §4.5. Statements are <code>name &lt;- expr</code> or <code>if</code>/<code>else</code> (<code>stmt_check()</code>). Every reader builds these and every writer prints them; a construct outside the table is refused, not guessed.</li>
+<li>
+<strong>The model</strong> (<a href="R/model.R">R/model.R</a>) is a classed list of the seven components of §4.1. <code>new_model()</code> is the only constructor and validates every component; it is internal, because readers are the public way to get a model (§5). The test helper <code>helper-model.R</code> builds models directly.</li>
+<li>
+<strong>Conditions</strong> (<a href="R/errors.R">R/errors.R</a>): <code>zupkpmx_abort()</code> and the §8 constructors <code>parse_error()</code>, <code>write_error()</code> and <code>engine_error()</code>, each carrying the fields a caller acts on.</li>
+<li>
+<strong>The corpus</strong> (<a href="R/corpus.R">R/corpus.R</a>, <code>inst/corpus/</code>): see Testing conventions.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="invariants-that-are-easy-to-break">Invariants that are easy to break<a class="anchor" aria-label="anchor" href="#invariants-that-are-easy-to-break"></a></h2>
 <p>These come from the design’s decisions (§13) and hold from the first stage.</p>
