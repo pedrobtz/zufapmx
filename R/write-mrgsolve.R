@@ -14,11 +14,17 @@
 #' with estimates is written with them and its initial values are recorded
 #' as lost.
 #'
-#' @param model A model read by one of the `pmx_read_*()` functions.
-#' @return A written model: the text as lines, its fidelity and its losses.
+#' @inheritParams pmx_inspect
+#' @return A `zupkpmx_written` object: the text as lines, with its fidelity
+#'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
+#'   give the text.
+#' @family writers
 #' @export
 #' @examples
-#' path <- system.file("corpus", "onecmt-oral", "model-rxode2.R", package = "zupkpmx")
+#' path <- system.file(
+#'   "corpus", "onecmt-oral", "model-rxode2.R",
+#'   package = "zupkpmx"
+#' )
 #' fun <- eval(parse(path))
 #' pmx_write_mrgsolve(pmx_read_rxode2(fun))
 pmx_write_mrgsolve <- function(model) {

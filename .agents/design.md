@@ -297,6 +297,10 @@ typical-subject predictions on the standard design.
   representation, and the formats that could hold it.
 - `zupkpmx_engine_error`: the engine missing or failing, with the engine's
   own message attached.
+- `zupkpmx_model_error`: an invalid argument, or a model that fails
+  validation. Readers never raise it for their input: what the validator
+  rejects in a model read from a file is that file's `zupkpmx_parse_error`.
+  (Added 2026-10-28, from review issue #68.)
 - `pmx_compare()` never raises on a failed comparison; failure is a value.
 
 ## 9. Testing

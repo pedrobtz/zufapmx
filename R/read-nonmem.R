@@ -11,24 +11,38 @@
 #' code may use assignments, `IF` in one line or in blocks, arithmetic,
 #' comparisons, `EXP`, `LOG`, `LOG10`, `SQRT` and `ABS`.
 #'
-#' Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines
-#' and anything else outside that subset are refused with an error of
-#' class `zupkpmx_parse_error` naming the file, line and column. The title,
-#' data records, estimation settings, tables, comments and the ODE solver
-#' are recorded as losses of the read.
+#' Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines,
+#' dosing or scale assignments inside `IF`, undeclared `THETA`/`ETA`/`EPS`
+#' indices and anything else outside that subset are refused with an error
+#' of class `zupkpmx_parse_error` naming the file and, where it can, the
+#' line and column.
 #'
-#' NONMEM's names are kept: `THETA(1)` reads as `THETA1`, `ETA(1)` as
-#' `ETA1` and `EPS(1)` as `EPS1`. The observation is the endpoint `Y`.
+#' Recorded as losses of the read: the title, `$SIZES`, data records,
+#' estimation settings, `$SIMULATION`, `$ABBREVIATED`, tables
+#' (`$TABLE`, `$SCATTERPLOT`), record options such as
+#' `$ERROR (ONLY OBSERVATIONS)`, comments, the ODE solver, `$ERROR`
+#' outputs `Y` does not use, and values that NM-TRAN keeps from earlier
+#' records for variables assigned only inside `IF` (the representation
+#' starts them at 0).
+#'
+#' NONMEM's names are kept, upper case: `THETA(1)` reads as `THETA1`,
+#' `ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. `T` and `TIME` read as the
+#' representation's time, `t`. Free names such as `WT` are recorded as
+#' covariates. The observation is the endpoint `Y`.
 #'
 #' @param file Path to the control stream.
 #' @param estimates Where final estimates come from. `"auto"` reads
-#'   `run.xml` (`<file>.xml`) through zuxml when both exist, else the
-#'   `.ext` file, else none. `"xml"`, `"ext"` and `"lst"` read that file and
-#'   fail if it is missing; `"none"` reads no estimates.
-#' @return A `zupkpmx_model`.
+#'   `run.xml` (`<file>.xml`) when it exists and zuxml is installed, else
+#'   the `.ext` file, else none. `"xml"`, `"ext"` and `"lst"` read that
+#'   file and fail if it is missing; `"none"` reads no estimates.
+#' @return A `zupkpmx_model`; see [pmx_inspect] and [pmx_write_nonmem()].
+#' @family readers
 #' @export
 #' @examples
-#' path <- system.file("corpus", "twocmt-bolus", "model.ctl", package = "zupkpmx")
+#' path <- system.file(
+#'   "corpus", "twocmt-bolus", "model.ctl",
+#'   package = "zupkpmx"
+#' )
 #' pmx_read_nonmem(path)
 pmx_read_nonmem <- function(
   file,

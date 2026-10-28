@@ -9,10 +9,18 @@
 #' written `[ NAME ]`. Code is the C++ subset mrgsolve documents for models:
 #' declarations and assignments, `if`/`else`, arithmetic, comparisons,
 #' `exp()`, `log()`, `log10()`, `sqrt()`, `fabs()`, `pow()`, `fmin()`,
-#' `fmax()`, `ETA(n)`, `EPS(n)`, and the macros `dxdt_CMT`, `F_CMT`,
-#' `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything else, including
-#' `$GLOBAL`, `$PREAMBLE` and the `nm-vars` plugin, is refused with an error
-#' of class `zupkpmx_parse_error`.
+#' `fmax()`, `ETA(n)`, `EPS(n)`, `THETA(n)`, and the macros `dxdt_CMT`,
+#' `F_CMT`, `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything else,
+#' including `$GLOBAL`, `$PREAMBLE`, the `nm-vars` plugin, `int`
+#' declarations and integer division (`3/4`), is refused with an error of
+#' class `zupkpmx_parse_error`. `$PKMODEL` may take its parameters from
+#' `$PARAM` directly or from `$MAIN`.
+#'
+#' Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
+#' descriptions, and `$TABLE` outputs `Y` does not use. `TIME` and
+#' `SOLVERTIME` read as the representation's time, `t`. `$NMXML` and
+#' `$NMEXT` resolve a relative path against the working directory, or the
+#' model file's with `root = "cppfile"`, as mrgsolve does.
 #'
 #' The observation is `Y` in `$TABLE`, written over a prediction such as
 #' `IPRED`; its residual model is recognised as for NONMEM. An `@annotated`
@@ -21,10 +29,14 @@
 #' them.
 #'
 #' @param file Path to the model file.
-#' @return A `zupkpmx_model`.
+#' @return A `zupkpmx_model`; see [pmx_inspect] and [pmx_write_mrgsolve()].
+#' @family readers
 #' @export
 #' @examples
-#' path <- system.file("corpus", "twocmt-bolus", "model.cpp", package = "zupkpmx")
+#' path <- system.file(
+#'   "corpus", "twocmt-bolus", "model.cpp",
+#'   package = "zupkpmx"
+#' )
 #' pmx_read_mrgsolve(path)
 pmx_read_mrgsolve <- function(file) {
   if (

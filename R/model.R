@@ -50,6 +50,154 @@ new_model <- function(
   validate_model(model)
 }
 
+#' Inspect a model
+#'
+#' `pmx_parameters()` returns the fixed effects, `pmx_omega()` the
+#' between-subject variability matrix, and `pmx_ode()` the differential
+#' equations of an ODE model.
+#'
+#' @param model A model read by one of the `pmx_read_*()` functions.
+#' @param values For `pmx_omega()`: `"estimate"` (the default) or
+#'   `"init"`.
+#' @return
+#' * `pmx_parameters()`: a data frame with one row per fixed effect and
+#'   columns `name` (the tool's name), `role` (`"clearance"`, `"volume"`,
+#'   `"ka"` or `"other"`), `init`, `lower`, `upper`, `fixed`, and
+#'   `estimate` (`NA` when the model was read without estimates).
+#' * `pmx_omega()`: a symmetric matrix with the random effects' names as
+#'   dimnames, built block-diagonally from the model's omega blocks. With
+#'   `values = "estimate"`, a block read with estimates contributes them
+#'   and any other block its initial values.
+#' * `pmx_ode()`: a named list of expressions, one derivative per
+#'   compartment, or `NULL` for a closed-form model.
+#' @name pmx_inspect
+NULL
+
+#' @rdname pmx_inspect
+#' @export
+pmx_parameters <- function(model) {
+  check_model(model)
+  model$parameters
+}
+
+#' @rdname pmx_inspect
+#' @export
+pmx_omega <- function(model, values = c("estimate", "init")) {
+  check_model(model)
+  values <- match.arg(values)
+  blocks <- model$random_effects$omega
+  names <- unlist(lapply(blocks, `[[`, "names"))
+  out <- matrix(0, length(names), length(names), dimnames = list(names, names))
+  at <- 0
+  for (block in blocks) {
+    i <- at + seq_along(block$names)
+    out[i, i] <- if (values == "estimate" && !is.null(block$estimate)) {
+      block$estimate
+    } else {
+      block$matrix
+    }
+    at <- at + length(block$names)
+  }
+  out
+}
+
+#' @rdname pmx_inspect
+#' @export
+pmx_ode <- function(model) {
+  check_model(model)
+  if (identical(model$structure$type, "ode")) model$structure$derivatives
+}
+
+#' @export
+print.zupkpmx_model <- function(x, ...) {
+  cat(format(x, ...), sep = "\n")
+  invisible(x)
+}
+
+#' @export
+format.zupkpmx_model <- function(x, ...) {
+  p <- x$parameters
+  estimated <- sum(!is.na(p$estimate))
+  attach <- x$random_effects$attach
+  obs <- x$observations
+
+  c(
+    sprintf("<zupkpmx_model> read from %s", x$provenance$format),
+    paste("Structure:", format_structure(x$structure)),
+    sprintf(
+      "Parameters: %d, %s",
+      nrow(p),
+      if (estimated == 0) {
+        "initial values only"
+      } else {
+        sprintf("%d with estimates", estimated)
+      }
+    ),
+    paste(
+      "Random effects:",
+      if (nrow(attach) == 0) {
+        "none"
+      } else {
+        paste(
+          sprintf(
+            "%s on %s (%s)",
+            attach$eta,
+            attach$parameter,
+            attach$transform
+          ),
+          collapse = ", "
+        )
+      }
+    ),
+    if (length(x$dosing) > 0) {
+      paste(
+        "Dosing:",
+        paste(
+          vapply(
+            names(x$dosing),
+            function(cmt) {
+              paste(cmt, paste(names(x$dosing[[cmt]]), collapse = ", "))
+            },
+            character(1)
+          ),
+          collapse = "; "
+        )
+      )
+    },
+    paste(
+      "Endpoints:",
+      paste(
+        sprintf(
+          "%s (%s)",
+          names(obs),
+          vapply(obs, function(o) o$residual$type, character(1))
+        ),
+        collapse = ", "
+      )
+    )
+  )
+}
+
+format_structure <- function(x) {
+  if (identical(x$type, "ode")) {
+    return(sprintf(
+      "ODE system over %d compartments: %s",
+      length(x$compartments),
+      paste(x$compartments, collapse = ", ")
+    ))
+  }
+  sprintf(
+    "%s-compartment closed form, %s input%s",
+    c("one", "two", "three")[[x$ncmt]],
+    if (isTRUE(x$depot)) "first-order" else "direct",
+    if (!is.null(x$advan)) {
+      sprintf(" (ADVAN%d TRANS%d)", x$advan, x$trans)
+    } else {
+      ""
+    }
+  )
+}
+
 validate_model <- function(model) {
   missing <- model_components[vapply(
     model_components,
@@ -216,152 +364,4 @@ check_model <- function(x) {
   if (!inherits(x, "zupkpmx_model")) {
     model_abort("Expected a zupkpmx model, not %s.", class(x)[[1]])
   }
-}
-
-#' Inspect a model
-#'
-#' `pmx_parameters()` returns the fixed effects, `pmx_omega()` the
-#' between-subject variability matrix, and `pmx_ode()` the differential
-#' equations of an ODE model.
-#'
-#' @param model A model read by one of the `pmx_read_*()` functions.
-#' @param values For `pmx_omega()`: `"estimate"` (the default) or
-#'   `"init"`.
-#' @return
-#' * `pmx_parameters()`: a data frame with one row per fixed effect and
-#'   columns `name` (the tool's name), `role` (`"clearance"`, `"volume"`,
-#'   `"ka"` or `"other"`), `init`, `lower`, `upper`, `fixed`, and
-#'   `estimate` (`NA` when the model was read without estimates).
-#' * `pmx_omega()`: a symmetric matrix with the random effects' names as
-#'   dimnames, built block-diagonally from the model's omega blocks. With
-#'   `values = "estimate"`, a block read with estimates contributes them
-#'   and any other block its initial values.
-#' * `pmx_ode()`: a named list of expressions, one derivative per
-#'   compartment, or `NULL` for a closed-form model.
-#' @name pmx_inspect
-NULL
-
-#' @rdname pmx_inspect
-#' @export
-pmx_parameters <- function(model) {
-  check_model(model)
-  model$parameters
-}
-
-#' @rdname pmx_inspect
-#' @export
-pmx_omega <- function(model, values = c("estimate", "init")) {
-  check_model(model)
-  values <- match.arg(values)
-  blocks <- model$random_effects$omega
-  names <- unlist(lapply(blocks, `[[`, "names"))
-  out <- matrix(0, length(names), length(names), dimnames = list(names, names))
-  at <- 0
-  for (block in blocks) {
-    i <- at + seq_along(block$names)
-    out[i, i] <- if (values == "estimate" && !is.null(block$estimate)) {
-      block$estimate
-    } else {
-      block$matrix
-    }
-    at <- at + length(block$names)
-  }
-  out
-}
-
-#' @rdname pmx_inspect
-#' @export
-pmx_ode <- function(model) {
-  check_model(model)
-  if (identical(model$structure$type, "ode")) model$structure$derivatives
-}
-
-#' @export
-print.zupkpmx_model <- function(x, ...) {
-  cat(format(x, ...), sep = "\n")
-  invisible(x)
-}
-
-#' @export
-format.zupkpmx_model <- function(x, ...) {
-  p <- x$parameters
-  estimated <- sum(!is.na(p$estimate))
-  attach <- x$random_effects$attach
-  obs <- x$observations
-
-  c(
-    sprintf("<zupkpmx_model> read from %s", x$provenance$format),
-    paste("Structure:", format_structure(x$structure)),
-    sprintf(
-      "Parameters: %d, %s",
-      nrow(p),
-      if (estimated == 0) {
-        "initial values only"
-      } else {
-        sprintf("%d with estimates", estimated)
-      }
-    ),
-    paste(
-      "Random effects:",
-      if (nrow(attach) == 0) {
-        "none"
-      } else {
-        paste(
-          sprintf(
-            "%s on %s (%s)",
-            attach$eta,
-            attach$parameter,
-            attach$transform
-          ),
-          collapse = ", "
-        )
-      }
-    ),
-    if (length(x$dosing) > 0) {
-      paste(
-        "Dosing:",
-        paste(
-          vapply(
-            names(x$dosing),
-            function(cmt) {
-              paste(cmt, paste(names(x$dosing[[cmt]]), collapse = ", "))
-            },
-            character(1)
-          ),
-          collapse = "; "
-        )
-      )
-    },
-    paste(
-      "Endpoints:",
-      paste(
-        sprintf(
-          "%s (%s)",
-          names(obs),
-          vapply(obs, function(o) o$residual$type, character(1))
-        ),
-        collapse = ", "
-      )
-    )
-  )
-}
-
-format_structure <- function(x) {
-  if (identical(x$type, "ode")) {
-    return(sprintf(
-      "ODE system over %d compartments: %s",
-      length(x$compartments),
-      paste(x$compartments, collapse = ", ")
-    ))
-  }
-  sprintf(
-    "%s-compartment closed form, %s input%s",
-    c("one", "two", "three")[[x$ncmt]],
-    if (isTRUE(x$depot)) "first-order" else "direct",
-    if (!is.null(x$advan)) {
-      sprintf(" (ADVAN%d TRANS%d)", x$advan, x$trans)
-    } else {
-      ""
-    }
-  )
 }

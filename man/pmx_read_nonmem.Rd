@@ -10,12 +10,12 @@ pmx_read_nonmem(file, estimates = c("auto", "xml", "ext", "lst", "none"))
 \item{file}{Path to the control stream.}
 
 \item{estimates}{Where final estimates come from. \code{"auto"} reads
-\code{run.xml} (\verb{<file>.xml}) through zuxml when both exist, else the
-\code{.ext} file, else none. \code{"xml"}, \code{"ext"} and \code{"lst"} read that file and
-fail if it is missing; \code{"none"} reads no estimates.}
+\code{run.xml} (\verb{<file>.xml}) when it exists and zuxml is installed, else
+the \code{.ext} file, else none. \code{"xml"}, \code{"ext"} and \code{"lst"} read that
+file and fail if it is missing; \code{"none"} reads no estimates.}
 }
 \value{
-A \code{zupkpmx_model}.
+A \code{zupkpmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}}.
 }
 \description{
 Reads a control stream into the package's representation, with final
@@ -30,16 +30,35 @@ ODE models are \code{ADVAN6}, \code{ADVAN8}, \code{ADVAN9} and \code{ADVAN13}. A
 code may use assignments, \code{IF} in one line or in blocks, arithmetic,
 comparisons, \code{EXP}, \code{LOG}, \code{LOG10}, \code{SQRT} and \code{ABS}.
 
-Verbatim Fortran, \verb{$INFN}, \verb{$PRED}, \verb{$MIX}, \verb{$PRIOR}, user subroutines
-and anything else outside that subset are refused with an error of
-class \code{zupkpmx_parse_error} naming the file, line and column. The title,
-data records, estimation settings, tables, comments and the ODE solver
-are recorded as losses of the read.
+Verbatim Fortran, \verb{$INFN}, \verb{$PRED}, \verb{$MIX}, \verb{$PRIOR}, user subroutines,
+dosing or scale assignments inside \code{IF}, undeclared \code{THETA}/\code{ETA}/\code{EPS}
+indices and anything else outside that subset are refused with an error
+of class \code{zupkpmx_parse_error} naming the file and, where it can, the
+line and column.
 
-NONMEM's names are kept: \code{THETA(1)} reads as \code{THETA1}, \code{ETA(1)} as
-\code{ETA1} and \code{EPS(1)} as \code{EPS1}. The observation is the endpoint \code{Y}.
+Recorded as losses of the read: the title, \verb{$SIZES}, data records,
+estimation settings, \verb{$SIMULATION}, \verb{$ABBREVIATED}, tables
+(\verb{$TABLE}, \verb{$SCATTERPLOT}), record options such as
+\verb{$ERROR (ONLY OBSERVATIONS)}, comments, the ODE solver, \verb{$ERROR}
+outputs \code{Y} does not use, and values that NM-TRAN keeps from earlier
+records for variables assigned only inside \code{IF} (the representation
+starts them at 0).
+
+NONMEM's names are kept, upper case: \code{THETA(1)} reads as \code{THETA1},
+\code{ETA(1)} as \code{ETA1} and \code{EPS(1)} as \code{EPS1}. \code{T} and \code{TIME} read as the
+representation's time, \code{t}. Free names such as \code{WT} are recorded as
+covariates. The observation is the endpoint \code{Y}.
 }
 \examples{
-corpus <- zupkpmx_corpus()
-pmx_read_nonmem(file.path(corpus$path[[4]], "model.ctl"))
+path <- system.file(
+  "corpus", "twocmt-bolus", "model.ctl",
+  package = "zupkpmx"
+)
+pmx_read_nonmem(path)
 }
+\seealso{
+Other readers:
+\code{\link[=pmx_read_mrgsolve]{pmx_read_mrgsolve()}},
+\code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}}
+}
+\concept{readers}

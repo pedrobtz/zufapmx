@@ -13,14 +13,20 @@
 #' `$INPUT` and `$DATA` are placeholders to point at a dataset, and no
 #' `$ESTIMATION` is written: the representation holds neither.
 #'
-#' @param model A model read by one of the `pmx_read_*()` functions.
+#' @inheritParams pmx_inspect
 #' @param estimates `"final"` writes final estimates where the model has
 #'   them, and its initial values elsewhere; `"initial"` writes initial
 #'   values. Whichever of the two is not written is recorded as lost.
-#' @return A written model: the text as lines, its fidelity and its losses.
+#' @return A `zupkpmx_written` object: the text as lines, with its fidelity
+#'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
+#'   give the text.
+#' @family writers
 #' @export
 #' @examples
-#' path <- system.file("corpus", "onecmt-oral", "model-rxode2.R", package = "zupkpmx")
+#' path <- system.file(
+#'   "corpus", "onecmt-oral", "model-rxode2.R",
+#'   package = "zupkpmx"
+#' )
 #' fun <- eval(parse(path))
 #' pmx_write_nonmem(pmx_read_rxode2(fun))
 pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {

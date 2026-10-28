@@ -7,13 +7,21 @@
 #' Supported: fixed effects with bounds and `fix()`; random effects,
 #' alone or in blocks; statements built from the function table;
 #' `linCmt()`; `d/dt()`; `alag()`, `lag()`, `f()`, `rate()`, `dur()` and
-#' initial amounts (`depot(0) <-`); and residual models `add()`, `prop()`,
-#' `add() + prop()`, `lnorm()` and `pow()`. Anything else is refused with
-#' an error of class `zupkpmx_parse_error`. Labels, `description` and
-#' comments are dropped and recorded as losses.
+#' initial amounts (`depot(0) <-`); time as `t` or `time`; and residual
+#' models `add()`, `prop()`, `add() + prop()`, `lnorm()` and `pow()` whose
+#' parameters are `ini()` parameters or `model()` variables. Anything else
+#' is refused with an error of class `zupkpmx_parse_error`.
+#'
+#' Recorded as losses of the read: `label()`s, `description` and other
+#' top-level metadata such as `reference` or `units`, and `ini()` values
+#' written as constant expressions (`log(90)`), which are evaluated.
+#' Comments are not part of a function's code and never reach the reader.
+#' Statements that read time belong to the ODE structure, since rxode2's
+#' time is continuous; a `linCmt()` model refuses them.
 #'
 #' @param model A model function, as written for rxode2 or nlmixr2.
-#' @return A `zupkpmx_model`.
+#' @return A `zupkpmx_model`; see [pmx_inspect] and [pmx_write_rxode2()].
+#' @family readers
 #' @export
 #' @examples
 #' one_cmt <- function() {

@@ -6,15 +6,23 @@
 #' rxode2's `ini()` holds one value per parameter: a model with estimates
 #' is written with its estimates, and its initial values are recorded as
 #' lost. Residual error held as sigma variances, as NONMEM holds it, is
-#' written as standard-deviation parameters named after the epsilons. Constructs rxode2 cannot hold,
-#' such as residual error written as an expression over epsilons, stop
-#' with an error of class `zupkpmx_write_error`.
+#' written as standard-deviation parameters named after the epsilons.
+#' Variables `linCmt()` would read as parameters are renamed with an `x_`
+#' prefix. Constructs rxode2 cannot hold, such as residual error written as
+#' an expression over epsilons, or an individual parameter that reads the
+#' record's time, stop with an error of class `zupkpmx_write_error`.
 #'
-#' @param model A model read by one of the `pmx_read_*()` functions.
-#' @return A written model: the text as lines, its fidelity and its losses.
+#' @inheritParams pmx_inspect
+#' @return A `zupkpmx_written` object: the text as lines, with its fidelity
+#'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
+#'   give the text.
+#' @family writers
 #' @export
 #' @examples
-#' path <- system.file("corpus", "onecmt-oral-mm", "model-rxode2.R", package = "zupkpmx")
+#' path <- system.file(
+#'   "corpus", "onecmt-oral-mm", "model-rxode2.R",
+#'   package = "zupkpmx"
+#' )
 #' fun <- eval(parse(path))
 #' pmx_write_rxode2(pmx_read_rxode2(fun))
 pmx_write_rxode2 <- function(model) {

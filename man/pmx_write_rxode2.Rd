@@ -10,7 +10,9 @@ pmx_write_rxode2(model)
 \item{model}{A model read by one of the \verb{pmx_read_*()} functions.}
 }
 \value{
-A written model: the text as lines, its fidelity and its losses.
+A \code{zupkpmx_written} object: the text as lines, with its fidelity
+and losses (see \code{\link[=pmx_fidelity]{pmx_fidelity()}}). \code{format()} and \code{as.character()}
+give the text.
 }
 \description{
 Prints a model as the text of an rxode2/nlmixr2 model function, with its
@@ -20,12 +22,23 @@ fidelity (see \code{\link[=pmx_fidelity]{pmx_fidelity()}}). Evaluate the text to
 rxode2's \code{ini()} holds one value per parameter: a model with estimates
 is written with its estimates, and its initial values are recorded as
 lost. Residual error held as sigma variances, as NONMEM holds it, is
-written as standard-deviation parameters named after the epsilons. Constructs rxode2 cannot hold,
-such as residual error written as an expression over epsilons, stop
-with an error of class \code{zupkpmx_write_error}.
+written as standard-deviation parameters named after the epsilons.
+Variables \code{linCmt()} would read as parameters are renamed with an \code{x_}
+prefix. Constructs rxode2 cannot hold, such as residual error written as
+an expression over epsilons, or an individual parameter that reads the
+record's time, stop with an error of class \code{zupkpmx_write_error}.
 }
 \examples{
-corpus <- zupkpmx_corpus()
-fun <- eval(parse(file.path(corpus$path[[2]], "model-rxode2.R")))
+path <- system.file(
+  "corpus", "onecmt-oral-mm", "model-rxode2.R",
+  package = "zupkpmx"
+)
+fun <- eval(parse(path))
 pmx_write_rxode2(pmx_read_rxode2(fun))
 }
+\seealso{
+Other writers:
+\code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}},
+\code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}}
+}
+\concept{writers}
