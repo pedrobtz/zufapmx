@@ -5,6 +5,13 @@
     Output
       run1.ctl:12:5: found `ELSEIF`, expected `ELSE` or `ENDIF`
 
+# a parse error can explain itself instead of listing tokens
+
+    Code
+      cat(conditionMessage(err))
+    Output
+      run1.ctl:40:1: not translated: verbatim Fortran at line 40
+
 # write errors carry the construct, location and formats
 
     Code

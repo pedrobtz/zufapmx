@@ -58,8 +58,7 @@ corpus_solve_entry_rxode2 <- function(path, regimen) {
 corpus_solve_mrgsolve <- function(cpp, regimen) {
   # A unique model name per compile: mrgsolve names the shared library after
   # the model, and two models of one name in one session collide.
-  dir <- tempfile("mrg")
-  dir.create(dir)
+  dir <- withr::local_tempdir("mrg")
   name <- basename(dir)
   file.copy(cpp, file.path(dir, paste0(name, ".cpp")))
   mod <- suppressMessages(mrgsolve::mread(name, project = dir, quiet = TRUE))
@@ -91,7 +90,7 @@ corpus_oracle_nonmem2rx <- function(path, regimen) {
 }
 
 corpus_oracle_amp_sim <- function(path, regimen) {
-  out <- tempfile("amp")
+  out <- withr::local_tempfile(pattern = "amp")
   suppressMessages(amp.sim::convert_nonmem(
     file.path(path, "model.ctl"),
     out,

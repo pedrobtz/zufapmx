@@ -84,7 +84,7 @@ test_that("verbatim code is refused with its line", {
     class = "zupkpmx_parse_error"
   )
   expect_equal(err$line, 2L)
-  expect_match(conditionMessage(err), "verbatim Fortran at line 2")
+  expect_snapshot(cat(conditionMessage(err)))
 })
 
 test_that("a function outside the table is refused with its position", {

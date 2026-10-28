@@ -3,10 +3,6 @@ test_that("corpus mrgsolve models round-trip exactly", {
     w <- pmx_write_mrgsolve(pmx_read_mrgsolve(file.path(path, "model.cpp")))
     expect_equal(pmx_fidelity(w), "exact", label = basename(path))
   }
-  expect_snapshot(print(pmx_write_mrgsolve(corpus_rxode2_model("twocmt-oral"))))
-  expect_snapshot(print(pmx_write_mrgsolve(corpus_rxode2_model(
-    "onecmt-oral-mm"
-  ))))
 })
 
 test_that("every corpus model writes to every format and back", {
@@ -202,4 +198,11 @@ test_that("every residual type round-trips through the mrgsolve writer", {
     error = c("W = SQRT(THETA(1))", "Y = F + W * EPS(1)")
   ))
   expect_error(pmx_write_mrgsolve(expression), class = "zupkpmx_write_error")
+})
+
+test_that("written text is stable", {
+  expect_snapshot(print(pmx_write_mrgsolve(corpus_rxode2_model("twocmt-oral"))))
+  expect_snapshot(print(pmx_write_mrgsolve(corpus_rxode2_model(
+    "onecmt-oral-mm"
+  ))))
 })

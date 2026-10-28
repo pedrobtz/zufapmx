@@ -1,4 +1,4 @@
-# corpus mrgsolve models round-trip exactly
+# written text is stable
 
     Code
       print(pmx_write_mrgsolve(corpus_rxode2_model("twocmt-oral")))

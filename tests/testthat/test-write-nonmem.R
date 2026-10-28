@@ -11,10 +11,6 @@ test_that("rxode2 corpus models write as equivalent control streams", {
     w <- pmx_write_nonmem(corpus_rxode2_model(id))
     expect_equal(pmx_fidelity(w), "equivalent", label = id)
   }
-  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model("twocmt-oral"))))
-  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model(
-    "onecmt-oral-mm"
-  ))))
 })
 
 test_that("models round-trip between rxode2 and NONMEM and still predict", {
@@ -219,4 +215,11 @@ test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
 
 test_that("whole numbers in NM-TRAN expressions carry a point", {
   expect_equal(nm_expr(quote(3 / 4 * x), c(x = "X")), "3.0 / 4.0 * X")
+})
+
+test_that("written text is stable", {
+  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model("twocmt-oral"))))
+  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model(
+    "onecmt-oral-mm"
+  ))))
 })

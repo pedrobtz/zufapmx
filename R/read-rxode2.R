@@ -72,11 +72,16 @@ rxode2_read_body <- function(body, source) {
   ini <- rxode2_read_ini(stmt_body(ini), reader)
   parts <- rxode2_read_model(stmt_body(model), reader)
   for (obs in parts$observations) {
-    unknown <- setdiff(obs$residual$parameters, ini$parameters$name)
+    defined <- c(
+      ini$parameters$name,
+      stmt_targets(parts$individual),
+      stmt_targets(parts$structure$statements)
+    )
+    unknown <- setdiff(obs$residual$parameters, defined)
     if (length(unknown) > 0) {
       reader$refuse(
         as.symbol(unknown[[1]]),
-        "residual error parameters defined in ini()"
+        "residual error parameters defined in ini() or model()"
       )
     }
   }

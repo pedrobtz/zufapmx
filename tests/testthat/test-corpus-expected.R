@@ -5,6 +5,11 @@ test_that("expected.csv has one row per design time and the right columns", {
     expected <- corpus_expected(corpus$path[[i]])
 
     expect_named(expected, c("regimen", "time", "endpoint", "pred"))
+    expect_true(
+      all(expected$regimen == corpus$regimen[[i]]),
+      label = corpus$id[[i]]
+    )
+    expect_true(all(expected$endpoint == "cp"), label = corpus$id[[i]])
     expect_equal(expected$time, corpus_times(corpus$regimen[[i]]))
     expect_true(all(expected$pred > 0), label = corpus$id[[i]])
   }
