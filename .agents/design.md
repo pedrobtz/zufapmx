@@ -399,6 +399,13 @@ decides it and the maintainer may overturn it.
 - **D11 (M), 2026-10-28.** `daffiz` goes to CRAN before the harness
   stage (§11 stage 5), so it stays in `Suggests` and `pmx_compare()`
   carries no alignment-and-tolerance routine of its own. Resolves Q5.
+- **D12 (M), 2026-10-28.** `nonmem2mrgsolve` is not on CRAN (it is on
+  GitHub only), so it cannot be in `Suggests`. `amp.sim` (CRAN 0.1.1),
+  which translates NONMEM to mrgsolve, takes its place as the mrgsolve-side
+  oracle in `Suggests` and in CI. `nonmem2mrgsolve` stays a development-only
+  cross-check, run by the `tools/` agreement script when installed and
+  never a package dependency. Where §7 and §9 say `nonmem2mrgsolve`, read
+  `amp.sim`.
 
 ## 14. Later versions, in the order they are expected
 
