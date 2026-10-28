@@ -51,6 +51,11 @@ cpp_parse <- function(block, file) {
     }
     if (t$type == "number") {
       take()
+      # A literal without a point or exponent is an int in C++; it stays
+      # integer until cpp_integers() has checked the arithmetic.
+      if (grepl("^[0-9]+$", t$value)) {
+        return(as.integer(t$value))
+      }
       return(as.numeric(sub("[fF]$", "", t$value)))
     }
     if (t$value == "(") {
@@ -166,7 +171,10 @@ cpp_parse <- function(block, file) {
       }
       return(call("if", cond, yes))
     }
-    while (is(c("double", "int", "bool", "capture", "const", "localdouble"))) {
+    if (is("int")) {
+      fail("double: an int declaration truncates")
+    }
+    while (is(c("double", "bool", "capture", "const", "localdouble"))) {
       take()
     }
     t <- peek()
@@ -184,8 +192,41 @@ cpp_parse <- function(block, file) {
   while (!is.null(peek())) {
     s <- statement()
     if (!is.null(s)) {
-      out[[length(out) + 1]] <- s
+      out[[length(out) + 1]] <- cpp_integers(s, file)$expr
     }
   }
   out
+}
+
+# Integer arithmetic as C++ does it. Integer literals and +, -, * of them
+# are int; dividing two ints truncates (3/4 is 0), which the representation
+# cannot hold, so it is refused. Everything else becomes double.
+cpp_integers <- function(x, file) {
+  if (is.integer(x)) {
+    return(list(expr = as.numeric(x), int = TRUE))
+  }
+  if (!is.call(x)) {
+    return(list(expr = x, int = FALSE))
+  }
+  parts <- lapply(as.list(x)[-1], cpp_integers, file = file)
+  x[-1] <- lapply(parts, `[[`, "expr")
+  op <- as.character(x[[1]])
+  ints <- vapply(parts, `[[`, logical(1), "int")
+  if (op == "/" && all(ints)) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = expr_text(x),
+      message = sprintf(
+        "not translated: `%s` is integer division in C++",
+        expr_text(x)
+      ),
+      call = NULL
+    )
+  }
+  list(
+    expr = x,
+    int = op %in% c("+", "-", "*", "(") && length(ints) > 0 && all(ints)
+  )
 }

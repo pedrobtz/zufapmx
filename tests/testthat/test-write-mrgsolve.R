@@ -76,7 +76,7 @@ test_that("C++ is printed with double literals, pow() and else if", {
     main = c(
       "double WTF = 0.0;",
       "if (WT > 70 && !(SEX == 1)) {",
-      "  WTF = pow(WT / 70.0, 0.75) + 1 / 2;",
+      "  WTF = pow(WT / 70.0, 0.75) + 1.0 / 2;",
       "} else if (WT > 50) {",
       "  WTF = fmin(fabs(WT), 1.0);",
       "} else {",

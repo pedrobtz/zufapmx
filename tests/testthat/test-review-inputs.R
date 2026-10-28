@@ -157,3 +157,24 @@ test_that("estimates are found next to a control stream in a dotted directory", 
   m <- pmx_read_nonmem(file.path(dir, "run1"), "ext")
   expect_equal(basename(unclass(m)$provenance$estimates), "run1.ext")
 })
+
+test_that("C++ integer division and int declarations are refused", {
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double X = pow(CL / 70.0, 3 / 4);")),
+    class = "zupkpmx_parse_error"
+  )
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double X = (1 + 2) / 4;")),
+    class = "zupkpmx_parse_error"
+  )
+  expect_error(
+    read_cpp(cpp_onecmt(main = "int N = 2;")),
+    class = "zupkpmx_parse_error"
+  )
+
+  m <- read_cpp(cpp_onecmt(
+    main = c("double X = 3.0 / 4;", "double Z = 2 * CL;")
+  ))
+  expect_equal(unclass(m)$individual[[3]], quote(X <- 3 / 4))
+  expect_identical(unclass(m)$individual[[4]][[3]][[2]], 2)
+})
