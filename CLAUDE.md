@@ -94,9 +94,10 @@ These come from the design's decisions (§13) and hold from the first stage.
   `Suggests`: estimates fall back from `run.xml` to `.ext`, tables to base R.
   Adding an `Imports` entry breaks a family rule and a v0.1.0 acceptance
   criterion.
-- **Every `Suggests` entry must be on CRAN at submission (Q5).** `daffiz`
-  is not yet. Either it reaches CRAN before the harness stage, or
-  `pmx_compare()` carries its own minimal alignment and tolerance code.
+- **Every `Suggests` entry must be on CRAN at submission.** `daffiz` is
+  not yet; it goes to CRAN before the harness stage (D11), and
+  `pmx_compare()` relies on it rather than carrying its own alignment
+  code.
 - **Writers never fabricate values and never silently drop a construct that
   changes predictions (D9).** Such a loss is `refused`, never `lossy`. A
   model without estimates is written with initial values and records the

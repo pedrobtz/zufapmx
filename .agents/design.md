@@ -396,6 +396,9 @@ decides it and the maintainer may overturn it.
   `zupkpmx` and `zupkode` (RFC 0047) read as siblings and a later
   `zupknca` would too. Functions carry the role word only: `pmx_*`, with
   `zupkpmx_corpus()` for the package-level entry point.
+- **D11 (M), 2026-10-28.** `daffiz` goes to CRAN before the harness
+  stage (§11 stage 5), so it stays in `Suggests` and `pmx_compare()`
+  carries no alignment-and-tolerance routine of its own. Resolves Q5.
 
 ## 14. Later versions, in the order they are expected
 
@@ -440,4 +443,4 @@ decides it and the maintainer may overturn it.
   Stage 5, or `pmx_compare()` carries a minimal alignment-and-tolerance
   routine of its own and `daffiz` becomes the richer report when
   installed. This RFC prefers submitting `daffiz` first and makes it a
-  Stage 0 check.
+  Stage 0 check. **Resolved by D11:** `daffiz` goes to CRAN first.
