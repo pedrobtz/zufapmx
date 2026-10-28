@@ -144,3 +144,41 @@ ctl_onecmt <- function(
     extra
   )
 }
+
+# Write model text to a temporary .cpp file and read it.
+read_cpp <- function(lines, env = parent.frame()) {
+  path <- withr::local_tempfile(fileext = ".cpp", .local_envir = env)
+  writeLines(lines, path)
+  pmx_read_mrgsolve(path)
+}
+
+cpp_onecmt <- function(
+  main = character(),
+  table = c("double IPRED = CENT / V;", "double Y = IPRED * (1 + EPS(1));"),
+  extra = character()
+) {
+  c(
+    "$PARAM TVCL = 4, TVV = 50",
+    "$CMT CENT",
+    "$MAIN",
+    "double CL = TVCL * exp(ETA(1));",
+    "double V = TVV;",
+    main,
+    "$ODE",
+    "dxdt_CENT = -CL / V * CENT;",
+    "$OMEGA 0.09",
+    "$SIGMA 0.04",
+    "$TABLE",
+    table,
+    extra
+  )
+}
+
+# Every corpus entry read from each of the three formats.
+corpus_models <- function(path, id) {
+  list(
+    mrgsolve = pmx_read_mrgsolve(file.path(path, "model.cpp")),
+    nonmem = pmx_read_nonmem(file.path(path, "model.ctl")),
+    rxode2 = corpus_rxode2_model(id)
+  )
+}
