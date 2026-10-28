@@ -9,7 +9,7 @@ equations of an ODE model.
 ``` r
 pmx_parameters(model)
 
-pmx_omega(model)
+pmx_omega(model, values = c("estimate", "init"))
 
 pmx_ode(model)
 ```
@@ -20,6 +20,10 @@ pmx_ode(model)
 
   A model read by one of the `pmx_read_*()` functions.
 
+- values:
+
+  For `pmx_omega()`: `"estimate"` (the default) or `"init"`.
+
 ## Value
 
 - `pmx_parameters()`: a data frame with one row per fixed effect and
@@ -28,7 +32,9 @@ pmx_ode(model)
   `estimate` (`NA` when the model was read without estimates).
 
 - `pmx_omega()`: a symmetric matrix with the random effects' names as
-  dimnames, built block-diagonally from the model's omega blocks.
+  dimnames, built block-diagonally from the model's omega blocks. With
+  `values = "estimate"`, a block read with estimates contributes them
+  and any other block its initial values.
 
 - `pmx_ode()`: a named list of expressions, one derivative per
   compartment, or `NULL` for a closed-form model.

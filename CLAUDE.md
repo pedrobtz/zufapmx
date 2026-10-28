@@ -109,6 +109,14 @@ land; see `.agents/design.md` (§4).
   only constructor and validates every component; it is internal,
   because readers are the public way to get a model (§5). The test
   helper `helper-model.R` builds models directly.
+- **NONMEM**
+  ([R/nmtran.R](https://pedrobtz.github.io/zupkpmx/R/nmtran.R),
+  [R/read-nonmem.R](https://pedrobtz.github.io/zupkpmx/R/read-nonmem.R),
+  [R/nonmem-estimates.R](https://pedrobtz.github.io/zupkpmx/R/nonmem-estimates.R)):
+  records, a tokenizer and a recursive-descent parser for abbreviated
+  code, then the same representation. NONMEM names stay as symbols
+  (`THETA1`, `ETA1`, `EPS1`); the endpoint is `Y`, and `$ERROR` is
+  reduced to a residual model of `Y` over `F`.
 - **Readers and writers**
   ([R/read-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/read-rxode2.R),
   [R/write-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/write-rxode2.R)):
@@ -165,6 +173,14 @@ stage.
   `keep.source = TRUE` (tests, interactive use) otherwise differs from
   the same model parsed from text, and every round trip reads as
   `equivalent` instead of `exact`.
+- **`linCmt()` has two naming styles.** rxode2’s (`cl`, `v`, `q`, `vp`)
+  and NONMEM’s numbered `TRANS4` names, where `V2` is the central volume
+  when there is a depot. `lincmt_aliases()` tells them apart; reading
+  `V2` as a peripheral volume refused every NONMEM-read closed form
+  written back.
+- **Read `run.xml` with an encoding override.** NONMEM declares
+  `encoding="ASCII"`, which zuxml (expat) rejects
+  ([pedrobtz/zuxml#84](https://github.com/pedrobtz/zuxml/issues/84)).
 - **Exported functions are `pmx_*` (D10),** with
   [`zupkpmx_corpus()`](https://pedrobtz.github.io/zupkpmx/reference/zupkpmx_corpus.md)
   the one package-level exception.

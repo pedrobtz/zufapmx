@@ -9,6 +9,8 @@
   [`pmx_omega()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_inspect.md)
   [`pmx_ode()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_inspect.md)
   : Inspect a model
+- [`pmx_read_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_nonmem.md)
+  : Read a NONMEM control stream
 - [`pmx_read_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_rxode2.md)
   : Read an rxode2 or nlmixr2 model function
 - [`pmx_write_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_rxode2.md)
