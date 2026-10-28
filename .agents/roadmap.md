@@ -16,7 +16,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
-| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupkpmx/issues/2) | | 2026-10-28 |
+| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupkpmx/issues/2) | [#16](https://github.com/pedrobtz/zupkpmx/pull/16) | 2026-10-28 |
 | 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zupkpmx/issues/3) | | |
 | 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | | |
 | 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | | |
@@ -60,6 +60,10 @@ every pull request in under five minutes.
 - Every quick-profile check on the pull request finishes in under five
   minutes; the timing is recorded in this roadmap.
 - `DESCRIPTION` has no placeholder text and no `Imports`.
+
+**Timing (2026-10-28, [#16](https://github.com/pedrobtz/zupkpmx/pull/16)).**
+Quick profile, longest check first: pkgdown 2m45s, R CMD check clang23
+2m38s, Ubuntu R-release 1m19s, coverage 1m11s. No tuning needed.
 
 **Design.** §1, §3, D8.
 
