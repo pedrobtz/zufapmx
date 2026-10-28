@@ -1,5 +1,7 @@
 # zupkpmx 0.0.0.9000
 
+* `pmx_write_nonmem()` writes a NONMEM control stream.
+
 * `pmx_read_nonmem()` reads a NONMEM control stream, with final estimates
   from `run.xml`, the `.ext` file or the `.lst` report.
 
