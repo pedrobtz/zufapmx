@@ -162,7 +162,7 @@ test_that("every dosing attribute round-trips through every writer", {
   }
   nm <- pmx_write_nonmem(m)$text
   expect_true(all(
-    c("ALAG1 = 0.5", "F1 = 0.8", "D2 = 2", "R2 = 3", "A_0(2) = 1") %in% nm
+    c("ALAG1 = 0.5", "F1 = 0.8", "D2 = 2.0", "R2 = 3.0", "A_0(2) = 1.0") %in% nm
   ))
   mrg <- pmx_write_mrgsolve(m)$text
   expect_true(all(

@@ -502,5 +502,11 @@ nm_dialect <- list(
   not = ".NOT.",
   power = NULL,
   functions = stats::setNames(names(nm_functions), nm_functions),
-  number = function(x) nm_number(x)
+  # A whole number prints with a point: Fortran divides integer constants
+  # as integers (3/4 is 0), and a point makes the intent explicit whatever
+  # NM-TRAN does with them.
+  number = function(x) {
+    text <- nm_number(x)
+    if (grepl("^-?[0-9]+$", text)) paste0(text, ".0") else text
+  }
 )

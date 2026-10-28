@@ -116,7 +116,7 @@ test_that("expressions print with Fortran precedence", {
   expect_equal(nm_expr(quote(a^-b), names), "A ** (-B)")
   expect_equal(
     nm_expr(quote(!(a > 1) | b <= c), names),
-    ".NOT.(A .GT. 1) .OR. B .LE. C"
+    ".NOT.(A .GT. 1.0) .OR. B .LE. C"
   )
   expect_equal(nm_expr(quote(exp(log10(a))), names), "EXP(LOG10(A))")
 })
@@ -189,7 +189,8 @@ test_that("variables PREDPP reserves are renamed", {
   text <- pmx_write_nonmem(m)$text
 
   expect_true(all(
-    c("F1_ = THETA(4)", "MTIME1_ = 2", "KA = THETA(1) * (1 + F1_)") %in% text
+    c("F1_ = THETA(4)", "MTIME1_ = 2.0", "KA = THETA(1) * (1.0 + F1_)") %in%
+      text
   ))
   expect_false(any(grepl("^F1 =", text)))
 })
@@ -214,4 +215,8 @@ test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
 
     expect_lte(corpus_max_rel_dev(got, expected), 1e-6, label = corpus$id[[i]])
   }
+})
+
+test_that("whole numbers in NM-TRAN expressions carry a point", {
+  expect_equal(nm_expr(quote(3 / 4 * x), c(x = "X")), "3.0 / 4.0 * X")
 })

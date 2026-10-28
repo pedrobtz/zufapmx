@@ -145,8 +145,10 @@ rxode2_write_lincmt_parameters <- function(m) {
 
 # Names linCmt() reads as parameters. In a closed form, any other variable
 # with one of them (V next to V1 and V2, say, after a NONMEM ADVAN alias)
-# makes rxode2 refuse the model, so it is renamed with an `x_` prefix
-# (rxode2 matches these names by prefix, so a suffix is not enough).
+# makes rxode2 refuse the model, so it is renamed with an `x_` prefix.
+# rxode2 also reads some stems as prefixes: VPX or VP_ next to V1 "mixes
+# volume styles", and KE or K10 is "ambiguous kel"; a suffix is not enough,
+# while VMAX, CLR or KAPPA are left alone (probed with rxode2 5.1.8).
 lincmt_reserved <- c(
   "cl",
   "v",
@@ -167,6 +169,8 @@ lincmt_reserved <- c(
   "q4",
   "ka",
   "k",
+  "ke",
+  "k10",
   "kel",
   "k12",
   "k21",
@@ -182,9 +186,11 @@ rxode2_write_free_lincmt <- function(m) {
     return(m)
   }
   vars <- stmt_targets(m$individual)
-  clash <- vars[
-    tolower(vars) %in% lincmt_reserved & !vars %in% m$structure$parameters
-  ]
+  lower <- tolower(vars)
+  reads <- lower %in%
+    lincmt_reserved |
+    grepl("^(vp|ke|k10)", lower)
+  clash <- vars[reads & !vars %in% m$structure$parameters]
   if (length(clash) == 0) {
     return(m)
   }

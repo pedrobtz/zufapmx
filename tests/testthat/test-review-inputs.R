@@ -223,7 +223,7 @@ test_that("time is one symbol, spelled for each format and block (D15)", {
   expect_true("t" %in% all.vars(pmx_ode(m)$DEPOT))
   expect_equal(pmx_fidelity(pmx_write_nonmem(m)), "exact")
   nm <- pmx_write_nonmem(m)$text
-  expect_true(any(grepl("(1 + 0.01 * TIME)", nm, fixed = TRUE)))
+  expect_true(any(grepl("(1.0 + 0.01 * TIME)", nm, fixed = TRUE)))
   expect_true(any(grepl("EXP(-0.1 * T)", nm, fixed = TRUE)))
   mrg <- pmx_write_mrgsolve(m)$text
   expect_true(any(grepl("0.01 * TIME", mrg, fixed = TRUE)))
