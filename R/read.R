@@ -120,3 +120,108 @@ strip_parens <- function(e) {
   }
   e
 }
+
+# Tokens of `lines` by `patterns`, tried in order; `space` is skipped. Each
+# token is list(type, value, line, column). `upper` names the token types
+# whose value is upper-cased (NM-TRAN is case-insensitive).
+tokenize <- function(
+  lines,
+  line_numbers,
+  patterns,
+  file,
+  expected,
+  upper = character()
+) {
+  tokens <- list()
+  for (k in seq_along(lines)) {
+    text <- lines[[k]]
+    pos <- 1L
+    n <- nchar(text)
+    while (pos <= n) {
+      rest <- substr(text, pos, n)
+      matched <- FALSE
+      for (type in names(patterns)) {
+        m <- regmatches(rest, regexpr(patterns[[type]], rest, perl = TRUE))
+        if (length(m) == 1 && nzchar(m)) {
+          if (type != "space") {
+            value <- if (type %in% upper) toupper(m) else m
+            tokens[[length(tokens) + 1]] <- list(
+              type = type,
+              value = value,
+              line = line_numbers[[k]],
+              column = pos
+            )
+          }
+          pos <- pos + nchar(m)
+          matched <- TRUE
+          break
+        }
+      }
+      if (!matched) {
+        parse_error(
+          file,
+          line_numbers[[k]],
+          pos,
+          seen = substr(rest, 1, 1),
+          expected = expected,
+          call = NULL
+        )
+      }
+    }
+  }
+  tokens
+}
+
+# A cursor over tokens for a recursive-descent parser. `end` is the token
+# reported when input runs out: list(value, line).
+token_stream <- function(tokens, file, end) {
+  i <- 1L
+  peek <- function(k = 0L) if (i + k <= length(tokens)) tokens[[i + k]]
+  is <- function(value, k = 0L) {
+    t <- peek(k)
+    !is.null(t) && t$value %in% value
+  }
+  fail <- function(expected) {
+    t <- peek() %||%
+      list(value = end$value, line = end$line, column = NA_integer_)
+    parse_error(
+      file,
+      t$line,
+      t$column,
+      seen = t$value,
+      expected = expected,
+      call = NULL
+    )
+  }
+  take <- function(value = NULL) {
+    t <- peek()
+    if (is.null(t) || (!is.null(value) && !t$value %in% value)) {
+      fail(
+        if (is.null(value)) "more input" else paste(value, collapse = " or ")
+      )
+    }
+    i <<- i + 1L
+    t
+  }
+  # A left-associative binary level: `ops` are token values, `map` gives
+  # each one's R operator (the token itself when NULL).
+  binary <- function(next_level, ops, map = NULL) {
+    function() {
+      left <- next_level()
+      while (is(ops)) {
+        op <- take()$value
+        left <- call(if (is.null(map)) op else map[[op]], left, next_level())
+      }
+      left
+    }
+  }
+  list(
+    peek = peek,
+    is = is,
+    fail = fail,
+    take = take,
+    binary = binary,
+    done = function() i > length(tokens),
+    expect_end = function() if (i <= length(tokens)) fail(end$value)
+  )
+}

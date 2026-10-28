@@ -132,3 +132,18 @@ test_that("records split on $ and accept abbreviations", {
     class = "zupkpmx_parse_error"
   )
 })
+
+test_that("NM-TRAN names are case-insensitive", {
+  expect_equal(
+    nm_parse_lines(c("Cl = Theta(2) * exp(Eta(1))", "k = CL / v")),
+    list(quote(CL <- THETA2 * exp(ETA1)), quote(K <- CL / V))
+  )
+  expect_equal(
+    nm_parse_lines(c("if (wt.gt.70) then", "x = 1", "endif")),
+    list(quote(
+      if (WT > 70) {
+        X <- 1
+      }
+    ))
+  )
+})

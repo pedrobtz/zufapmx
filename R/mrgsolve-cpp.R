@@ -16,96 +16,34 @@ cpp_functions <- c(
 )
 
 cpp_tokenize <- function(lines, line_numbers, file) {
-  patterns <- c(
-    space = "^\\s+",
-    number = "^([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?[fF]?",
-    name = "^[A-Za-z_][A-Za-z0-9_]*",
-    op = "^(&&|\\|\\||==|!=|<=|>=|[-+*/()=<>!,;{}])"
+  tokenize(
+    lines,
+    line_numbers,
+    c(
+      space = "^\\s+",
+      number = "^([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?[fF]?",
+      name = "^[A-Za-z_][A-Za-z0-9_]*",
+      op = "^(&&|\\|\\||==|!=|<=|>=|[-+*/()=<>!,;{}])"
+    ),
+    file,
+    "C++ of mrgsolve's model code"
   )
-  tokens <- list()
-  for (k in seq_along(lines)) {
-    text <- lines[[k]]
-    pos <- 1L
-    n <- nchar(text)
-    while (pos <= n) {
-      rest <- substr(text, pos, n)
-      matched <- FALSE
-      for (type in names(patterns)) {
-        m <- regmatches(rest, regexpr(patterns[[type]], rest, perl = TRUE))
-        if (length(m) == 1 && nzchar(m)) {
-          if (type != "space") {
-            tokens[[length(tokens) + 1]] <- list(
-              type = type,
-              value = m,
-              line = line_numbers[[k]],
-              column = pos
-            )
-          }
-          pos <- pos + nchar(m)
-          matched <- TRUE
-          break
-        }
-      }
-      if (!matched) {
-        parse_error(
-          file,
-          line_numbers[[k]],
-          pos,
-          seen = substr(rest, 1, 1),
-          expected = "C++ of mrgsolve's model code",
-          call = NULL
-        )
-      }
-    }
-  }
-  tokens
 }
 
 # Parse a block's code into statements.
 cpp_parse <- function(block, file) {
   tokens <- cpp_tokenize(block$lines, block$line, file)
-  i <- 1L
-  peek <- function(k = 0L) if (i + k <= length(tokens)) tokens[[i + k]]
-  is <- function(value, k = 0L) {
-    t <- peek(k)
-    !is.null(t) && t$value %in% value
-  }
-  fail <- function(expected) {
-    t <- peek()
-    if (is.null(t)) {
-      t <- list(
-        value = "end of block",
-        line = max(block$line),
-        column = NA_integer_
-      )
-    }
-    parse_error(
-      file,
-      t$line,
-      t$column,
-      seen = t$value,
-      expected = expected,
-      call = NULL
-    )
-  }
-  take <- function(value = NULL) {
-    t <- peek()
-    if (is.null(t) || (!is.null(value) && !t$value %in% value)) {
-      fail(if (is.null(value)) "more code" else paste(value, collapse = " or "))
-    }
-    i <<- i + 1L
-    t
-  }
-  binary <- function(next_level, ops, map) {
-    function() {
-      left <- next_level()
-      while (is(ops)) {
-        op <- take()$value
-        left <- call(map[[op]], left, next_level())
-      }
-      left
-    }
-  }
+  s <- token_stream(
+    tokens,
+    file,
+    end = list(value = "end of block", line = max(block$line))
+  )
+  peek <- s$peek
+  is <- s$is
+  take <- s$take
+  fail <- s$fail
+  binary <- s$binary
+
   primary <- function() {
     t <- peek()
     if (is.null(t)) {
@@ -173,14 +111,10 @@ cpp_parse <- function(block, file) {
     }
     primary()
   }
-  multiplicative <- binary(unary, c("*", "/"), c(`*` = "*", `/` = "/"))
-  additive <- binary(multiplicative, c("+", "-"), c(`+` = "+", `-` = "-"))
-  relational <- binary(
-    additive,
-    c("<", "<=", ">", ">="),
-    c(`<` = "<", `<=` = "<=", `>` = ">", `>=` = ">=")
-  )
-  equality <- binary(relational, c("==", "!="), c(`==` = "==", `!=` = "!="))
+  multiplicative <- binary(unary, c("*", "/"))
+  additive <- binary(multiplicative, c("+", "-"))
+  relational <- binary(additive, c("<", "<=", ">", ">="))
+  equality <- binary(relational, c("==", "!="))
   and_expr <- binary(equality, "&&", c(`&&` = "&"))
   or_expr <- binary(and_expr, "||", c(`||` = "|"))
 

@@ -83,96 +83,35 @@ nm_split <- function(lines, file) {
 
 # Tokens of one line: a list of list(type, value, column).
 nm_tokenize <- function(text, line, file) {
-  tokens <- list()
-  pos <- 1L
-  n <- nchar(text)
-  patterns <- c(
-    space = "^\\s+",
-    dotop = "^\\.(EQ|NE|LT|LE|GT|GE|AND|OR|NOT)\\.",
-    number = "^([0-9]+(\\.(?![A-Za-z]{2,3}\\.)[0-9]*)?|\\.[0-9]+)([EeDd][+-]?[0-9]+)?",
-    name = "^[A-Za-z_][A-Za-z0-9_]*",
-    op = "^(\\*\\*|==|/=|<=|>=|[-+*/()=<>,])"
+  tokenize(
+    text,
+    line,
+    c(
+      space = "^\\s+",
+      dotop = "(?i)^\\.(EQ|NE|LT|LE|GT|GE|AND|OR|NOT)\\.",
+      number = "^([0-9]+(\\.(?![A-Za-z]{2,3}\\.)[0-9]*)?|\\.[0-9]+)([EeDd][+-]?[0-9]+)?",
+      name = "^[A-Za-z_][A-Za-z0-9_]*",
+      op = "^(\\*\\*|==|/=|<=|>=|[-+*/()=<>,])"
+    ),
+    file,
+    "an operator, a name or a number",
+    upper = c("dotop", "name")
   )
-  while (pos <= n) {
-    rest <- substr(text, pos, n)
-    matched <- FALSE
-    for (type in names(patterns)) {
-      m <- regmatches(
-        rest,
-        regexpr(
-          patterns[[type]],
-          rest,
-          perl = TRUE,
-          ignore.case = type == "dotop"
-        )
-      )
-      if (length(m) == 1 && nzchar(m)) {
-        if (type != "space") {
-          value <- if (type == "dotop") toupper(m) else m
-          tokens[[length(tokens) + 1]] <- list(
-            type = type,
-            value = value,
-            column = pos
-          )
-        }
-        pos <- pos + nchar(m)
-        matched <- TRUE
-        break
-      }
-    }
-    if (!matched) {
-      parse_error(
-        file,
-        line,
-        pos,
-        seen = substr(rest, 1, 1),
-        expected = "an operator, a name or a number",
-        call = NULL
-      )
-    }
-  }
-  tokens
 }
 
 # A parser over one line's tokens. `cmt` maps a compartment number to its
 # name, for `A(n)`.
 nm_parser <- function(tokens, line, file, cmt) {
-  i <- 1L
-  peek <- function(k = 0L) if (i + k <= length(tokens)) tokens[[i + k]]
-  is <- function(value, k = 0L) {
-    t <- peek(k)
-    !is.null(t) && toupper(t$value) %in% value
-  }
-  fail <- function(expected) {
-    t <- peek()
-    parse_error(
-      file,
-      line,
-      if (is.null(t)) NA_integer_ else t$column,
-      seen = if (is.null(t)) "end of line" else t$value,
-      expected = expected,
-      call = NULL
-    )
-  }
-  take <- function(value = NULL) {
-    t <- peek()
-    if (is.null(t) || (!is.null(value) && !toupper(t$value) %in% value)) {
-      fail(if (is.null(value)) "more input" else value)
-    }
-    i <<- i + 1L
-    t
-  }
-  binary <- function(next_level, ops, map = NULL) {
-    function() {
-      left <- next_level()
-      while (is(ops)) {
-        op <- toupper(take()$value)
-        r_op <- if (is.null(map)) op else map[[op]]
-        left <- call(r_op, left, next_level())
-      }
-      left
-    }
-  }
+  s <- token_stream(
+    tokens,
+    file,
+    end = list(value = "end of line", line = line)
+  )
+  peek <- s$peek
+  is <- s$is
+  take <- s$take
+  fail <- s$fail
+  binary <- s$binary
 
   compare_map <- c(
     `.EQ.` = "==",
@@ -207,7 +146,7 @@ nm_parser <- function(tokens, line, file, cmt) {
     if (t$type != "name") {
       fail("an expression")
     }
-    name <- toupper(take()$value)
+    name <- take()$value
     if (!is("(")) {
       return(as.symbol(t$value))
     }
@@ -271,7 +210,7 @@ nm_parser <- function(tokens, line, file, cmt) {
   comparison <- function() {
     left <- additive()
     if (is(names(compare_map))) {
-      op <- compare_map[[toupper(take()$value)]]
+      op <- compare_map[[take()$value]]
       left <- call(op, left, additive())
     }
     left
@@ -292,8 +231,8 @@ nm_parser <- function(tokens, line, file, cmt) {
     take = take,
     fail = fail,
     expr = or_expr,
-    done = function() i > length(tokens),
-    expect_end = function() if (i <= length(tokens)) fail("end of line")
+    done = s$done,
+    expect_end = s$expect_end
   )
 }
 
