@@ -150,7 +150,7 @@ test_that("constructs NM-TRAN cannot hold are refused", {
   )
 
   clash <- parts
-  clash$individual <- c(clash$individual, list(quote(f <- 1)))
+  clash$individual <- c(clash$individual, list(quote(cl.a <- 1), quote(cl_a <- 2)))
   expect_error(
     pmx_write_nonmem(do.call(new_model, clash)),
     class = "zupkpmx_write_error"
@@ -162,4 +162,31 @@ test_that("constructs NM-TRAN cannot hold are refused", {
     pmx_write_nonmem(do.call(new_model, iov)),
     class = "zupkpmx_write_error"
   )
+})
+
+test_that("variables PREDPP reserves are renamed", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tka <- c(0, 1)
+      tcl <- c(0, 4)
+      tv <- c(0, 50)
+      tf <- 0.1
+      sd <- c(0, 0.2)
+    })
+    model({
+      f1 <- tf
+      mtime1 <- 2
+      ka <- tka * (1 + f1)
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ prop(sd)
+    })
+  })
+  text <- pmx_write_nonmem(m)$text
+
+  expect_true(all(
+    c("F1_ = THETA(4)", "MTIME1_ = 2", "KA = THETA(1) * (1 + F1_)") %in% text
+  ))
+  expect_false(any(grepl("^F1 =", text)))
 })

@@ -181,22 +181,13 @@ nm_names <- function(m) {
   )
   nm_vars <- toupper(gsub(".", "_", vars, fixed = TRUE))
   nm_vars <- closed_free_names(vars, nm_vars, m$structure)
-  reserved <- c(
-    "F",
-    "Y",
-    "A",
-    "ERR",
-    "EPS",
-    "ETA",
-    "THETA",
-    "DADT",
-    "IPRED",
-    sprintf("S%d", 1:9)
-  )
+  # A variable PREDPP gives meaning to (F1 is compartment 1's
+  # bioavailability) gets a `_` suffix.
+  nm_vars <- ifelse(nm_reserved(nm_vars), paste0(nm_vars, "_"), nm_vars)
   bad <- vars[
     duplicated(nm_vars) |
       duplicated(nm_vars, fromLast = TRUE) |
-      nm_vars %in% reserved |
+      nm_reserved(nm_vars) |
       !grepl("^[A-Z][A-Z0-9_]*$", nm_vars)
   ]
   if (length(bad) > 0) {
@@ -208,6 +199,62 @@ nm_names <- function(m) {
     )
   }
   c(map, stats::setNames(nm_vars, vars))
+}
+
+# Names NM-TRAN and PREDPP give meaning to: data items the writer declares,
+# PREDPP's reserved variables, and the numbered families of scales, dosing
+# attributes and model event times.
+nm_reserved_names <- c(
+  "F",
+  "Y",
+  "A",
+  "T",
+  "ERR",
+  "EPS",
+  "ETA",
+  "THETA",
+  "DADT",
+  "ID",
+  "TIME",
+  "EVID",
+  "AMT",
+  "RATE",
+  "CMT",
+  "DV",
+  "MDV",
+  "II",
+  "SS",
+  "ADDL",
+  "ICALL",
+  "NEWIND",
+  "IREP",
+  "MIXNUM",
+  "MIXEST",
+  "PRED",
+  "RES",
+  "WRES",
+  "COMACT",
+  "COMSAV",
+  "MODE",
+  "PCMT",
+  "MNEXT",
+  "MPAST",
+  "MNOW",
+  "GETETA",
+  "NTHETA",
+  "NETA",
+  "NEPS",
+  "IERPRD",
+  "MSEC",
+  "MFIRST",
+  "NEWL2",
+  "LIREC"
+)
+
+nm_reserved <- function(names) {
+  names %in%
+    nm_reserved_names |
+    grepl("^(S|F|R|D|ALAG|MTIME|THETA|ETA|EPS|ERR)[0-9]+$|^A_0$", names)
 }
 
 nm_index_names <- function(blocks, prefix) {
