@@ -109,6 +109,14 @@ land; see `.agents/design.md` (§4).
   only constructor and validates every component; it is internal,
   because readers are the public way to get a model (§5). The test
   helper `helper-model.R` builds models directly.
+- **Readers and writers**
+  ([R/read-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/read-rxode2.R),
+  [R/write-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/write-rxode2.R)):
+  a reader raises `zupkpmx_parse_error` for anything it does not
+  support, never a model error; a writer reads its own output back and
+  sets the fidelity
+  ([R/written.R](https://pedrobtz.github.io/zupkpmx/R/written.R)) from
+  whether the representation came back identical.
 - **Conditions**
   ([R/errors.R](https://pedrobtz.github.io/zupkpmx/R/errors.R)):
   `zupkpmx_abort()` and the §8 constructors `parse_error()`,
@@ -153,6 +161,10 @@ stage.
 - **Each mrgsolve compile needs its own model name.** mrgsolve names the
   shared library after the model, and a second model of the same name in
   one session silently runs the first one’s code.
+- **Readers strip source references.** A model typed with
+  `keep.source = TRUE` (tests, interactive use) otherwise differs from
+  the same model parsed from text, and every round trip reads as
+  `equivalent` instead of `exact`.
 - **Exported functions are `pmx_*` (D10),** with
   [`zupkpmx_corpus()`](https://pedrobtz.github.io/zupkpmx/reference/zupkpmx_corpus.md)
   the one package-level exception.

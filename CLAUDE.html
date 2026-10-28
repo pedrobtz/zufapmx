@@ -89,6 +89,8 @@
 <li>
 <strong>The model</strong> (<a href="R/model.R">R/model.R</a>) is a classed list of the seven components of §4.1. <code>new_model()</code> is the only constructor and validates every component; it is internal, because readers are the public way to get a model (§5). The test helper <code>helper-model.R</code> builds models directly.</li>
 <li>
+<strong>Readers and writers</strong> (<a href="R/read-rxode2.R">R/read-rxode2.R</a>, <a href="R/write-rxode2.R">R/write-rxode2.R</a>): a reader raises <code>zupkpmx_parse_error</code> for anything it does not support, never a model error; a writer reads its own output back and sets the fidelity (<a href="R/written.R">R/written.R</a>) from whether the representation came back identical.</li>
+<li>
 <strong>Conditions</strong> (<a href="R/errors.R">R/errors.R</a>): <code>zupkpmx_abort()</code> and the §8 constructors <code>parse_error()</code>, <code>write_error()</code> and <code>engine_error()</code>, each carrying the fields a caller acts on.</li>
 <li>
 <strong>The corpus</strong> (<a href="R/corpus.R">R/corpus.R</a>, <code>inst/corpus/</code>): see Testing conventions.</li>
@@ -116,6 +118,8 @@
 <strong>The corpus ships only MIT-compatible models.</strong> Entries are written for this package; <code>nlmixr2lib</code> and <code>modlib()</code> are GPL and are loaded from their installed copies at test time, never copied into <code>inst/</code>.</li>
 <li>
 <strong>Each mrgsolve compile needs its own model name.</strong> mrgsolve names the shared library after the model, and a second model of the same name in one session silently runs the first one’s code.</li>
+<li>
+<strong>Readers strip source references.</strong> A model typed with <code>keep.source = TRUE</code> (tests, interactive use) otherwise differs from the same model parsed from text, and every round trip reads as <code>equivalent</code> instead of <code>exact</code>.</li>
 <li>
 <strong>Exported functions are <code>pmx_*</code> (D10),</strong> with <code><a href="reference/zupkpmx_corpus.html">zupkpmx_corpus()</a></code> the one package-level exception.</li>
 </ul></div>
