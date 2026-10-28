@@ -4,6 +4,7 @@
 # symbols, `THETA(1)` as `THETA1`, `ETA(1)` as `ETA1`, `EPS(1)` as `EPS1`.
 
 nm_records <- c(
+  "SIZES",
   "PROBLEM",
   "INPUT",
   "DATA",
@@ -58,11 +59,14 @@ nm_split <- function(lines, file) {
     at <- starts[[i]]:ends[[i]]
     first <- sub("^\\s*\\$", "", code[[starts[[i]]]])
     word <- toupper(regmatches(first, regexpr("^[A-Za-z]+", first)))
-    name <- nm_records[
-      startsWith(nm_records, word) & nchar(word) >= min(3, nchar(word))
-    ]
-    if (word %in% c("PK", "DES")) {
-      name <- word
+    # NM-TRAN accepts a record name abbreviated to three letters or more;
+    # $PK and $DES are whole names.
+    name <- if (word %in% c("PK", "DES")) {
+      word
+    } else if (nchar(word) >= 3) {
+      nm_records[startsWith(nm_records, word)]
+    } else {
+      character()
     }
     if (length(name) != 1) {
       parse_error(
@@ -70,13 +74,27 @@ nm_split <- function(lines, file) {
         starts[[i]],
         1L,
         seen = paste0("$", word),
-        expected = "a supported record",
+        expected = if (length(name) > 1) {
+          sprintf(
+            "one of %s, not an ambiguous abbreviation",
+            paste0("$", name, collapse = ", ")
+          )
+        } else {
+          "a supported record"
+        },
         call = NULL
       )
     }
     text <- code[at]
     text[[1]] <- sub("^\\s*\\$[A-Za-z]+", "", text[[1]])
-    list(name = name, lines = text, line = at)
+    # Options such as $ERROR (ONLY OBSERVATIONS) say when the record runs,
+    # not what it computes.
+    options <- character()
+    if (name %in% c("PK", "DES", "ERROR")) {
+      options <- regmatches(text[[1]], regexpr("^\\s*\\([^)]*\\)", text[[1]]))
+      text[[1]] <- sub("^\\s*\\([^)]*\\)", "", text[[1]])
+    }
+    list(name = name, lines = text, line = at, options = trimws(options))
   })
   list(records = records, comments = any(comments))
 }

@@ -147,3 +147,20 @@ test_that("NM-TRAN names are case-insensitive", {
     ))
   )
 })
+
+test_that("record names need three letters, and an ambiguous one says so", {
+  expect_error(
+    nm_split(c("$PROB x", "$OM 0.1"), "t.ctl"),
+    class = "zupkpmx_parse_error"
+  )
+  err <- expect_error(
+    nm_split(c("$PROB x", "$S 0.1"), "t.ctl"),
+    class = "zupkpmx_parse_error"
+  )
+  expect_equal(err$seen, "$S")
+  err <- expect_error(
+    nm_split(c("$PROB x", "$SI 0.1"), "t.ctl"),
+    class = "zupkpmx_parse_error"
+  )
+  expect_equal(err$seen, "$SI")
+})

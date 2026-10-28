@@ -624,3 +624,18 @@ model_covariates <- function(file, parts) {
   }
   sort(free)
 }
+
+# Name blocks by position: PREFIX1, PREFIX2, ... across all of them.
+renumber_blocks <- function(blocks, prefix) {
+  at <- 0
+  lapply(blocks, function(b) {
+    names <- paste0(prefix, at + seq_along(b$names))
+    at <<- at + length(b$names)
+    b$names <- names
+    dimnames(b$matrix) <- list(names, names)
+    if (!is.null(b$estimate)) {
+      dimnames(b$estimate) <- list(names, names)
+    }
+    b
+  })
+}

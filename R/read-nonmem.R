@@ -35,7 +35,12 @@ pmx_read_nonmem <- function(
   estimates = c("auto", "xml", "ext", "lst", "none")
 ) {
   estimates <- match.arg(estimates)
-  if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
+  if (
+    !is.character(file) ||
+      length(file) != 1 ||
+      !file.exists(file) ||
+      dir.exists(file)
+  ) {
     zupkpmx_abort("`file` must be the path of an existing file.", "model")
   }
   model <- nm_read(file)
@@ -91,6 +96,7 @@ nm_closed <- list(
 nm_ode_advans <- c(6L, 8L, 9L, 13L)
 
 nm_lost_records <- c(
+  SIZES = "array sizes ($SIZES)",
   PROBLEM = "title ($PROBLEM)",
   INPUT = "data records ($INPUT, $DATA)",
   DATA = "data records ($INPUT, $DATA)",
@@ -128,6 +134,14 @@ nm_read <- function(file) {
     losses,
     unique(unname(nm_lost_records[intersect(names, names(nm_lost_records))]))
   )
+  for (r in records) {
+    if (length(r$options) == 1 && r$name %in% c("PK", "DES", "ERROR")) {
+      losses <- union(
+        losses,
+        sprintf("record options ($%s %s)", r$name, r$options)
+      )
+    }
+  }
   record <- function(name) records[names == name]
   one <- function(name) {
     found <- record(name)

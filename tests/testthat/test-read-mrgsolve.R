@@ -236,3 +236,70 @@ test_that("$PKMODEL parameters can come straight from $PARAM", {
   )$pred
   expect_lte(corpus_max_rel_dev(got, expected), 1e-6)
 })
+
+test_that("Y is matched exactly in $TABLE", {
+  expect_error(
+    read_cpp(cpp_onecmt(
+      table = c(
+        "double IPRED = CENT / V;",
+        "double YOBS = IPRED * (1 + EPS(1));"
+      )
+    )),
+    class = "zupkpmx_parse_error"
+  )
+})
+
+test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order", {
+  dir <- withr::local_tempdir()
+  file.copy(test_path("fixtures", "nonmem", "run1.ext"), dir)
+  lines <- c(
+    "$OMEGA 0.5",
+    "$NMEXT path = \"run1.ext\", root = \"cppfile\"",
+    "$PKMODEL advan = 4, trans = 4, cmt = \"DEPOT CENT PERIPH\"",
+    "$MAIN",
+    "double KA = THETA1 * exp(ETA(1));",
+    "double CL = THETA2 * exp(ETA(2));",
+    "double V2 = THETA3 * exp(ETA(3));",
+    "double Q = THETA4;",
+    "double V3 = THETA5;",
+    "$TABLE",
+    "double IPRED = CENT / V2;",
+    "double Y = IPRED * (1 + EPS(1));"
+  )
+  path <- file.path(dir, "model.cpp")
+  writeLines(lines, path)
+  m <- pmx_read_mrgsolve(path)
+
+  expect_equal(diag(pmx_omega(m)), c(ETA1 = 0.5, ETA2 = 0.084, ETA3 = 0.096))
+  expect_equal(unclass(m)$random_effects$attach$parameter, c("KA", "CL", "V2"))
+
+  withr::local_dir(dir)
+  writeLines(sub(", root = \"cppfile\"", "", lines, fixed = TRUE), "model.cpp")
+  expect_equal(
+    pmx_parameters(pmx_read_mrgsolve("model.cpp"))$estimate[[1]],
+    1.12
+  )
+
+  writeLines(c("$THETA 1", lines), "model.cpp")
+  expect_error(pmx_read_mrgsolve("model.cpp"), class = "zupkpmx_parse_error")
+})
+
+test_that("$NMXML needs zuxml", {
+  local_mocked_bindings(has_zuxml = function() FALSE)
+  xml <- normalizePath(test_path("fixtures", "nonmem", "run1.xml"))
+  expect_error(
+    read_cpp(c(sprintf("$NMXML path = \"%s\"", xml), cpp_onecmt())),
+    class = "zupkpmx_engine_error"
+  )
+})
+
+test_that("a directory is not a model file", {
+  expect_error(
+    pmx_read_mrgsolve(withr::local_tempdir()),
+    class = "zupkpmx_model_error"
+  )
+  expect_error(
+    pmx_read_nonmem(withr::local_tempdir()),
+    class = "zupkpmx_model_error"
+  )
+})

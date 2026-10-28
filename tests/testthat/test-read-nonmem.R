@@ -224,3 +224,16 @@ test_that("$ERROR uses the definitions in force where Y is assigned", {
     list(type = "proportional", parameters = "EPS1")
   )
 })
+
+test_that("$SIZES and $ERROR (ONLY OBSERVATIONS) are read as losses", {
+  lines <- ctl_onecmt()
+  lines <- c(
+    "$SIZES PD=50",
+    sub("^\\$ERROR$", "$ERROR (ONLY OBSERVATIONS)", lines)
+  )
+  m <- read_ctl(lines)
+  losses <- unclass(m)$provenance$losses
+
+  expect_true("array sizes ($SIZES)" %in% losses)
+  expect_true("record options ($ERROR (ONLY OBSERVATIONS))" %in% losses)
+})

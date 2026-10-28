@@ -27,7 +27,12 @@
 #' path <- system.file("corpus", "twocmt-bolus", "model.cpp", package = "zupkpmx")
 #' pmx_read_mrgsolve(path)
 pmx_read_mrgsolve <- function(file) {
-  if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
+  if (
+    !is.character(file) ||
+      length(file) != 1 ||
+      !file.exists(file) ||
+      dir.exists(file)
+  ) {
     zupkpmx_abort("`file` must be the path of an existing file.", "model")
   }
   mrg_read(file)
@@ -144,13 +149,37 @@ mrg_read <- function(file) {
 
   params <- mrg_params(block("PARAM"), file)
   thetas <- mrg_thetas(block("THETA"), file)
-  omega <- mrg_matrix_blocks(block("OMEGA"), "ETA", file)
-  sigma <- mrg_matrix_blocks(block("SIGMA"), "EPS", file)
-  nm <- mrg_nonmem(block("NMXML", "NMEXT"), file)
+  # Random effects in file order: $OMEGA and $SIGMA blocks, and the
+  # matrices a $NMXML or $NMEXT imports where it stands. ETA(n) and EPS(n)
+  # count positions, so the names are given once all are in.
+  omega <- list()
+  sigma <- list()
+  nm <- NULL
+  for (b in block("OMEGA", "SIGMA", "NMXML", "NMEXT")) {
+    if (b$name == "OMEGA") {
+      omega <- c(omega, mrg_matrix_blocks(list(b), "ETA", file))
+    } else if (b$name == "SIGMA") {
+      sigma <- c(sigma, mrg_matrix_blocks(list(b), "EPS", file))
+    } else {
+      if (!is.null(nm) || nrow(thetas) > 0) {
+        parse_error(
+          file,
+          b$line[[1]],
+          1L,
+          seen = paste0("$", b$name),
+          expected = "one source of THETA1, ...: $THETA or one $NMXML/$NMEXT",
+          call = NULL
+        )
+      }
+      nm <- mrg_nonmem(b, file)
+      omega <- c(omega, nm$omega)
+      sigma <- c(sigma, nm$sigma)
+    }
+  }
+  omega <- renumber_blocks(omega, "ETA")
+  sigma <- renumber_blocks(sigma, "EPS")
   if (!is.null(nm)) {
-    thetas <- rbind(thetas, nm$thetas)
-    omega <- c(omega, nm$omega)
-    sigma <- c(sigma, nm$sigma)
+    thetas <- nm$thetas
   }
   parameters <- rbind(params$parameters, thetas)
   losses <- c(losses, params$losses)
@@ -619,11 +648,7 @@ mrg_pkmodel <- function(b, file) {
 
 # $NMXML or $NMEXT: thetas, omega and sigma from a NONMEM run, as
 # parameters (THETA1, ...) and blocks whose values are the estimates.
-mrg_nonmem <- function(blocks, file) {
-  if (length(blocks) == 0) {
-    return(NULL)
-  }
-  b <- blocks[[1]]
+mrg_nonmem <- function(b, file) {
   args <- tryCatch(
     as.list(str2lang(sprintf("list(%s)", paste(b$lines, collapse = " "))))[-1],
     error = function(e) NULL
@@ -653,8 +678,11 @@ mrg_nonmem <- function(blocks, file) {
       call = NULL
     )
   }
-  if (!grepl("^/", path)) {
-    path <- file.path(dirname(file), path)
+  # mrgsolve resolves a relative path against the working directory, or
+  # against the model file's directory with root = "cppfile".
+  if (!grepl("^(/|~|[A-Za-z]:[/\\\\])", path)) {
+    root <- if (identical(args$root, "cppfile")) dirname(file) else getwd()
+    path <- file.path(root, path)
   }
   if (!file.exists(path)) {
     zupkpmx_abort(sprintf("No NONMEM output at `%s`.", path), "model")
