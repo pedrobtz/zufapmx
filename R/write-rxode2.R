@@ -22,8 +22,8 @@ pmx_write_rxode2 <- function(model) {
   m <- unclass(model)
   losses <- character()
 
-  m <- rxode2_sd_from_sigma(m)
-  m <- rxode2_free_lincmt_names(m)
+  m <- rxode2_write_sd_from_sigma(m)
+  m <- rxode2_write_free_lincmt(m)
   if (isTRUE(m$random_effects$iov$present)) {
     write_error(
       "inter-occasion variability",
@@ -42,15 +42,15 @@ pmx_write_rxode2 <- function(model) {
   text <- c(
     "function() {",
     "  ini({",
-    indent(rxode2_ini_lines(m), 4),
+    indent(rxode2_write_ini(m), 4),
     "  })",
     "  model({",
-    indent(rxode2_model_lines(m), 4),
+    indent(rxode2_write_model(m), 4),
     "  })",
     "}"
   )
 
-  back <- read_rxode2_body(body(eval(parse(text = text))), "written")
+  back <- rxode2_read_body(body(eval(parse(text = text))), "written")
   new_written(
     text = text,
     format = "rxode2",
@@ -62,7 +62,7 @@ pmx_write_rxode2 <- function(model) {
 # Residual error held as sigma variances (as NONMEM holds it) becomes
 # standard-deviation parameters, named after their epsilons, whose values
 # are the square roots of the variances.
-rxode2_sd_from_sigma <- function(m) {
+rxode2_write_sd_from_sigma <- function(m) {
   blocks <- m$random_effects$sigma
   if (length(blocks) == 0) {
     return(m)
@@ -136,7 +136,7 @@ lincmt_reserved <- c(
   "gamma"
 )
 
-rxode2_free_lincmt_names <- function(m) {
+rxode2_write_free_lincmt <- function(m) {
   if (!identical(m$structure$type, "closed")) {
     return(m)
   }
@@ -168,18 +168,7 @@ rxode2_free_lincmt_names <- function(m) {
   m
 }
 
-rename_symbols <- function(x, map) {
-  if (is.symbol(x)) {
-    name <- as.character(x)
-    return(if (name %in% names(map)) as.symbol(map[[name]]) else x)
-  }
-  if (is.call(x)) {
-    x[] <- lapply(as.list(x), rename_symbols, map = map)
-  }
-  x
-}
-
-rxode2_ini_lines <- function(m) {
+rxode2_write_ini <- function(m) {
   p <- m$parameters
   params <- vapply(
     seq_len(nrow(p)),
@@ -194,7 +183,7 @@ rxode2_ini_lines <- function(m) {
       } else {
         c(p$lower[[i]], value, p$upper[[i]])
       }
-      paste(p$name[[i]], "<-", rxode2_values(values, p$fixed[[i]]))
+      paste(p$name[[i]], "<-", rxode2_write_values(values, p$fixed[[i]]))
     },
     character(1)
   )
@@ -206,7 +195,7 @@ rxode2_ini_lines <- function(m) {
       paste(
         paste(block$names, collapse = " + "),
         "~",
-        rxode2_values(values, block$fixed)
+        rxode2_write_values(values, block$fixed)
       )
     },
     character(1)
@@ -214,7 +203,7 @@ rxode2_ini_lines <- function(m) {
   c(params, etas)
 }
 
-rxode2_values <- function(values, fixed) {
+rxode2_write_values <- function(values, fixed) {
   text <- vapply(values, num_text, character(1))
   if (fixed) {
     return(sprintf("fix(%s)", paste(text, collapse = ", ")))
@@ -226,7 +215,7 @@ rxode2_values <- function(values, fixed) {
   }
 }
 
-rxode2_model_lines <- function(m) {
+rxode2_write_model <- function(m) {
   s <- m$structure
   lines <- stmt_lines(m$individual)
 
@@ -275,7 +264,7 @@ rxode2_model_lines <- function(m) {
         call = NULL
       )
     }
-    lines <- c(lines, rxode2_prediction(s, endpoint, obs$prediction))
+    lines <- c(lines, rxode2_write_prediction(s, endpoint, obs$prediction))
   }
   for (endpoint in names(m$observations)) {
     lines <- c(
@@ -283,14 +272,14 @@ rxode2_model_lines <- function(m) {
       sprintf(
         "%s ~ %s",
         endpoint,
-        rxode2_residual_text(m$observations[[endpoint]]$residual, endpoint)
+        rxode2_write_residual(m$observations[[endpoint]]$residual, endpoint)
       )
     )
   }
   lines
 }
 
-rxode2_prediction <- function(s, endpoint, prediction) {
+rxode2_write_prediction <- function(s, endpoint, prediction) {
   if (identical(prediction, as.symbol(endpoint))) {
     return(character())
   }
@@ -315,7 +304,7 @@ rxode2_prediction <- function(s, endpoint, prediction) {
   sprintf("%s <- %s", endpoint, expr_line(prediction))
 }
 
-rxode2_residual_text <- function(residual, endpoint) {
+rxode2_write_residual <- function(residual, endpoint) {
   p <- residual$parameters
   switch(
     residual$type,
@@ -337,43 +326,4 @@ stmt_lines <- function(stmts) {
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "if")) expr_deparse(x) else expr_line(x)
   }))
-}
-
-expr_line <- function(x) {
-  paste(expr_deparse(x), collapse = " ")
-}
-
-# Deparse with 15 significant digits unless a constant needs 17 to read
-# back as the same number.
-expr_deparse <- function(x) {
-  numbers <- expr_numbers(x)
-  exact <- all(vapply(
-    numbers,
-    function(n) identical(as.numeric(as.character(n)), n),
-    logical(1)
-  ))
-  opts <- if (exact) "keepNA" else c("keepNA", "digits17")
-  deparse(x, width.cutoff = 500L, control = opts)
-}
-
-expr_numbers <- function(x) {
-  if (is.numeric(x)) {
-    return(as.list(x))
-  }
-  if (is.call(x)) {
-    return(unlist(lapply(as.list(x)[-1], expr_numbers), recursive = FALSE))
-  }
-  list()
-}
-
-# 15 significant digits when they read back within a few ulps, which the
-# fidelity check allows (same_content()); 17 otherwise. 0.2^2 prints as
-# 0.04, not 0.040000000000000008.
-num_text <- function(x) {
-  text <- as.character(x)
-  if (same_content(as.numeric(text), x)) text else sprintf("%.17g", x)
-}
-
-indent <- function(lines, n) {
-  paste0(strrep(" ", n), lines)
 }

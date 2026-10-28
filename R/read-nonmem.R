@@ -602,16 +602,6 @@ nm_residual <- function(e, original) {
   )
 }
 
-strip_parens <- function(e) {
-  if (is_call(e, "(")) {
-    return(strip_parens(e[[2]]))
-  }
-  if (is.call(e)) {
-    e[-1] <- lapply(as.list(e)[-1], strip_parens)
-  }
-  e
-}
-
 # $THETA: one row per theta, in order across records.
 nm_inits <- function(records, kind, file) {
   items <- nm_init_items(records, file)

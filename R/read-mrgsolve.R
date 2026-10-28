@@ -192,7 +192,7 @@ mrg_read <- function(file) {
   }
   code <- function(...) {
     stmts <- unlist(
-      lapply(block(...), mrg_code, file = file),
+      lapply(block(...), cpp_parse, file = file),
       recursive = FALSE
     )
     lapply(stmts, rename_symbols, map = rename)

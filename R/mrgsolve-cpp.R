@@ -62,7 +62,7 @@ cpp_tokenize <- function(lines, line_numbers, file) {
 }
 
 # Parse a block's code into statements.
-mrg_code <- function(block, file) {
+cpp_parse <- function(block, file) {
   tokens <- cpp_tokenize(block$lines, block$line, file)
   i <- 1L
   peek <- function(k = 0L) if (i + k <= length(tokens)) tokens[[i + k]]

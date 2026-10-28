@@ -92,15 +92,6 @@ nm_block_estimates <- function(blocks, full, path) {
   })
 }
 
-# A full symmetric matrix from lower-triangle values listed row by row.
-lower_to_full <- function(values) {
-  n <- (sqrt(8 * length(values) + 1) - 1) / 2
-  m <- matrix(0, n, n)
-  m[upper.tri(m, diag = TRUE)] <- values
-  m[lower.tri(m)] <- t(m)[lower.tri(m)]
-  m
-}
-
 nm_estimates_ext <- function(path) {
   lines <- readLines(path, warn = FALSE)
   tables <- grep("^TABLE NO\\.", lines)
