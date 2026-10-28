@@ -111,15 +111,36 @@ test_that("a fixed omega block written by the writer parses in rxode2", {
   expect_true(all(ui$iniDf$fix[!is.na(ui$iniDf$neta1)]))
 })
 
-test_that("sigma blocks and inter-occasion variability are refused", {
+test_that("sigma variances become standard-deviation parameters", {
+  m <- model_twocmt_oral()
+  w <- pmx_write_rxode2(m)
+
+  expect_equal(pmx_fidelity(w), "equivalent")
+  expect_true("eps.prop <- c(0, 0.2)" %in% trimws(w$text))
+  expect_true("cp ~ prop(eps.prop)" %in% trimws(w$text))
+})
+
+test_that("correlated sigma, expression residuals and IOV are refused", {
+  m <- model_twocmt_oral()
+  re <- unclass(m)$random_effects
+  re$sigma <- list(model_block(c("e1", "e2"), c(0.04, 0.01)))
   expect_error(
-    pmx_write_rxode2(model_twocmt_oral()),
+    pmx_write_rxode2(model_with(m, random_effects = re)),
     class = "zupkpmx_write_error"
   )
 
-  m <- model_twocmt_oral()
+  obs <- unclass(m)$observations
+  obs$cp$residual <- list(
+    type = "expression",
+    parameters = "eps.prop",
+    expression = quote(F + eps.prop)
+  )
+  expect_error(
+    pmx_write_rxode2(model_with(m, observations = obs)),
+    class = "zupkpmx_write_error"
+  )
+
   re <- unclass(m)$random_effects
-  re$sigma <- list()
   re$iov <- list(present = TRUE, occasion = "OCC")
   expect_error(
     pmx_write_rxode2(model_with(m, random_effects = re)),

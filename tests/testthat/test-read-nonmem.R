@@ -45,7 +45,7 @@ test_that("corpus control streams predict their expected.csv", {
   for (i in seq_len(nrow(corpus))) {
     model <- pmx_read_nonmem(file.path(corpus$path[[i]], "model.ctl"))
     got <- corpus_solve_rxode2(
-      nonmem_as_rxode2(model),
+      as_rxode2_function(model),
       corpus$regimen[[i]],
       "Y"
     )

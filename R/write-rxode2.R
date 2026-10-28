@@ -5,9 +5,10 @@
 #'
 #' rxode2's `ini()` holds one value per parameter: a model with estimates
 #' is written with its estimates, and its initial values are recorded as
-#' lost. Constructs rxode2 cannot hold, such as residual error written as
-#' an expression over epsilons, stop with an error of class
-#' `zupkpmx_write_error`.
+#' lost. Residual error held as sigma variances, as NONMEM holds it, is
+#' written as standard-deviation parameters named after the epsilons. Constructs rxode2 cannot hold,
+#' such as residual error written as an expression over epsilons, stop
+#' with an error of class `zupkpmx_write_error`.
 #'
 #' @param model A model read by one of the `pmx_read_*()` functions.
 #' @return A written model: the text as lines, its fidelity and its losses.
@@ -21,14 +22,8 @@ pmx_write_rxode2 <- function(model) {
   m <- unclass(model)
   losses <- character()
 
-  if (length(m$random_effects$sigma) > 0) {
-    write_error(
-      "residual error as sigma blocks over epsilons",
-      "random_effects$sigma",
-      formats = c("nonmem", "mrgsolve"),
-      call = NULL
-    )
-  }
+  m <- rxode2_sd_from_sigma(m)
+  m <- rxode2_free_lincmt_names(m)
   if (isTRUE(m$random_effects$iov$present)) {
     write_error(
       "inter-occasion variability",
@@ -62,6 +57,124 @@ pmx_write_rxode2 <- function(model) {
     fidelity = written_fidelity(losses, model, back),
     losses = losses
   )
+}
+
+# Residual error held as sigma variances (as NONMEM holds it) becomes
+# standard-deviation parameters, named after their epsilons, whose values
+# are the square roots of the variances.
+rxode2_sd_from_sigma <- function(m) {
+  blocks <- m$random_effects$sigma
+  if (length(blocks) == 0) {
+    return(m)
+  }
+  if (any(vapply(blocks, function(b) length(b$names) > 1, logical(1)))) {
+    write_error(
+      "correlated residual errors",
+      "random_effects$sigma",
+      formats = c("nonmem", "mrgsolve"),
+      call = NULL
+    )
+  }
+  for (e in names(m$observations)) {
+    if (m$observations[[e]]$residual$type == "expression") {
+      write_error(
+        "a residual model written as an expression over epsilons",
+        sprintf("observations$%s$residual", e),
+        formats = c("nonmem", "mrgsolve"),
+        call = NULL
+      )
+    }
+  }
+  sd <- lapply(blocks, function(b) {
+    data.frame(
+      name = b$names,
+      role = "other",
+      init = sqrt(b$matrix[[1]]),
+      lower = 0,
+      upper = Inf,
+      fixed = b$fixed,
+      estimate = if (is.null(b$estimate)) NA_real_ else sqrt(b$estimate[[1]])
+    )
+  })
+  m$parameters <- do.call(rbind, c(list(m$parameters), sd))
+  rownames(m$parameters) <- NULL
+  m$random_effects$sigma <- list()
+  m
+}
+
+# Names linCmt() reads as parameters. In a closed form, any other variable
+# with one of them (V next to V1 and V2, say, after a NONMEM ADVAN alias)
+# makes rxode2 refuse the model, so it is renamed with an `x_` prefix
+# (rxode2 matches these names by prefix, so a suffix is not enough).
+lincmt_reserved <- c(
+  "cl",
+  "v",
+  "vc",
+  "v1",
+  "v2",
+  "v3",
+  "v4",
+  "vp",
+  "vp1",
+  "vp2",
+  "vp3",
+  "vss",
+  "q",
+  "q1",
+  "q2",
+  "q3",
+  "q4",
+  "ka",
+  "k",
+  "kel",
+  "k12",
+  "k21",
+  "k13",
+  "k31",
+  "alpha",
+  "beta",
+  "gamma"
+)
+
+rxode2_free_lincmt_names <- function(m) {
+  if (!identical(m$structure$type, "closed")) {
+    return(m)
+  }
+  vars <- stmt_targets(m$individual)
+  clash <- vars[
+    tolower(vars) %in% lincmt_reserved & !vars %in% m$structure$parameters
+  ]
+  if (length(clash) == 0) {
+    return(m)
+  }
+  taken <- unique(c(
+    vars,
+    unlist(lapply(m$individual, all.vars)),
+    m$parameters$name
+  ))
+  map <- stats::setNames(
+    make.unique(c(taken, paste0("x_", clash)))[length(taken) + seq_along(clash)],
+    clash
+  )
+  rename <- function(x) rename_symbols(x, map)
+  m$individual <- lapply(m$individual, rename)
+  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
+  m$observations <- lapply(m$observations, function(o) {
+    o$prediction <- rename(o$prediction)
+    o
+  })
+  m
+}
+
+rename_symbols <- function(x, map) {
+  if (is.symbol(x)) {
+    name <- as.character(x)
+    return(if (name %in% names(map)) as.symbol(map[[name]]) else x)
+  }
+  if (is.call(x)) {
+    x[] <- lapply(as.list(x), rename_symbols, map = map)
+  }
+  x
 }
 
 rxode2_ini_lines <- function(m) {
@@ -251,9 +364,12 @@ expr_numbers <- function(x) {
   list()
 }
 
+# 15 significant digits when they read back within a few ulps, which the
+# fidelity check allows (same_content()); 17 otherwise. 0.2^2 prints as
+# 0.04, not 0.040000000000000008.
 num_text <- function(x) {
   text <- as.character(x)
-  if (identical(as.numeric(text), x)) text else sprintf("%.17g", x)
+  if (same_content(as.numeric(text), x)) text else sprintf("%.17g", x)
 }
 
 indent <- function(lines, n) {
