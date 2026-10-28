@@ -1,0 +1,19 @@
+$PROBLEM One-compartment model, first-order absorption
+$INPUT ID TIME EVID AMT CMT DV
+$DATA data.csv IGNORE=@
+$SUBROUTINES ADVAN2 TRANS2
+$PK
+  KA = THETA(1)
+  CL = THETA(2) * EXP(ETA(1))
+  V  = THETA(3) * EXP(ETA(2))
+  S2 = V
+$ERROR
+  IPRED = F
+  Y = IPRED * (1 + EPS(1))
+$THETA
+  (0, 1)   ; KA
+  (0, 4)   ; CL
+  (0, 50)  ; V
+$OMEGA 0.09 0.09
+$SIGMA 0.04
+$ESTIMATION METHOD=1 INTERACTION MAXEVAL=9999

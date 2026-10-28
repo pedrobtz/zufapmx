@@ -18,7 +18,12 @@ BugReports: https://github.com/pedrobtz/zupkpmx/issues
 Depends: 
     R (>= 4.1)
 Suggests: 
-    testthat (>= 3.0.0)
+    amp.sim,
+    mrgsolve,
+    nonmem2rx,
+    rxode2,
+    testthat (>= 3.0.0),
+    withr
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

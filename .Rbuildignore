@@ -14,3 +14,4 @@
 ^pkgdown$
 ^\.superpowers$
 ^\.worktrees$
+^tools$

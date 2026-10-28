@@ -1,0 +1,21 @@
+$PROBLEM Two-compartment model, intravenous bolus
+$INPUT ID TIME EVID AMT CMT DV
+$DATA data.csv IGNORE=@
+$SUBROUTINES ADVAN3 TRANS4
+$PK
+  CL = THETA(1) * EXP(ETA(1))
+  V1 = THETA(2) * EXP(ETA(2))
+  Q  = THETA(3)
+  V2 = THETA(4)
+  S1 = V1
+$ERROR
+  IPRED = F
+  Y = IPRED * (1 + EPS(1))
+$THETA
+  (0, 4)   ; CL
+  (0, 20)  ; V1
+  (0, 2)   ; Q
+  (0, 40)  ; V2
+$OMEGA 0.09 0.09
+$SIGMA 0.04
+$ESTIMATION METHOD=1 INTERACTION MAXEVAL=9999

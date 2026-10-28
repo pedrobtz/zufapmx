@@ -1,0 +1,7 @@
+Id: onecmt-oral
+Title: One-compartment model, first-order absorption
+Structure: ADVAN2 TRANS2
+Regimen: oral
+Formats: nonmem,rxode2,mrgsolve
+Source: Written for zupkpmx from the PREDPP ADVAN2 TRANS2 structure
+ (NONMEM Users Guide, Part VI). MIT.

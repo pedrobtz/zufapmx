@@ -1,0 +1,9 @@
+regimen,time,endpoint,pred
+oral,0.5,cp,0.7540192567
+oral,1,cp,1.165709741
+oral,2,cp,1.469242749
+oral,4,cp,1.366667207
+oral,6,cp,1.093743835
+oral,8,cp,0.8383857045
+oral,12,cp,0.4565251814
+oral,24,cp,0.05073309241
