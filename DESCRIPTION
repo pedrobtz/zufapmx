@@ -1,14 +1,25 @@
 Package: zupkpmx
-Title: What the Package Does (One Line, Title Case)
+Title: Read, Write and Check Equivalence of Pharmacometric Models
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Pedro", "Baltazar", , "pedrobtz@gmail.com",
+           role = c("aut", "cre", "cph"))
+Description: Holds a population pharmacokinetic and pharmacodynamic model
+    as one R object, reads it from 'NONMEM' control streams, 'rxode2' and
+    'nlmixr2' model functions and 'mrgsolve' model specifications, and
+    writes it to any of them, reporting what a translation keeps and what
+    it loses. Checks that two models are the same model by simulating both
+    on a canonical design, each through its own engine, and comparing the
+    predictions against a tolerance.
 License: MIT + file LICENSE
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.1.0
+URL: https://github.com/pedrobtz/zupkpmx,
+    https://pedrobtz.github.io/zupkpmx/
+BugReports: https://github.com/pedrobtz/zupkpmx/issues
+Depends: 
+    R (>= 4.1)
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-URL: https://pedrobtz.github.io/zupkpmx/
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.0
