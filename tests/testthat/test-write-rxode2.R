@@ -166,3 +166,23 @@ test_that("fidelity tolerates a parser that is off by one ulp", {
   expect_false(same_content(data.frame(a = 1), data.frame(b = 1)))
   expect_false(same_content(list(NA_real_), list(1)))
 })
+
+test_that("fidelity is equivalent only through known reparameterisations", {
+  m <- corpus_rxode2_model("twocmt-oral")
+  parts <- unclass(m)
+
+  renamed <- parts
+  renamed$individual <- c(renamed$individual, list(quote(V2 <- v)))
+  renamed$structure$parameters[["v"]] <- "V2"
+  renamed$observations$cp$prediction <- quote(central / V2)
+  back <- do.call(new_model, renamed)
+  expect_equal(written_fidelity(character(), m, back), "equivalent")
+
+  changed <- parts
+  changed$individual[[2]] <- quote(cl <- tcl * exp(eta.cl) * 2)
+  back <- do.call(new_model, changed)
+  expect_error(
+    written_fidelity(character(), m, back),
+    class = "zupkpmx_write_error"
+  )
+})

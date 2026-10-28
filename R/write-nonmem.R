@@ -146,14 +146,15 @@ nm_sigma_from_sd <- function(m) {
         )
       }
       name <- paste0("EPS", length(m$random_effects$sigma) + 1)
-      m$random_effects$sigma[[length(m$random_effects$sigma) + 1]] <- list(
+      block <- list(
         names = name,
         matrix = matrix(row$init^2, dimnames = list(name, name)),
-        fixed = row$fixed,
-        estimate = if (!is.na(row$estimate)) {
-          matrix(row$estimate^2, dimnames = list(name, name))
-        }
+        fixed = row$fixed
       )
+      if (!is.na(row$estimate)) {
+        block$estimate <- matrix(row$estimate^2, dimnames = list(name, name))
+      }
+      m$random_effects$sigma[[length(m$random_effects$sigma) + 1]] <- block
       m$parameters <- m$parameters[m$parameters$name != sd, ]
       eps <- c(eps, name)
     }

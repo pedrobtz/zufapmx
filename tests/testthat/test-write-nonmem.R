@@ -193,3 +193,25 @@ test_that("variables PREDPP reserves are renamed", {
   ))
   expect_false(any(grepl("^F1 =", text)))
 })
+
+test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
+  skip_on_cran()
+  skip_if_not_installed("rxode2")
+  corpus <- zupkpmx_corpus()
+
+  for (i in seq_len(nrow(corpus))) {
+    path <- withr::local_tempfile(fileext = ".ctl")
+    writeLines(
+      pmx_write_nonmem(pmx_read_mrgsolve(file.path(
+        corpus$path[[i]],
+        "model.cpp"
+      )))$text,
+      path
+    )
+    fun <- eval(parse(text = pmx_write_rxode2(pmx_read_nonmem(path))$text))
+    got <- corpus_solve_rxode2(fun, corpus$regimen[[i]], "Y")
+    expected <- corpus_expected(corpus$path[[i]])$pred
+
+    expect_lte(corpus_max_rel_dev(got, expected), 1e-6, label = corpus$id[[i]])
+  }
+})
