@@ -24,14 +24,7 @@ pmx_write_rxode2 <- function(model) {
 
   m <- rxode2_write_sd_from_sigma(m)
   m <- rxode2_write_free_lincmt(m)
-  if (isTRUE(m$random_effects$iov$present)) {
-    write_error(
-      "inter-occasion variability",
-      "random_effects$iov",
-      formats = character(),
-      call = NULL
-    )
-  }
+  check_writable(m, one_endpoint = FALSE)
   if (any(!is.na(m$parameters$estimate))) {
     losses <- c(
       losses,
@@ -174,15 +167,7 @@ rxode2_write_ini <- function(m) {
     seq_len(nrow(p)),
     function(i) {
       value <- if (is.na(p$estimate[[i]])) p$init[[i]] else p$estimate[[i]]
-      values <- if (is.infinite(p$upper[[i]]) && p$upper[[i]] > 0) {
-        if (is.infinite(p$lower[[i]]) && p$lower[[i]] < 0) {
-          value
-        } else {
-          c(p$lower[[i]], value)
-        }
-      } else {
-        c(p$lower[[i]], value, p$upper[[i]])
-      }
+      values <- bounded_values(p$lower[[i]], value, p$upper[[i]])
       paste(p$name[[i]], "<-", rxode2_write_values(values, p$fixed[[i]]))
     },
     character(1)

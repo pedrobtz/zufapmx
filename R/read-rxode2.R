@@ -242,9 +242,8 @@ rxode2_read_block <- function(names, values, x, reader) {
   if (length(values) != n * (n + 1) / 2) {
     reader$refuse(x, sprintf("%d values for a block of %d", n * (n + 1) / 2, n))
   }
-  m <- matrix(0, n, n, dimnames = list(names, names))
-  m[upper.tri(m, diag = TRUE)] <- values
-  m[lower.tri(m)] <- t(m)[lower.tri(m)]
+  m <- lower_to_full(values)
+  dimnames(m) <- list(names, names)
   m
 }
 
@@ -505,7 +504,7 @@ rxode2_read_lincmt <- function(targets, reader) {
     ncmt = ncmt,
     depot = depot,
     parameters = found[c(keep, if (depot) "ka")],
-    advan = if (depot) c(2L, 4L, 12L)[[ncmt]] else c(1L, 3L, 11L)[[ncmt]],
+    advan = closed_advan(ncmt, depot),
     trans = if (ncmt == 1) 2L else 4L
   )
 }

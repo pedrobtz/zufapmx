@@ -225,3 +225,19 @@ token_stream <- function(tokens, file, end) {
     expect_end = function() if (i <= length(tokens)) fail(end$value)
   )
 }
+
+# A model's compartments: an ODE model's own, or a closed form's canonical
+# ones.
+model_compartments <- function(structure) {
+  if (identical(structure$type, "ode")) {
+    structure$compartments
+  } else {
+    closed_compartments(structure)
+  }
+}
+
+# The ADVAN of a closed form with `ncmt` compartments, with or without a
+# depot.
+closed_advan <- function(ncmt, depot) {
+  if (depot) c(2L, 4L, 12L)[[ncmt]] else c(1L, 3L, 11L)[[ncmt]]
+}

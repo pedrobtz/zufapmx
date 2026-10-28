@@ -509,7 +509,7 @@ mrg_pkmodel <- function(b, file) {
   } else {
     ncmt <- as.integer(args$ncmt %||% 1L)
     depot <- isTRUE(args$depot)
-    advan <- if (depot) c(2L, 4L, 12L)[[ncmt]] else c(1L, 3L, 11L)[[ncmt]]
+    advan <- closed_advan(ncmt, depot)
   }
   closed <- nm_closed[[as.character(advan)]]
   if (is.null(closed)) {

@@ -29,22 +29,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   m <- unclass(model)
   losses <- character()
 
-  if (isTRUE(m$random_effects$iov$present)) {
-    write_error(
-      "inter-occasion variability",
-      "random_effects$iov",
-      formats = character(),
-      call = NULL
-    )
-  }
-  if (length(m$observations) != 1) {
-    write_error(
-      "more than one endpoint",
-      "observations",
-      formats = "rxode2",
-      call = NULL
-    )
-  }
+  check_writable(m)
   has_estimates <- any(!is.na(m$parameters$estimate)) ||
     any(vapply(
       c(m$random_effects$omega, m$random_effects$sigma),
@@ -60,28 +45,31 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   }
 
   m <- nm_sigma_from_sd(m)
-  names <- nm_names(m)
+  spelling <- nm_names(m)
   text <- c(
     sprintf("$PROBLEM %s", nm_title(m$provenance)),
     "; zupkpmx: $INPUT and $DATA are placeholders; point them at your dataset.",
     "$INPUT ID TIME EVID AMT RATE CMT DV",
     "$DATA data.csv IGNORE=@",
-    nm_structure_lines(m, names),
+    nm_structure_lines(m, spelling),
     "$PK",
-    nm_stmt_lines(c(m$individual, nm_closed_aliases(m, names)), names),
-    nm_dosing_lines(m, names),
-    nm_scale_lines(m, names),
+    nm_stmt_lines(
+      c(m$individual, closed_aliases(m$structure, spelling)),
+      spelling
+    ),
+    nm_dosing_lines(m, spelling),
+    nm_scale_lines(m, spelling),
     if (identical(m$structure$type, "ode")) {
       c(
         "$DES",
-        nm_stmt_lines(m$structure$statements, names),
+        nm_stmt_lines(m$structure$statements, spelling),
         vapply(
           seq_along(m$structure$compartments),
           function(i) {
             sprintf(
               "DADT(%d) = %s",
               i,
-              nm_expr(m$structure$derivatives[[i]], names)
+              nm_expr(m$structure$derivatives[[i]], spelling)
             )
           },
           character(1)
@@ -89,7 +77,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
       )
     },
     "$ERROR",
-    nm_error_lines(m, names),
+    nm_error_lines(m, spelling),
     nm_theta_lines(m$parameters, estimates),
     nm_block_lines("OMEGA", m$random_effects$omega, estimates),
     nm_block_lines("SIGMA", m$random_effects$sigma, estimates)
@@ -174,11 +162,7 @@ nm_names <- function(m) {
     nm_index_names(m$random_effects$omega, "ETA"),
     nm_index_names(m$random_effects$sigma, "EPS")
   )
-  compartments <- if (identical(m$structure$type, "ode")) {
-    m$structure$compartments
-  } else {
-    closed_compartments(m$structure)
-  }
+  compartments <- model_compartments(m$structure)
   map <- c(
     map,
     stats::setNames(sprintf("A(%d)", seq_along(compartments)), compartments)
@@ -196,17 +180,7 @@ nm_names <- function(m) {
     names(map)
   )
   nm_vars <- toupper(gsub(".", "_", vars, fixed = TRUE))
-  # A closed form's ADVAN reserves names for its parameters: a model
-  # variable holding one of them for another purpose (rxode2's q2 is
-  # ADVAN11's Q3) is renamed, and nm_closed_aliases() assigns the name.
-  if (identical(m$structure$type, "closed")) {
-    required <- nm_closed[[as.character(m$structure$advan)]]$names
-    owner <- m$structure$parameters[names(required)]
-    taken <- nm_vars %in%
-      required &
-      vars != unname(owner[match(nm_vars, required)])
-    nm_vars[taken] <- paste0(nm_vars[taken], "_")
-  }
+  nm_vars <- closed_free_names(vars, nm_vars, m$structure)
   reserved <- c(
     "F",
     "Y",
@@ -237,11 +211,11 @@ nm_names <- function(m) {
 }
 
 nm_index_names <- function(blocks, prefix) {
-  names <- unlist(lapply(blocks, `[[`, "names"))
-  stats::setNames(sprintf("%s(%d)", prefix, seq_along(names)), names)
+  symbols <- unlist(lapply(blocks, `[[`, "names"))
+  stats::setNames(sprintf("%s(%d)", prefix, seq_along(symbols)), symbols)
 }
 
-nm_structure_lines <- function(m, names) {
+nm_structure_lines <- function(m, spelling) {
   s <- m$structure
   if (identical(s$type, "closed")) {
     return(sprintf("$SUBROUTINES ADVAN%d TRANS%d", s$advan, s$trans))
@@ -255,46 +229,8 @@ nm_structure_lines <- function(m, names) {
   )
 }
 
-# A closed form needs its ADVAN's parameter names; alias the model's own
-# where they differ.
-nm_closed_aliases <- function(m, names) {
-  s <- m$structure
-  if (!identical(s$type, "closed")) {
-    return(list())
-  }
-  required <- nm_closed[[as.character(s$advan)]]$names
-  out <- list()
-  for (canonical in names(required)) {
-    have <- names[[s$parameters[[canonical]]]]
-    if (have != required[[canonical]]) {
-      if (required[[canonical]] %in% names) {
-        write_error(
-          sprintf(
-            "`%s`, which ADVAN%d needs for another parameter",
-            required[[canonical]],
-            s$advan
-          ),
-          "individual",
-          formats = "rxode2",
-          call = NULL
-        )
-      }
-      out[[length(out) + 1]] <- call(
-        "<-",
-        as.symbol(required[[canonical]]),
-        as.symbol(s$parameters[[canonical]])
-      )
-    }
-  }
-  out
-}
-
-nm_dosing_lines <- function(m, names) {
-  compartments <- if (identical(m$structure$type, "ode")) {
-    m$structure$compartments
-  } else {
-    closed_compartments(m$structure)
-  }
+nm_dosing_lines <- function(m, spelling) {
+  compartments <- model_compartments(m$structure)
   prefix <- c(lag = "ALAG", bioavailability = "F", rate = "R", duration = "D")
   out <- character()
   for (cmt in names(m$dosing)) {
@@ -307,19 +243,15 @@ nm_dosing_lines <- function(m, names) {
       }
       out <- c(
         out,
-        sprintf("%s = %s", target, nm_expr(m$dosing[[cmt]][[attr]], names))
+        sprintf("%s = %s", target, nm_expr(m$dosing[[cmt]][[attr]], spelling))
       )
     }
   }
   out
 }
 
-nm_scale_lines <- function(m, names) {
-  compartments <- if (identical(m$structure$type, "ode")) {
-    m$structure$compartments
-  } else {
-    closed_compartments(m$structure)
-  }
+nm_scale_lines <- function(m, spelling) {
+  compartments <- model_compartments(m$structure)
   pred <- m$observations[[1]]$prediction
   if (is.symbol(pred) && as.character(pred) %in% compartments) {
     return(character())
@@ -340,7 +272,7 @@ nm_scale_lines <- function(m, names) {
         call = NULL
       )
     }
-    scale <- nm_expr(pred[[3]], names)
+    scale <- nm_expr(pred[[3]], spelling)
     # Scale a closed form by its ADVAN's own name for the central volume,
     # so the control stream reads back as the central concentration.
     if (
@@ -359,16 +291,16 @@ nm_scale_lines <- function(m, names) {
   )
 }
 
-nm_error_lines <- function(m, names) {
+nm_error_lines <- function(m, spelling) {
   r <- m$observations[[1]]$residual
-  p <- vapply(r$parameters, function(e) names[[e]], character(1))
+  p <- vapply(r$parameters, function(e) spelling[[e]], character(1))
   y <- switch(
     r$type,
     additive = sprintf("F + %s", p[[1]]),
     proportional = sprintf("F * (1 + %s)", p[[1]]),
     combined = sprintf("F * (1 + %s) + %s", p[[2]], p[[1]]),
     exponential = sprintf("F * EXP(%s)", p[[1]]),
-    expression = nm_expr(r$expression, c(names, F = "F")),
+    expression = nm_expr(r$expression, c(spelling, F = "F")),
     write_error(
       sprintf("a %s residual model", r$type),
       "observations",
@@ -388,17 +320,15 @@ nm_theta_lines <- function(p, estimates) {
       } else {
         p$init[[i]]
       }
-      text <- nm_number(value)
-      lower <- p$lower[[i]]
-      upper <- p$upper[[i]]
-      bounds <- if (is.infinite(upper) && upper > 0) {
-        if (is.infinite(lower) && lower < 0) {
-          text
-        } else {
-          sprintf("(%s, %s)", nm_number(lower), text)
-        }
+      values <- vapply(
+        bounded_values(p$lower[[i]], value, p$upper[[i]]),
+        nm_number,
+        character(1)
+      )
+      bounds <- if (length(values) == 1) {
+        values
       } else {
-        sprintf("(%s, %s, %s)", nm_number(lower), text, nm_number(upper))
+        sprintf("(%s)", paste(values, collapse = ", "))
       }
       sprintf(
         "$THETA %s%s ; %s",
@@ -442,7 +372,7 @@ nm_number <- function(x) {
   num_text(x)
 }
 
-nm_stmt_lines <- function(stmts, names, indent = 0) {
+nm_stmt_lines <- function(stmts, spelling, indent = 0) {
   pad <- strrep(" ", indent)
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "<-")) {
@@ -450,29 +380,29 @@ nm_stmt_lines <- function(stmts, names, indent = 0) {
         "%s%s = %s",
         pad,
         # An ADVAN alias assigns a name that is already NONMEM's.
-        names[as.character(x[[2]])] %|NA|% as.character(x[[2]]),
-        nm_expr(x[[3]], names)
+        spelling[as.character(x[[2]])] %|NA|% as.character(x[[2]]),
+        nm_expr(x[[3]], spelling)
       ))
     }
-    nm_if_lines(x, names, indent)
+    nm_if_lines(x, spelling, indent)
   }))
 }
 
-nm_if_lines <- function(x, names, indent, keyword = "IF") {
+nm_if_lines <- function(x, spelling, indent, keyword = "IF") {
   pad <- strrep(" ", indent)
   out <- c(
-    sprintf("%s%s (%s) THEN", pad, keyword, nm_expr(x[[2]], names)),
-    nm_stmt_lines(stmt_body(x[[3]]), names, indent + 2)
+    sprintf("%s%s (%s) THEN", pad, keyword, nm_expr(x[[2]], spelling)),
+    nm_stmt_lines(stmt_body(x[[3]]), spelling, indent + 2)
   )
   if (length(x) == 4) {
     other <- x[[4]]
     out <- if (is_call(other, "if")) {
-      c(out, nm_if_lines(other, names, indent, "ELSE IF"))
+      c(out, nm_if_lines(other, spelling, indent, "ELSE IF"))
     } else {
       c(
         out,
         sprintf("%sELSE", pad),
-        nm_stmt_lines(stmt_body(other), names, indent + 2)
+        nm_stmt_lines(stmt_body(other), spelling, indent + 2)
       )
     }
   }
@@ -481,8 +411,8 @@ nm_if_lines <- function(x, names, indent, keyword = "IF") {
 
 # Print an expression as NM-TRAN, adding parentheses where Fortran's
 # precedence needs them.
-nm_expr <- function(x, names) {
-  expr_print(x, names, nm_dialect)
+nm_expr <- function(x, spelling) {
+  expr_print(x, spelling, nm_dialect)
 }
 
 nm_dialect <- list(

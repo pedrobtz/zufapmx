@@ -50,3 +50,71 @@ num_text <- function(x) {
 indent <- function(lines, n) {
   paste0(strrep(" ", n), lines)
 }
+
+# A parameter's value with its finite bounds: `value`, `c(lower, value)` or
+# `c(lower, value, upper)`, the shapes NM-TRAN's $THETA and rxode2's ini()
+# both use.
+bounded_values <- function(lower, value, upper) {
+  if (is.infinite(upper) && upper > 0) {
+    if (is.infinite(lower) && lower < 0) value else c(lower, value)
+  } else {
+    c(lower, value, upper)
+  }
+}
+
+# A closed form's ADVAN names its parameters (CL, V2, ...). `spelled` holds
+# the target's spelling of `vars`; a variable holding one of these names for
+# another purpose (rxode2's q2 is ADVAN11's Q3) gets a `_` suffix, and
+# closed_aliases() assigns the name.
+closed_free_names <- function(vars, spelled, structure) {
+  if (!identical(structure$type, "closed")) {
+    return(spelled)
+  }
+  required <- nm_closed[[as.character(structure$advan)]]$names
+  owner <- unname(structure$parameters[names(required)])
+  taken <- spelled %in% required & vars != owner[match(spelled, required)]
+  spelled[taken] <- paste0(spelled[taken], "_")
+  spelled
+}
+
+# `NAME <- var` for each parameter name the ADVAN needs that the model
+# spells differently.
+closed_aliases <- function(structure, spelling) {
+  if (!identical(structure$type, "closed")) {
+    return(list())
+  }
+  required <- nm_closed[[as.character(structure$advan)]]$names
+  out <- list()
+  for (canonical in names(required)) {
+    var <- structure$parameters[[canonical]]
+    if (spelling[[var]] != required[[canonical]]) {
+      out[[length(out) + 1]] <- call(
+        "<-",
+        as.symbol(required[[canonical]]),
+        as.symbol(var)
+      )
+    }
+  }
+  out
+}
+
+# What no writer can hold yet: inter-occasion variability, and (for NONMEM
+# and mrgsolve) more than one endpoint.
+check_writable <- function(m, one_endpoint = TRUE) {
+  if (isTRUE(m$random_effects$iov$present)) {
+    write_error(
+      "inter-occasion variability",
+      "random_effects$iov",
+      formats = character(),
+      call = NULL
+    )
+  }
+  if (one_endpoint && length(m$observations) != 1) {
+    write_error(
+      "more than one endpoint",
+      "observations",
+      formats = "rxode2",
+      call = NULL
+    )
+  }
+}

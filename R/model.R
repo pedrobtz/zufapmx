@@ -160,8 +160,7 @@ validate_structure <- function(x, targets) {
         unassigned[[1]]
       )
     }
-    peripheral <- if (x$ncmt > 1) paste0("peripheral", seq_len(x$ncmt - 1))
-    return(c(if (isTRUE(x$depot)) "depot", "central", peripheral))
+    return(closed_compartments(x))
   }
 
   if (identical(x$type, "ode")) {

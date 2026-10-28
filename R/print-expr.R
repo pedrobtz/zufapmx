@@ -30,7 +30,7 @@ expr_precedence <- function(x) {
   )
 }
 
-expr_print <- function(x, names, dialect) {
+expr_print <- function(x, spelling, dialect) {
   refuse <- function(what) {
     write_error(what, "expression", formats = dialect$formats, call = NULL)
   }
@@ -39,19 +39,19 @@ expr_print <- function(x, names, dialect) {
   }
   if (is.symbol(x)) {
     name <- as.character(x)
-    if (!name %in% names(names)) {
+    if (!name %in% names(spelling)) {
       refuse(sprintf("the name `%s`", name))
     }
-    return(names[[name]])
+    return(spelling[[name]])
   }
   op <- as.character(x[[1]])
   p <- expr_precedence(x)
   wrap <- function(e, needs) {
-    text <- expr_print(e, names, dialect)
+    text <- expr_print(e, spelling, dialect)
     if (needs) paste0("(", text, ")") else text
   }
   if (op == "(") {
-    return(paste0("(", expr_print(x[[2]], names, dialect), ")"))
+    return(paste0("(", expr_print(x[[2]], spelling, dialect), ")"))
   }
   if (op == "!") {
     return(paste0(dialect$not, wrap(x[[2]], expr_precedence(x[[2]]) < p)))
@@ -63,8 +63,8 @@ expr_print <- function(x, names, dialect) {
     return(sprintf(
       "%s(%s, %s)",
       dialect$power,
-      expr_print(x[[2]], names, dialect),
-      expr_print(x[[3]], names, dialect)
+      expr_print(x[[2]], spelling, dialect),
+      expr_print(x[[3]], spelling, dialect)
     ))
   }
   if (op %in% names(dialect$operators)) {
@@ -83,7 +83,7 @@ expr_print <- function(x, names, dialect) {
     as.list(x)[-1],
     expr_print,
     character(1),
-    names = names,
+    spelling = spelling,
     dialect = dialect
   )
   sprintf("%s(%s)", dialect$functions[[op]], paste(args, collapse = ", "))

@@ -680,9 +680,8 @@ nm_blocks <- function(records, prefix, file) {
         prefix,
         length(unlist(lapply(blocks, `[[`, "names"))) + seq_len(n)
       )
-      m <- matrix(0, n, n, dimnames = list(names, names))
-      m[upper.tri(m, diag = TRUE)] <- values
-      m[lower.tri(m)] <- t(m)[lower.tri(m)]
+      m <- lower_to_full(values)
+      dimnames(m) <- list(names, names)
       blocks[[length(blocks) + 1]] <- list(
         names = names,
         matrix = m,
