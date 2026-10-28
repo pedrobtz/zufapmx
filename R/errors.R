@@ -11,3 +11,68 @@ zupkpmx_abort <- function(message, kind, call = sys.call(-1), ...) {
     list(message = message, call = call, ...)
   ))
 }
+
+# The condition classes of design §8. Each carries the fields a caller needs
+# to act on it; tests match on the class, never the message.
+
+parse_error <- function(
+  file,
+  line,
+  column,
+  seen,
+  expected = character(),
+  message = NULL,
+  call = sys.call(-1)
+) {
+  if (is.null(message)) {
+    message <- sprintf(
+      "found `%s`, expected %s",
+      seen,
+      paste0("`", expected, "`", collapse = " or ")
+    )
+  }
+  zupkpmx_abort(
+    sprintf("%s:%d:%d: %s", file, line, column, message),
+    "parse",
+    call = call,
+    file = file,
+    line = line,
+    column = column,
+    seen = seen,
+    expected = expected
+  )
+}
+
+write_error <- function(construct, location, formats, call = sys.call(-1)) {
+  zupkpmx_abort(
+    sprintf(
+      "Cannot write %s (at `%s`). %s",
+      construct,
+      location,
+      if (length(formats) == 0) {
+        "No supported format can hold it."
+      } else {
+        sprintf("Formats that can: %s.", paste(formats, collapse = ", "))
+      }
+    ),
+    "write",
+    call = call,
+    construct = construct,
+    location = location,
+    formats = formats
+  )
+}
+
+engine_error <- function(engine, parent = NULL, call = sys.call(-1)) {
+  zupkpmx_abort(
+    if (is.null(parent)) {
+      sprintf("The %s engine is not installed.", engine)
+    } else {
+      sprintf("The %s engine failed: %s", engine, conditionMessage(parent))
+    },
+    "engine",
+    call = call,
+    engine = engine,
+    parent = parent
+  )
+}
