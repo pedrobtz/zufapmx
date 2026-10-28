@@ -117,34 +117,7 @@ nm_read <- function(file) {
   names <- vapply(records, `[[`, character(1), "name")
   losses <- if (stream$comments) "comments" else character()
 
-  for (r in records) {
-    if (r$name %in% c("PRED", "INFN", "MIX", "PRIOR")) {
-      parse_error(
-        file,
-        r$line[[1]],
-        1L,
-        seen = paste0("$", r$name),
-        message = sprintf(
-          "not translated: $%s at line %d",
-          r$name,
-          r$line[[1]]
-        ),
-        call = NULL
-      )
-    }
-  }
-  losses <- union(
-    losses,
-    unique(unname(nm_lost_records[intersect(names, names(nm_lost_records))]))
-  )
-  for (r in records) {
-    if (length(r$options) == 1 && r$name %in% c("PK", "DES", "ERROR")) {
-      losses <- union(
-        losses,
-        sprintf("record options ($%s %s)", r$name, r$options)
-      )
-    }
-  }
+  losses <- c(losses, nm_record_losses(records, file))
   record <- function(name) records[names == name]
   one <- function(name) {
     found <- record(name)
@@ -229,39 +202,13 @@ nm_read <- function(file) {
     )
   }
 
-  scaled <- names(pk$scale)
-  if (
-    length(scaled) > 1 ||
-      (length(scaled) == 1 && as.integer(scaled) != defobs && !is.null(closed))
-  ) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = paste0("S", scaled[[length(scaled)]]),
-      expected = sprintf("one scale, S%d", defobs),
-      call = NULL
-    )
-  }
-  if (length(scaled) == 1) {
-    defobs <- as.integer(scaled)
-    if (defobs < 1 || defobs > length(compartments)) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = paste0("S", scaled),
-        expected = "a scale of a compartment",
-        call = NULL
-      )
-    }
-  }
-  observed <- as.symbol(compartments[[defobs]])
-  prediction <- if (length(scaled) == 1) {
-    call("/", observed, pk$scale[[1]])
-  } else {
-    observed
-  }
+  prediction <- nm_prediction(
+    pk$scale,
+    compartments,
+    defobs,
+    !is.null(closed),
+    file
+  )
 
   error <- read_observation(
     nm_code(one("ERROR"), file, cmt),
@@ -724,5 +671,80 @@ nm_derivative <- function(compartments, file) {
       )
     }
     compartments[[n]]
+  }
+}
+
+# Refuse the records the reader does not translate, and name what the
+# others lose: the title, data records, settings, tables, record options.
+nm_record_losses <- function(records, file) {
+  names <- vapply(records, `[[`, character(1), "name")
+  losses <- character()
+  for (r in records) {
+    if (r$name %in% c("PRED", "INFN", "MIX", "PRIOR")) {
+      parse_error(
+        file,
+        r$line[[1]],
+        1L,
+        seen = paste0("$", r$name),
+        message = sprintf(
+          "not translated: $%s at line %d",
+          r$name,
+          r$line[[1]]
+        ),
+        call = NULL
+      )
+    }
+  }
+  losses <- union(
+    losses,
+    unique(unname(nm_lost_records[intersect(names, names(nm_lost_records))]))
+  )
+  for (r in records) {
+    if (length(r$options) == 1 && r$name %in% c("PK", "DES", "ERROR")) {
+      losses <- union(
+        losses,
+        sprintf("record options ($%s %s)", r$name, r$options)
+      )
+    }
+  }
+  losses
+}
+
+# The prediction F: the observed compartment over its scale. A closed form
+# scales its central compartment; an ODE model the one its S<n> names, or
+# its DEFOBS compartment unscaled.
+nm_prediction <- function(scale, compartments, defobs, closed, file) {
+  scaled <- names(scale)
+  if (
+    length(scaled) > 1 ||
+      (length(scaled) == 1 && as.integer(scaled) != defobs && closed)
+  ) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = paste0("S", scaled[[length(scaled)]]),
+      expected = sprintf("one scale, S%d", defobs),
+      call = NULL
+    )
+  }
+  if (length(scaled) == 1) {
+    defobs <- as.integer(scaled)
+    if (defobs < 1 || defobs > length(compartments)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = paste0("S", scaled),
+        expected = "a scale of a compartment",
+        call = NULL
+      )
+    }
+  }
+  observed <- as.symbol(compartments[[defobs]])
+  if (length(scaled) == 1) {
+    call("/", observed, scale[[1]])
+  } else {
+    observed
   }
 }

@@ -379,45 +379,15 @@ rxode2_read_model <- function(stmts, reader) {
   names(predictions) <- targets[is_prediction]
   rest <- assigns[!is_prediction]
 
+  parts <- rxode2_read_structure(rest, lincmt, derivatives, reader)
+  individual <- parts$individual
+  structure <- parts$structure
+  compartments <- model_compartments(structure)
   if (!is.null(lincmt)) {
-    for (x in rest) {
-      if ("t" %in% all.vars(x)) {
-        reader$refuse(x, "statements of a linCmt() model that do not read time")
-      }
-    }
-    individual <- rest
-    structure <- rxode2_read_lincmt(stmt_targets(individual), reader)
-    compartments <- closed_compartments(structure)
     predictions[[lincmt]] <- call(
       "/",
       quote(central),
       as.symbol(structure$parameters[["v"]])
-    )
-  } else {
-    # A statement belongs to the structure when it reads a compartment
-    # amount, or a name another structure statement assigns.
-    compartments <- names(derivatives)
-    # Time is continuous in rxode2: statements reading it are part of the
-    # ODE structure, not individual parameters (D15).
-    state <- c(compartments, "t")
-    in_structure <- logical(length(rest))
-    for (i in seq_along(rest)) {
-      reads <- if (is_call(rest[[i]], "<-")) {
-        all.vars(rest[[i]][[3]])
-      } else {
-        all.vars(rest[[i]])
-      }
-      if (any(reads %in% state)) {
-        in_structure[[i]] <- TRUE
-        state <- c(state, stmt_targets(rest[i]))
-      }
-    }
-    individual <- rest[!in_structure]
-    structure <- list(
-      type = "ode",
-      compartments = compartments,
-      statements = rest[in_structure],
-      derivatives = derivatives
     )
   }
 
@@ -534,4 +504,47 @@ rxode2_read_lincmt <- function(targets, reader) {
     advan = closed_advan(ncmt, depot),
     trans = if (ncmt == 1) 2L else 4L
   )
+}
+
+# Split model() statements between individual parameters and the
+# structure: a linCmt() closed form, or ODEs whose statements are those that
+# read a compartment amount, time, or a name another such statement assigns.
+rxode2_read_structure <- function(rest, lincmt, derivatives, reader) {
+  if (!is.null(lincmt)) {
+    for (x in rest) {
+      if ("t" %in% all.vars(x)) {
+        reader$refuse(x, "statements of a linCmt() model that do not read time")
+      }
+    }
+    individual <- rest
+    structure <- rxode2_read_lincmt(stmt_targets(individual), reader)
+  } else {
+    # A statement belongs to the structure when it reads a compartment
+    # amount, or a name another structure statement assigns.
+    compartments <- names(derivatives)
+    # Time is continuous in rxode2: statements reading it are part of the
+    # ODE structure, not individual parameters (D15).
+    state <- c(compartments, "t")
+    in_structure <- logical(length(rest))
+    for (i in seq_along(rest)) {
+      reads <- if (is_call(rest[[i]], "<-")) {
+        all.vars(rest[[i]][[3]])
+      } else {
+        all.vars(rest[[i]])
+      }
+      if (any(reads %in% state)) {
+        in_structure[[i]] <- TRUE
+        state <- c(state, stmt_targets(rest[i]))
+      }
+    }
+    individual <- rest[!in_structure]
+    structure <- list(
+      type = "ode",
+      compartments = compartments,
+      statements = rest[in_structure],
+      derivatives = derivatives
+    )
+  }
+
+  list(individual = individual, structure = structure)
 }

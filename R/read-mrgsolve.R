@@ -154,83 +154,22 @@ mrg_read <- function(file) {
 
   params <- mrg_params(block("PARAM"), file)
   thetas <- mrg_thetas(block("THETA"), file)
-  # Random effects in file order: $OMEGA and $SIGMA blocks, and the
-  # matrices a $NMXML or $NMEXT imports where it stands. ETA(n) and EPS(n)
-  # count positions, so the names are given once all are in.
-  omega <- list()
-  sigma <- list()
-  nm <- NULL
-  for (b in block("OMEGA", "SIGMA", "NMXML", "NMEXT")) {
-    if (b$name == "OMEGA") {
-      omega <- c(omega, mrg_matrix_blocks(list(b), "ETA", file))
-    } else if (b$name == "SIGMA") {
-      sigma <- c(sigma, mrg_matrix_blocks(list(b), "EPS", file))
-    } else {
-      if (!is.null(nm) || nrow(thetas) > 0) {
-        parse_error(
-          file,
-          b$line[[1]],
-          1L,
-          seen = paste0("$", b$name),
-          expected = "one source of THETA1, ...: $THETA or one $NMXML/$NMEXT",
-          call = NULL
-        )
-      }
-      nm <- mrg_nonmem(b, file)
-      omega <- c(omega, nm$omega)
-      sigma <- c(sigma, nm$sigma)
-    }
-  }
-  omega <- renumber_blocks(omega, "ETA")
-  sigma <- renumber_blocks(sigma, "EPS")
-  if (!is.null(nm)) {
-    thetas <- nm$thetas
-  }
+  random <- mrg_random_effects(
+    block("OMEGA", "SIGMA", "NMXML", "NMEXT"),
+    thetas,
+    file
+  )
+  omega <- random$omega
+  sigma <- random$sigma
+  thetas <- random$thetas
+  estimates <- random$estimates
   parameters <- rbind(params$parameters, thetas)
   losses <- c(losses, params$losses)
 
-  pkmodel <- block("PKMODEL")
-  cmt_names <- unlist(lapply(block("CMT"), mrg_cmt_names))
-  closed <- NULL
-  if (length(pkmodel) > 0) {
-    closed <- mrg_pkmodel(pkmodel[[1]], file)
-    if (length(closed$cmt) == 0) {
-      closed$cmt <- cmt_names
-    }
-    canonical <- closed_compartments(closed$structure)
-    if (length(closed$cmt) != length(canonical)) {
-      parse_error(
-        file,
-        pkmodel[[1]]$line[[1]],
-        1L,
-        seen = if (length(closed$cmt) == 0) {
-          "no compartment names"
-        } else {
-          paste(closed$cmt, collapse = " ")
-        },
-        expected = sprintf(
-          "%d compartment names, in `cmt =` or $CMT",
-          length(canonical)
-        ),
-        call = NULL
-      )
-    }
-    rename <- stats::setNames(canonical, closed$cmt)
-    compartments <- canonical
-  } else {
-    if (length(cmt_names) == 0) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = "end of file",
-        expected = "$CMT or $PKMODEL",
-        call = NULL
-      )
-    }
-    rename <- character()
-    compartments <- cmt_names
-  }
+  layout <- mrg_compartments(block("PKMODEL"), block("CMT"), file)
+  closed <- layout$closed
+  rename <- layout$rename
+  compartments <- layout$compartments
   code <- function(...) {
     stmts <- unlist(
       lapply(block(...), cpp_parse, file = file),
@@ -303,7 +242,7 @@ mrg_read <- function(file) {
     provenance = list(
       format = "mrgsolve",
       file = normalizePath(file),
-      estimates = if (is.null(nm)) NA_character_ else nm$path,
+      estimates = estimates,
       hash = unname(tools::md5sum(file)),
       fidelity = if (length(losses) == 0) "exact" else "lossy",
       losses = unique(losses)
@@ -783,4 +722,87 @@ mrg_derivative <- function(compartments, file) {
     }
     cmt
   }
+}
+
+# Random effects in file order: $OMEGA and $SIGMA blocks, and the matrices
+# a $NMXML or $NMEXT imports where it stands; its thetas replace $THETA's.
+# ETA(n) and EPS(n) count positions, so names are given once all are in.
+mrg_random_effects <- function(blocks, thetas, file) {
+  omega <- list()
+  sigma <- list()
+  nm <- NULL
+  for (b in blocks) {
+    if (b$name == "OMEGA") {
+      omega <- c(omega, mrg_matrix_blocks(list(b), "ETA", file))
+    } else if (b$name == "SIGMA") {
+      sigma <- c(sigma, mrg_matrix_blocks(list(b), "EPS", file))
+    } else {
+      if (!is.null(nm) || nrow(thetas) > 0) {
+        parse_error(
+          file,
+          b$line[[1]],
+          1L,
+          seen = paste0("$", b$name),
+          expected = "one source of THETA1, ...: $THETA or one $NMXML/$NMEXT",
+          call = NULL
+        )
+      }
+      nm <- mrg_nonmem(b, file)
+      omega <- c(omega, nm$omega)
+      sigma <- c(sigma, nm$sigma)
+    }
+  }
+  list(
+    omega = renumber_blocks(omega, "ETA"),
+    sigma = renumber_blocks(sigma, "EPS"),
+    thetas = if (is.null(nm)) thetas else nm$thetas,
+    estimates = if (is.null(nm)) NA_character_ else nm$path
+  )
+}
+
+# The compartments: a $PKMODEL's canonical ones, with `rename` from the
+# file's names (DEPOT CENT) to them, or an ODE model's $CMT.
+mrg_compartments <- function(pkmodel, cmt, file) {
+  cmt_names <- unlist(lapply(cmt, mrg_cmt_names))
+  closed <- NULL
+  if (length(pkmodel) > 0) {
+    closed <- mrg_pkmodel(pkmodel[[1]], file)
+    if (length(closed$cmt) == 0) {
+      closed$cmt <- cmt_names
+    }
+    canonical <- closed_compartments(closed$structure)
+    if (length(closed$cmt) != length(canonical)) {
+      parse_error(
+        file,
+        pkmodel[[1]]$line[[1]],
+        1L,
+        seen = if (length(closed$cmt) == 0) {
+          "no compartment names"
+        } else {
+          paste(closed$cmt, collapse = " ")
+        },
+        expected = sprintf(
+          "%d compartment names, in `cmt =` or $CMT",
+          length(canonical)
+        ),
+        call = NULL
+      )
+    }
+    rename <- stats::setNames(canonical, closed$cmt)
+    compartments <- canonical
+  } else {
+    if (length(cmt_names) == 0) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = "end of file",
+        expected = "$CMT or $PKMODEL",
+        call = NULL
+      )
+    }
+    rename <- character()
+    compartments <- cmt_names
+  }
+  list(closed = closed, rename = rename, compartments = compartments)
 }
