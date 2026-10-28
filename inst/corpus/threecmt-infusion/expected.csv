@@ -1,0 +1,9 @@
+regimen,time,endpoint,pred
+infusion,0.5,cp,4.272427394
+infusion,1,cp,7.377629899
+infusion,2,cp,3.956598203
+infusion,4,cp,1.328104483
+infusion,6,cp,0.6228037169
+infusion,8,cp,0.4107013665
+infusion,12,cp,0.2815620208
+infusion,24,cp,0.1387663178

@@ -1,0 +1,9 @@
+regimen,time,endpoint,pred
+bolus,0.5,cp,4.306345552
+bolus,1,cp,3.714178033
+bolus,2,cp,2.776762346
+bolus,4,cp,1.593121076
+bolus,6,cp,0.9596649406
+bolus,8,cp,0.6175848364
+bolus,12,cp,0.3245278083
+bolus,24,cp,0.1547953129

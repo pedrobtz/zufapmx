@@ -1,0 +1,31 @@
+test_that("each entry's rxode2 model reproduces its expected.csv", {
+  skip_on_cran()
+  skip_if_not_installed("rxode2")
+  corpus <- zupkpmx_corpus()
+
+  for (i in seq_len(nrow(corpus))) {
+    expected <- corpus_expected(corpus$path[[i]])
+    got <- corpus_solve_rxode2(corpus$path[[i]], corpus$regimen[[i]])
+
+    expect_equal(got$time, expected$time, label = corpus$id[[i]])
+    expect_equal(
+      got$pred,
+      expected$pred,
+      tolerance = 1e-6,
+      label = corpus$id[[i]]
+    )
+  }
+})
+
+test_that("expected.csv has one row per design time and the right columns", {
+  corpus <- zupkpmx_corpus()
+
+  for (i in seq_len(nrow(corpus))) {
+    expected <- corpus_expected(corpus$path[[i]])
+    design <- corpus_design(corpus$regimen[[i]])
+
+    expect_named(expected, c("regimen", "time", "endpoint", "pred"))
+    expect_equal(expected$time, design$time[design$evid == 0])
+    expect_true(all(expected$pred > 0), label = corpus$id[[i]])
+  }
+})

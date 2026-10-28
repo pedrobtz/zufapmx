@@ -92,3 +92,24 @@ corpus_read_entry <- function(dir) {
     path = normalizePath(dir)
   )
 }
+
+# The Stage 1 standard design: one 100-unit dose at time 0 by the entry's
+# regimen, and typical-subject predictions at fixed times. pmx_design()
+# grows from this.
+corpus_design <- function(regimen) {
+  regimens <- c("bolus", "oral", "infusion")
+  if (!regimen %in% regimens) {
+    zupkpmx_abort(sprintf("Unknown regimen `%s`.", regimen), "corpus")
+  }
+  times <- c(0.5, 1, 2, 4, 6, 8, 12, 24)
+  data.frame(
+    time = c(0, times),
+    evid = c(1L, rep(0L, length(times))),
+    amt = c(100, rep(0, length(times))),
+    dur = c(if (regimen == "infusion") 1 else 0, rep(0, length(times))),
+    cmt = c(
+      if (regimen == "oral") "depot" else "central",
+      rep(NA, length(times))
+    )
+  )
+}
