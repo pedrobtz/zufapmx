@@ -19,7 +19,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupkpmx/issues/2) | [#16](https://github.com/pedrobtz/zupkpmx/pull/16) | 2026-10-28 |
 | 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zupkpmx/issues/3) | [#18](https://github.com/pedrobtz/zupkpmx/pull/18) | 2026-10-28 |
 | 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | [#19](https://github.com/pedrobtz/zupkpmx/pull/19) | 2026-10-28 |
-| 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | | |
+| 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | | 2026-10-28 |
 | 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zupkpmx/issues/6) | | |
 | 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zupkpmx/issues/7) | | |
 | 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zupkpmx/issues/8) | | |
@@ -184,6 +184,21 @@ and write back out, with a fidelity and a list of losses.
 - `R CMD check` passes on the quick profile.
 
 **Design.** §4.2, §4.3, §6, D9.
+
+**Deviations (2026-10-28).**
+
+- The corpus has no `nlmixr2lib` models (Stage 1), so the first exit
+  criterion is checked on the installed library instead: every
+  `nlmixr2lib` model either reads and round-trips `exact`, or is refused
+  with `zupkpmx_parse_error`. With nlmixr2lib 0.3.2, 44 of 59 read, all
+  `exact`, including every `PK_*` model; 15 are refused for `logit()`,
+  `sin()`/`cos()` of time, a two-value omega and a `log(c(...))` bound.
+- §6's "a model without estimates writes initial values and sets a loss"
+  is read per writer: rxode2's `ini()` holds one value, so writing a model
+  without estimates loses nothing, and writing one with estimates loses
+  the initial values. The loss applies as written to the NONMEM writer.
+- Reading also records top-level metadata (`reference`, `units`), labels
+  and constant `ini()` expressions such as `log(90)` as losses.
 
 ## Stage 4 — NONMEM reader
 

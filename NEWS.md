@@ -1,5 +1,9 @@
 # zupkpmx 0.0.0.9000
 
+* `pmx_read_rxode2()` reads an rxode2 or nlmixr2 model function and
+  `pmx_write_rxode2()` writes one. `pmx_fidelity()` and `pmx_losses()` say
+  how faithful a written model is.
+
 * `pmx_parameters()`, `pmx_omega()` and `pmx_ode()` inspect a model, and
   `print()` summarises it.
 
