@@ -153,7 +153,9 @@ rxode2_free_lincmt_names <- function(m) {
     m$parameters$name
   ))
   map <- stats::setNames(
-    make.unique(c(taken, paste0("x_", clash)))[length(taken) + seq_along(clash)],
+    make.unique(c(taken, paste0("x_", clash)))[
+      length(taken) + seq_along(clash)
+    ],
     clash
   )
   rename <- function(x) rename_symbols(x, map)

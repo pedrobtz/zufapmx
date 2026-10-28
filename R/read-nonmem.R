@@ -414,7 +414,9 @@ nm_closed_structure <- function(sub, closed, individual, file) {
   found <- vapply(
     closed$names,
     function(name) {
-      hit <- targets[toupper(targets) == name]
+      # An exact match first: C++ (mrgsolve) is case-sensitive, and `cl`
+      # next to `CL` must not stand in for it.
+      hit <- c(targets[targets == name], targets[toupper(targets) == name])
       if (length(hit) == 0) {
         parse_error(
           file,

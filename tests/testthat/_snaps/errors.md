@@ -1,9 +1,9 @@
-# parse errors carry the file, position and tokens
+# engine errors carry the engine and its own error
 
     Code
       cat(conditionMessage(err))
     Output
-      run1.ctl:12:5: found `ELSEIF`, expected `ELSE` or `ENDIF`
+      The mrgsolve engine failed: compilation failed
 
 # write errors carry the construct, location and formats
 
@@ -12,17 +12,17 @@
     Output
       Cannot write inter-occasion variability (at `random_effects$iov`). No supported format can hold it.
 
+# parse errors carry the file, position and tokens
+
+    Code
+      cat(conditionMessage(err))
+    Output
+      run1.ctl:12:5: found `ELSEIF`, expected `ELSE` or `ENDIF`
+
 # an engine error without a parent says the engine is missing
 
     Code
       cat(conditionMessage(err))
     Output
       The rxode2 engine is not installed.
-
-# engine errors carry the engine and its own error
-
-    Code
-      cat(conditionMessage(err))
-    Output
-      The mrgsolve engine failed: compilation failed
 
