@@ -20,6 +20,7 @@ Depends:
 Suggests: 
     amp.sim,
     mrgsolve,
+    nlmixr2lib,
     nonmem2rx,
     rxode2,
     testthat (>= 3.0.0),

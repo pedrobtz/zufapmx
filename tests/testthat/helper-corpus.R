@@ -100,3 +100,12 @@ corpus_oracle_amp_sim <- function(path, regimen) {
 corpus_max_rel_dev <- function(got, expected) {
   max(abs(got - expected) / abs(expected))
 }
+
+# An entry's rxode2 model function, and the model read from it.
+corpus_rxode2 <- function(id) {
+  eval(parse(system.file("corpus", id, "model-rxode2.R", package = "zupkpmx")))
+}
+
+corpus_rxode2_model <- function(id) {
+  pmx_read_rxode2(corpus_rxode2(id))
+}
