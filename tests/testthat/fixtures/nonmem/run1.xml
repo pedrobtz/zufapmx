@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="ASCII"?>
+<nm:output xmlns:nm="http://namespaces.oup.com/nonmem">
+ <nm:nonmem nm:version="7.5.1">
+  <nm:problem nm:number="1">
+   <nm:estimation nm:number="1" nm:type="0">
+    <nm:theta>
+     <nm:val nm:name="1">1.13</nm:val>
+     <nm:val nm:name="2">4.26</nm:val>
+     <nm:val nm:name="3">21.6</nm:val>
+     <nm:val nm:name="4">2.16</nm:val>
+     <nm:val nm:name="5">41.6</nm:val>
+    </nm:theta>
+    <nm:omega>
+     <nm:row nm:rname="1"><nm:col nm:cname="1">0.083</nm:col></nm:row>
+     <nm:row nm:rname="2"><nm:col nm:cname="1">0</nm:col><nm:col nm:cname="2">0.097</nm:col></nm:row>
+    </nm:omega>
+    <nm:sigma>
+     <nm:row nm:rname="1"><nm:col nm:cname="1">0.037</nm:col></nm:row>
+    </nm:sigma>
+   </nm:estimation>
+  </nm:problem>
+ </nm:nonmem>
+</nm:output>

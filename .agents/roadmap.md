@@ -20,7 +20,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zupkpmx/issues/3) | [#18](https://github.com/pedrobtz/zupkpmx/pull/18) | 2026-10-28 |
 | 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | [#19](https://github.com/pedrobtz/zupkpmx/pull/19) | 2026-10-28 |
 | 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | [#20](https://github.com/pedrobtz/zupkpmx/pull/20) | 2026-10-28 |
-| 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zupkpmx/issues/6) | | |
+| 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zupkpmx/issues/6) | [#21](https://github.com/pedrobtz/zupkpmx/pull/21) | 2026-10-28 |
 | 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zupkpmx/issues/7) | | |
 | 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zupkpmx/issues/8) | | |
 | 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zupkpmx/issues/9) | | |
@@ -228,7 +228,8 @@ estimates attached from the best available source.
 - Each estimate source, and the fallback without `zuxml`, has a test.
 - `R CMD check` passes on the quick profile.
 
-**Design.** §4.2, §6 (estimates), §8, D6, D7, Q3.
+**Design.** §4.2, §6 (estimates), §8, D6, D7, D13 (Q3 resolved: every
+general ODE `ADVAN`, solver recorded as a loss).
 
 ## Stage 5 — NONMEM writer
 
@@ -447,8 +448,6 @@ That makes `daffiz` reaching CRAN a dependency of Stage 7.
 
 - **Q2, blocks Stage 1.** May the corpus carry open-access published models
   whose licence is silent? The design says no.
-- **Q3, blocks Stage 4.** Accept only `ADVAN13`, or every general ODE
-  `ADVAN`? The design accepts all and records the solver as a loss.
 - **Q1, blocks Stage 8.** Compare individual predictions from estimation
   output as well as simulations?
 - **Q4, blocks Stage 11.** Is the external pharmacometrician's review

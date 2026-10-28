@@ -293,3 +293,46 @@ test_that("a construct outside the table in a derivative is a parse error", {
     class = "zupkpmx_parse_error"
   )
 })
+
+test_that("linCmt() reads NONMEM's numbered names", {
+  lincmt <- function(names) {
+    stmts <- lapply(names, function(n) call("<-", as.symbol(n), 1))
+    f <- function() NULL
+    body(f) <- call(
+      "{",
+      call(
+        "ini",
+        quote({
+          sd <- 0.1
+        })
+      ),
+      call(
+        "model",
+        as.call(c(
+          as.symbol("{"),
+          stmts,
+          quote(Y <- linCmt()),
+          quote(Y ~ add(sd))
+        ))
+      )
+    )
+    unclass(pmx_read_rxode2(f))$structure$parameters
+  }
+
+  expect_equal(
+    lincmt(c("CL", "V2", "Q", "V3", "KA")),
+    c(cl = "CL", v = "V2", q = "Q", vp = "V3", ka = "KA")
+  )
+  expect_equal(
+    lincmt(c("CL", "V1", "Q", "V2")),
+    c(cl = "CL", v = "V1", q = "Q", vp = "V2")
+  )
+  expect_equal(
+    lincmt(c("CL", "V1", "Q2", "V2", "Q3", "V3")),
+    c(cl = "CL", v = "V1", q = "Q2", vp = "V2", q2 = "Q3", vp2 = "V3")
+  )
+  expect_equal(
+    lincmt(c("cl", "v", "q", "vp", "q2", "vp2")),
+    c(cl = "cl", v = "v", q = "q", vp = "vp", q2 = "q2", vp2 = "vp2")
+  )
+})

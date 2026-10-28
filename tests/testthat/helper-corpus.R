@@ -109,3 +109,57 @@ corpus_rxode2 <- function(id) {
 corpus_rxode2_model <- function(id) {
   pmx_read_rxode2(corpus_rxode2(id))
 }
+
+# A NONMEM-read model as a simulable rxode2 function: rxode2 has no sigma,
+# so the residual becomes additive on a placeholder parameter. Predictions
+# are unaffected.
+nonmem_as_rxode2 <- function(model) {
+  m <- unclass(model)
+  m$random_effects$sigma <- list()
+  m$parameters <- rbind(
+    m$parameters,
+    data.frame(
+      name = "rsd",
+      role = "other",
+      init = 1,
+      lower = 0,
+      upper = Inf,
+      fixed = FALSE,
+      estimate = NA_real_
+    )
+  )
+  for (e in names(m$observations)) {
+    m$observations[[e]]$residual <- list(type = "additive", parameters = "rsd")
+  }
+  eval(parse(text = pmx_write_rxode2(do.call(new_model, m))$text))
+}
+
+# Write a control stream to a temporary file and read it.
+read_ctl <- function(lines, env = parent.frame()) {
+  path <- withr::local_tempfile(fileext = ".ctl", .local_envir = env)
+  writeLines(lines, path)
+  pmx_read_nonmem(path)
+}
+
+ctl_onecmt <- function(
+  pk = character(),
+  error = c("IPRED = F", "Y = IPRED * (1 + EPS(1))"),
+  extra = character()
+) {
+  c(
+    "$PROBLEM test",
+    "$SUBROUTINES ADVAN2 TRANS2",
+    "$PK",
+    "KA = THETA(1)",
+    "CL = THETA(2) * EXP(ETA(1))",
+    "V = THETA(3) * EXP(ETA(2))",
+    "S2 = V",
+    pk,
+    "$ERROR",
+    error,
+    "$THETA (0, 1) (0, 4) (0, 50)",
+    "$OMEGA 0.09 0.09",
+    "$SIGMA 0.04",
+    extra
+  )
+}
