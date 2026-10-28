@@ -25,6 +25,18 @@ pmx_write_rxode2 <- function(model) {
   m <- rxode2_write_sd_from_sigma(m)
   m <- rxode2_write_free_lincmt(m)
   check_writable(m, one_endpoint = FALSE)
+  # The record's time in individual statements (D15) has no rxode2
+  # spelling: rxode2 evaluates every statement in continuous time.
+  for (x in m$individual) {
+    if ("t" %in% all.vars(x)) {
+      write_error(
+        "an individual parameter that reads the record's time",
+        "individual",
+        formats = c("nonmem", "mrgsolve"),
+        call = NULL
+      )
+    }
+  }
   if (any(!is.na(m$parameters$estimate))) {
     losses <- c(
       losses,

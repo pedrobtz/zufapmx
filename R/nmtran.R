@@ -158,13 +158,18 @@ nm_parser <- function(tokens, line, file, cmt) {
     }
     take(")")
     index <- function() {
-      if (length(args) != 1 || !is.numeric(args[[1]])) {
+      if (
+        length(args) != 1 ||
+          !is.numeric(args[[1]]) ||
+          args[[1]] != round(args[[1]]) ||
+          args[[1]] < 1
+      ) {
         parse_error(
           file,
           line,
           t$column,
           seen = name,
-          expected = sprintf("%s(n)", name),
+          expected = sprintf("%s(n) with a whole number n", name),
           call = NULL
         )
       }
@@ -336,7 +341,8 @@ nm_code <- function(record, file, cmt) {
       call = NULL
     )
   }
-  out
+  # T ($DES) and TIME (data) are the representation's time, t (D15).
+  lapply(out, rename_symbols, map = c(T = "t", TIME = "t"))
 }
 
 nm_assignment <- function(p, file, line) {

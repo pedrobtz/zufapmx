@@ -532,8 +532,25 @@ read_bounds <- function(values) {
 # new_model() for a reader: a model the validator rejects was read from
 # input, so the reader reports it as a parse error of that input.
 read_model <- function(file, ...) {
+  parts <- list(...)
+  individual <- explicit_zero(parts$individual)
+  if (
+    length(individual) > length(parts$individual) &&
+      identical(parts$provenance$format, "nonmem")
+  ) {
+    parts$provenance$losses <- c(
+      parts$provenance$losses,
+      "values kept from earlier records by variables assigned only inside IF (D14)"
+    )
+    parts$provenance$fidelity <- "lossy"
+  }
+  parts$individual <- individual
+  if (identical(parts$structure$type, "ode")) {
+    parts$structure$statements <- explicit_zero(parts$structure$statements)
+  }
+  parts$provenance$covariates <- model_covariates(file, parts)
   tryCatch(
-    new_model(...),
+    do.call(new_model, parts),
     zupkpmx_model_error = function(e) {
       parse_error(
         file,
@@ -545,4 +562,65 @@ read_model <- function(file, ...) {
       )
     }
   )
+}
+
+# A variable an `if` assigns before any statement outside it does starts at
+# 0 in every evaluation (D14). Readers make that explicit with `x <- 0`
+# before the `if`, so every writer prints the same model.
+explicit_zero <- function(stmts) {
+  out <- list()
+  assigned <- character()
+  for (x in stmts) {
+    if (is_call(x, "if")) {
+      for (v in setdiff(stmt_targets(list(x)), assigned)) {
+        out[[length(out) + 1]] <- call("<-", as.symbol(v), 0)
+        assigned <- c(assigned, v)
+      }
+    } else if (is_call(x, "<-")) {
+      assigned <- c(assigned, as.character(x[[2]]))
+    }
+    out[[length(out) + 1]] <- x
+  }
+  out
+}
+
+# Free symbols of a model about to be built: what it reads but does not
+# define. Undeclared THETA, ETA and EPS indices are refused; the rest are
+# covariates, recorded in provenance. `t` is time (D15).
+model_covariates <- function(file, parts) {
+  s <- parts$structure
+  defined <- c(
+    parts$parameters$name,
+    unlist(lapply(
+      c(parts$random_effects$omega, parts$random_effects$sigma),
+      `[[`,
+      "names"
+    )),
+    model_compartments(s),
+    stmt_targets(parts$individual),
+    stmt_targets(s$statements),
+    "t",
+    "F"
+  )
+  exprs <- c(
+    parts$individual,
+    s$statements,
+    s$derivatives,
+    unlist(parts$dosing, recursive = FALSE),
+    lapply(parts$observations, `[[`, "prediction"),
+    lapply(parts$observations, function(o) o$residual$expression)
+  )
+  free <- setdiff(unique(unlist(lapply(exprs, all.vars))), defined)
+  undeclared <- grep("^(THETA|ETA|EPS)[0-9]+$", free, value = TRUE)
+  if (length(undeclared) > 0) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = undeclared[[1]],
+      expected = "THETA, ETA and EPS indices the model declares",
+      call = NULL
+    )
+  }
+  sort(free)
 }

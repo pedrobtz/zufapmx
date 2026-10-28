@@ -308,6 +308,8 @@ rxode2_dosing_attributes <- c(
 )
 
 rxode2_read_model <- function(stmts, reader) {
+  # rxode2's time is t, or time (D15).
+  stmts <- lapply(stmts, rename_symbols, map = c(time = "t"))
   derivatives <- list()
   dosing <- list()
   residuals <- list()
@@ -374,6 +376,11 @@ rxode2_read_model <- function(stmts, reader) {
   rest <- assigns[!is_prediction]
 
   if (!is.null(lincmt)) {
+    for (x in rest) {
+      if ("t" %in% all.vars(x)) {
+        reader$refuse(x, "statements of a linCmt() model that do not read time")
+      }
+    }
     individual <- rest
     structure <- rxode2_read_lincmt(stmt_targets(individual), reader)
     compartments <- closed_compartments(structure)
@@ -386,7 +393,9 @@ rxode2_read_model <- function(stmts, reader) {
     # A statement belongs to the structure when it reads a compartment
     # amount, or a name another structure statement assigns.
     compartments <- names(derivatives)
-    state <- compartments
+    # Time is continuous in rxode2: statements reading it are part of the
+    # ODE structure, not individual parameters (D15).
+    state <- c(compartments, "t")
     in_structure <- logical(length(rest))
     for (i in seq_along(rest)) {
       reads <- if (is_call(rest[[i]], "<-")) {

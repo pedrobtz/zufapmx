@@ -409,6 +409,18 @@ decides it and the maintainer may overturn it.
 - **D13 (M), 2026-10-28.** The NONMEM reader accepts every general ODE
   `ADVAN` (6, 8, 9 and 13) with `$DES`. The representation holds no solver,
   so the read records the solver choice as a loss. Resolves Q3.
+- **D14 (M), 2026-10-28.** A variable an `if` assigns, before any
+  statement outside it does, starts at 0 in every evaluation. Readers make
+  this explicit with `x <- 0` before the `if`, so every writer prints the
+  same statements. NM-TRAN instead keeps the value from the previous
+  record; a NONMEM model that relies on it records a loss when read.
+  Settles the review question in issue #54.
+- **D15 (M), 2026-10-28.** Time is one symbol, `t`. In individual
+  statements it is the time of the record being evaluated (NONMEM `TIME`
+  in `$PK`, mrgsolve `TIME` in `$MAIN`), which rxode2 cannot spell, so the
+  rxode2 writer refuses it. In ODE code and observations it is continuous
+  time (NONMEM `T` in `$DES`, mrgsolve `SOLVERTIME` in `$ODE`, rxode2 `t`);
+  the rxode2 reader puts statements that read time into the ODE structure.
 
 ## 14. Later versions, in the order they are expected
 

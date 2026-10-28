@@ -178,3 +178,76 @@ test_that("C++ integer division and int declarations are refused", {
   expect_equal(unclass(m)$individual[[3]], quote(X <- 3 / 4))
   expect_identical(unclass(m)$individual[[4]][[3]][[2]], 2)
 })
+
+test_that("undeclared or fractional THETA, ETA and EPS indices are refused", {
+  expect_error(
+    read_ctl(ctl_onecmt(pk = "X = THETA(9)")),
+    class = "zupkpmx_parse_error"
+  )
+  expect_error(
+    read_ctl(ctl_onecmt(pk = "X = ETA(5)")),
+    class = "zupkpmx_parse_error"
+  )
+  expect_error(
+    read_ctl(ctl_onecmt(pk = "X = THETA(1.5)")),
+    class = "zupkpmx_parse_error"
+  )
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double X = ETA(4);")),
+    class = "zupkpmx_parse_error"
+  )
+})
+
+test_that("other free symbols are recorded as covariates", {
+  m <- read_ctl(ctl_onecmt(pk = "X = WT / 70"))
+  expect_equal(unclass(m)$provenance$covariates, "WT")
+})
+
+test_that("time is one symbol, spelled for each format and block (D15)", {
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
+  lines <- sub(
+    "VM = THETA(2) * EXP(ETA(1))",
+    "VM = THETA(2) * EXP(ETA(1)) * (1 + 0.01 * TIME)",
+    lines,
+    fixed = TRUE
+  )
+  lines <- sub(
+    "DADT(1) = -KA * A(1)",
+    "DADT(1) = -KA * A(1) * EXP(-0.1 * T)",
+    lines,
+    fixed = TRUE
+  )
+  m <- read_ctl(lines)
+
+  expect_true("t" %in% all.vars(unclass(m)$individual[[2]]))
+  expect_true("t" %in% all.vars(pmx_ode(m)$DEPOT))
+  expect_equal(pmx_fidelity(pmx_write_nonmem(m)), "exact")
+  nm <- pmx_write_nonmem(m)$text
+  expect_true(any(grepl("(1 + 0.01 * TIME)", nm, fixed = TRUE)))
+  expect_true(any(grepl("EXP(-0.1 * T)", nm, fixed = TRUE)))
+  mrg <- pmx_write_mrgsolve(m)$text
+  expect_true(any(grepl("0.01 * TIME", mrg, fixed = TRUE)))
+  expect_true(any(grepl("exp(-0.1 * SOLVERTIME)", mrg, fixed = TRUE)))
+  expect_error(pmx_write_rxode2(m), class = "zupkpmx_write_error")
+})
+
+test_that("rxode2 statements that read time belong to the ODE structure", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tk <- 0.1
+      sd <- 0.1
+    })
+    model({
+      k <- tk * exp(-0.1 * time)
+      d / dt(central) <- -k * central
+      cp <- central
+      cp ~ add(sd)
+    })
+  })
+  expect_equal(
+    unclass(m)$structure$statements,
+    list(quote(k <- tk * exp(-0.1 * t)))
+  )
+  expect_true(any(grepl("SOLVERTIME", pmx_write_mrgsolve(m)$text)))
+  expect_true(any(grepl("$DES", pmx_write_nonmem(m)$text, fixed = TRUE)))
+})

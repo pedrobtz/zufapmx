@@ -45,6 +45,8 @@ pmx_write_mrgsolve <- function(model) {
 
   m <- nm_sigma_from_sd(m)
   spelling <- mrg_names(m)
+  ode_spelling <- spelling
+  ode_spelling[["t"]] <- "SOLVERTIME"
   closed <- identical(m$structure$type, "closed")
   compartments <- model_compartments(m$structure)
 
@@ -75,14 +77,14 @@ pmx_write_mrgsolve <- function(model) {
       c(
         "",
         "$ODE",
-        mrg_stmt_lines(m$structure$statements, spelling),
+        mrg_stmt_lines(m$structure$statements, ode_spelling),
         vapply(
           compartments,
           function(cmt) {
             sprintf(
               "dxdt_%s = %s;",
               spelling[[cmt]],
-              cpp_expr(m$structure$derivatives[[cmt]], spelling)
+              cpp_expr(m$structure$derivatives[[cmt]], ode_spelling)
             )
           },
           character(1),
@@ -154,7 +156,9 @@ mrg_names <- function(m) {
   map <- c(
     nm_index_names(m$random_effects$omega, "ETA"),
     nm_index_names(m$random_effects$sigma, "EPS"),
-    stats::setNames(cmt_names, compartments)
+    stats::setNames(cmt_names, compartments),
+    # Time (D15): the record's TIME in $MAIN and $TABLE; SOLVERTIME in $ODE.
+    t = "TIME"
   )
   vars <- setdiff(
     unique(c(
@@ -282,7 +286,8 @@ mrg_residual <- function(m, spelling) {
 
 # Statements as C++. A variable is declared `double` where it is first
 # assigned at the top level; one assigned only inside `if` is declared
-# first with the value 0, the value NM-TRAN gives it.
+# first with the value 0 (D14). Readers already make that 0 explicit, so
+# this only matters for models built by other means.
 mrg_stmt_lines <- function(
   stmts,
   spelling,

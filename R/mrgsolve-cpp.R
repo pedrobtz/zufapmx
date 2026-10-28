@@ -83,13 +83,18 @@ cpp_parse <- function(block, file) {
     take(")")
     name <- t$value
     if (name %in% c("ETA", "EPS", "THETA")) {
-      if (length(args) != 1 || !is.numeric(args[[1]])) {
+      if (
+        length(args) != 1 ||
+          !is.numeric(args[[1]]) ||
+          args[[1]] != round(args[[1]]) ||
+          args[[1]] < 1
+      ) {
         parse_error(
           file,
           t$line,
           t$column,
           seen = name,
-          expected = sprintf("%s(n)", name),
+          expected = sprintf("%s(n) with a whole number n", name),
           call = NULL
         )
       }

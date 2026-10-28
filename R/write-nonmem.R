@@ -62,14 +62,14 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
     if (identical(m$structure$type, "ode")) {
       c(
         "$DES",
-        nm_stmt_lines(m$structure$statements, spelling),
+        nm_stmt_lines(m$structure$statements, nm_des_spelling(spelling)),
         vapply(
           seq_along(m$structure$compartments),
           function(i) {
             sprintf(
               "DADT(%d) = %s",
               i,
-              nm_expr(m$structure$derivatives[[i]], spelling)
+              nm_expr(m$structure$derivatives[[i]], nm_des_spelling(spelling))
             )
           },
           character(1)
@@ -176,7 +176,10 @@ nm_names <- function(m) {
   compartments <- model_compartments(m$structure)
   map <- c(
     map,
-    stats::setNames(sprintf("A(%d)", seq_along(compartments)), compartments)
+    stats::setNames(sprintf("A(%d)", seq_along(compartments)), compartments),
+    # Time (D15): the record's TIME in $PK and $ERROR; nm_des_spelling()
+    # makes it T in $DES.
+    t = "TIME"
   )
 
   vars <- setdiff(
@@ -266,6 +269,12 @@ nm_reserved <- function(names) {
   names %in%
     nm_reserved_names |
     grepl("^(S|F|R|D|ALAG|MTIME|THETA|ETA|EPS|ERR)[0-9]+$|^A_0$", names)
+}
+
+# In $DES, continuous time is T.
+nm_des_spelling <- function(spelling) {
+  spelling[["t"]] <- "T"
+  spelling
 }
 
 nm_index_names <- function(blocks, prefix) {

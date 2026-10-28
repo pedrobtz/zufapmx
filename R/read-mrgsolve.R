@@ -195,7 +195,8 @@ mrg_read <- function(file) {
       lapply(block(...), cpp_parse, file = file),
       recursive = FALSE
     )
-    lapply(stmts, rename_symbols, map = rename)
+    # TIME and SOLVERTIME are the representation's time, t (D15).
+    lapply(stmts, rename_symbols, map = c(rename, TIME = "t", SOLVERTIME = "t"))
   }
 
   main <- mrg_main(code("MAIN", "PK"), compartments, rename, file)

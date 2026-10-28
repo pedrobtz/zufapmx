@@ -125,7 +125,9 @@ test_that("dosing attributes and IF blocks in $PK read", {
     unclass(m)$dosing$depot,
     list(lag = quote(THETA1 / 10), bioavailability = 0.8)
   )
-  expect_true(is_call(unclass(m)$individual[[4]], "if"))
+  expect_equal(unclass(m)$individual[[4]], quote(WTF <- 0))
+  expect_true(is_call(unclass(m)$individual[[5]], "if"))
+  expect_true(any(grepl("D14", unclass(m)$provenance$losses)))
 })
 
 test_that("unsupported control streams are refused with a position", {
