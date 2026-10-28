@@ -17,7 +17,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupkpmx/issues/2) | [#16](https://github.com/pedrobtz/zupkpmx/pull/16) | 2026-10-28 |
-| 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zupkpmx/issues/3) | | |
+| 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zupkpmx/issues/3) | | 2026-10-28 |
 | 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | | |
 | 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | | |
 | 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zupkpmx/issues/6) | | |
@@ -73,7 +73,7 @@ Quick profile, longest check first: pkgdown 2m45s, R CMD check clang23
 [v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
 
 **CI.** `full — first Suggests guards (rxode2, mrgsolve, nonmem2rx,
-nonmem2mrgsolve); nosuggests must pass before later stages copy the skip
+amp.sim); nosuggests must pass before later stages copy the skip
 pattern.`
 
 **Goal.** The corpus layout exists with its first models, the oracles run
@@ -105,7 +105,23 @@ on it, and where they agree and disagree is recorded.
 - The quick profile, with `Suggests` installed, still finishes in under
   five minutes, or this roadmap records what was tuned.
 
-**Design.** §7, §9, Q2, D11.
+**Design.** §7, §9, Q2, D11, D12.
+
+**Deviations (2026-10-28).**
+
+- `nonmem2mrgsolve` is not on CRAN, so `amp.sim` replaces it in
+  `Suggests` (design D12, the maintainer's decision). `nonmem2mrgsolve` is
+  a development-only cross-check in `tools/oracle-agreement.R`.
+- The corpus entries are written for this package from the PREDPP model
+  structures, not copied from `nlmixr2lib` or `modlib()`. Both are GPL,
+  and this package is MIT; shipping their files in `inst/` would change
+  its licence. Tests that need them load them from the installed
+  packages. Q2's answer (no corpus model without an explicit,
+  compatible licence) is applied as written.
+- `nlmixr2` is not in `Suggests` yet. Nothing in this stage uses it; the
+  rxode2 reader stage adds it if its tests need it.
+- `daffiz` is not on CRAN as of 2026-10-28 and has no `CRAN-submission`
+  issue. Stage 7 waits on it (D11).
 
 ## Stage 2 — Representation and expressions
 
