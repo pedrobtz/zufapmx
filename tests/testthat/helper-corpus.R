@@ -97,7 +97,13 @@ corpus_oracle_amp_sim <- function(path, regimen) {
   corpus_solve_mrgsolve(paste0(out, ".cpp"), regimen)
 }
 
+# The largest relative deviation of `got` from `expected`. A missing output
+# (NULL), a wrong length or a non-finite value is Inf, never a pass:
+# max(numeric(0)) is -Inf, and recycling hides a short result.
 corpus_max_rel_dev <- function(got, expected) {
+  if (length(got) != length(expected) || !all(is.finite(got))) {
+    return(Inf)
+  }
   max(abs(got - expected) / abs(expected))
 }
 
