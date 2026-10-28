@@ -188,3 +188,8 @@ corpus_models <- function(path, id) {
     rxode2 = corpus_rxode2_model(id)
   )
 }
+
+# A file of a corpus entry, by id rather than by position.
+corpus_file <- function(id, file) {
+  system.file("corpus", id, file, package = "zupkpmx", mustWork = TRUE)
+}

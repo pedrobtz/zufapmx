@@ -10,6 +10,7 @@ test_that("zupkpmx_corpus() lists every shipped entry", {
     corpus$id,
     c(
       "onecmt-oral",
+      "onecmt-oral-lag",
       "onecmt-oral-mm",
       "threecmt-infusion",
       "twocmt-bolus",

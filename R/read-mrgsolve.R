@@ -24,8 +24,8 @@
 #' @return A `zupkpmx_model`.
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
-#' pmx_read_mrgsolve(file.path(corpus$path[[4]], "model.cpp"))
+#' path <- system.file("corpus", "twocmt-bolus", "model.cpp", package = "zupkpmx")
+#' pmx_read_mrgsolve(path)
 pmx_read_mrgsolve <- function(file) {
   if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
     zupkpmx_abort("`file` must be the path of an existing file.", "model")
@@ -198,7 +198,7 @@ mrg_read <- function(file) {
     lapply(stmts, rename_symbols, map = rename)
   }
 
-  main <- mrg_main(code("MAIN", "PK"), compartments, file)
+  main <- mrg_main(code("MAIN", "PK"), compartments, rename, file)
   init <- mrg_init(block("INIT"), file)
   for (cmt in names(init)) {
     target <- rename[cmt] %|NA|% cmt
@@ -215,9 +215,23 @@ mrg_read <- function(file) {
       file
     )
   } else {
-    structure <- mrg_ode(code("ODE", "DES"), compartments, file)
+    structure <- split_ode(
+      code("ODE", "DES"),
+      compartments,
+      mrg_derivative(compartments, file),
+      file,
+      "$ODE"
+    )
   }
-  table <- mrg_table(code("TABLE", "ERROR"), block("CAPTURE"), file)
+  captured <- unlist(lapply(block("CAPTURE"), function(b) {
+    strsplit(trimws(paste(b$lines, collapse = " ")), "[[:space:],]+")[[1]]
+  }))
+  table <- read_observation(
+    code("TABLE", "ERROR"),
+    file,
+    "$TABLE",
+    outputs = captured
+  )
   losses <- c(losses, table$losses)
 
   parameters$role <- infer_roles(parameters$name, main$individual, structure)
@@ -560,148 +574,6 @@ mrg_pkmodel <- function(b, file) {
   )
 }
 
-# $MAIN: individual statements and the dosing macros.
-mrg_main <- function(stmts, compartments, file) {
-  dosing <- list()
-  individual <- list()
-  macros <- c(F = "bioavailability", ALAG = "lag", R = "rate", D = "duration")
-  for (x in stmts) {
-    target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
-    m <- regmatches(target, regexec("^(F|ALAG|R|D)_(.+)$", target))[[1]]
-    init <- regmatches(target, regexec("^(.+)_0$", target))[[1]]
-    if (length(m) == 3 && m[[3]] %in% compartments) {
-      dosing[[m[[3]]]] <- c(
-        dosing[[m[[3]]]],
-        stats::setNames(list(x[[3]]), macros[[m[[2]]]])
-      )
-    } else if (length(init) == 2 && init[[2]] %in% compartments) {
-      dosing[[init[[2]]]] <- c(dosing[[init[[2]]]], list(initial = x[[3]]))
-    } else {
-      individual[[length(individual) + 1]] <- x
-    }
-  }
-  list(individual = individual, dosing = dosing)
-}
-
-mrg_ode <- function(stmts, compartments, file) {
-  derivatives <- list()
-  statements <- list()
-  for (x in stmts) {
-    target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
-    if (startsWith(target, "dxdt_")) {
-      cmt <- sub("^dxdt_", "", target)
-      if (!cmt %in% compartments) {
-        parse_error(
-          file,
-          NA_integer_,
-          NA_integer_,
-          seen = target,
-          expected = "dxdt_ of a compartment",
-          call = NULL
-        )
-      }
-      derivatives[[cmt]] <- x[[3]]
-    } else {
-      statements[[length(statements) + 1]] <- x
-    }
-  }
-  missing <- setdiff(compartments, names(derivatives))
-  if (length(missing) > 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$ODE",
-      expected = sprintf("dxdt_%s", missing[[1]]),
-      call = NULL
-    )
-  }
-  list(
-    type = "ode",
-    compartments = compartments,
-    statements = statements,
-    derivatives = derivatives[compartments]
-  )
-}
-
-# $TABLE: Y over a prediction. The prediction is the variable Y reads that
-# $TABLE defines without an epsilon.
-mrg_table <- function(stmts, capture, file) {
-  defs <- list()
-  for (x in stmts) {
-    if (!is_call(x, "<-")) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = expr_text(x),
-        expected = "assignments in $TABLE",
-        call = NULL
-      )
-    }
-    defs[[as.character(x[[2]])]] <- x[[3]]
-  }
-  if (is.null(defs$Y)) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$TABLE",
-      expected = "Y = ... with EPS(n)",
-      call = NULL
-    )
-  }
-  has_eps <- function(e) any(grepl("^EPS[0-9]+$", all.vars(e)))
-  pred <- Filter(
-    function(v) v %in% names(defs) && !has_eps(defs[[v]]),
-    all.vars(defs$Y)
-  )
-  if (length(pred) == 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = expr_text(defs$Y),
-      expected = "Y over a prediction defined in $TABLE",
-      call = NULL
-    )
-  }
-  pred <- pred[[1]]
-  used <- c("Y", pred)
-  subst <- function(e) {
-    if (is.symbol(e)) {
-      name <- as.character(e)
-      if (name == pred) {
-        return(quote(F))
-      }
-      if (name %in% names(defs)) {
-        used <<- union(used, name)
-        return(call("(", subst(defs[[name]])))
-      }
-      return(e)
-    }
-    if (is.call(e)) {
-      e[-1] <- lapply(as.list(e)[-1], subst)
-    }
-    e
-  }
-  expr <- subst(defs$Y)
-  captured <- unlist(lapply(capture, function(b) {
-    strsplit(trimws(paste(b$lines, collapse = " ")), "[[:space:],]+")[[1]]
-  }))
-  outputs <- setdiff(c(names(defs), captured), used)
-  list(
-    prediction = defs[[pred]],
-    residual = nm_residual(strip_parens(expr), expr),
-    losses = if (length(outputs) > 0) {
-      sprintf(
-        "$TABLE outputs not used by Y: %s",
-        paste(unique(outputs), collapse = ", ")
-      )
-    }
-  )
-}
-
 # $NMXML or $NMEXT: thetas, omega and sigma from a NONMEM run, as
 # parameters (THETA1, ...) and blocks whose values are the estimates.
 mrg_nonmem <- function(blocks, file) {
@@ -778,4 +650,61 @@ mrg_nonmem <- function(blocks, file) {
     omega = split(est$omega, "ETA"),
     sigma = split(est$sigma, "EPS")
   )
+}
+
+# $MAIN: individual statements and the dosing macros. Macros name
+# compartments as the file does (`F_GUT`); `rename` maps those names to the
+# representation's (a closed form's `depot`).
+mrg_main <- function(stmts, compartments, rename, file) {
+  dosing <- list()
+  individual <- list()
+  macros <- c(F = "bioavailability", ALAG = "lag", R = "rate", D = "duration")
+  file_names <- c(names(rename), setdiff(compartments, rename))
+  to_model <- function(cmt) rename[cmt] %|NA|% cmt
+  for (x in stmts) {
+    target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
+    m <- regmatches(target, regexec("^(F|ALAG|R|D)_(.+)$", target))[[1]]
+    init <- regmatches(target, regexec("^(.+)_0$", target))[[1]]
+    if (length(m) == 3 && m[[3]] %in% file_names) {
+      cmt <- to_model(m[[3]])
+      dosing[[cmt]] <- c(
+        dosing[[cmt]],
+        stats::setNames(list(x[[3]]), macros[[m[[2]]]])
+      )
+    } else if (length(init) == 2 && init[[2]] %in% file_names) {
+      cmt <- to_model(init[[2]])
+      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
+    } else {
+      individual[[length(individual) + 1]] <- x
+    }
+  }
+  pattern <- sprintf(
+    "^(F|ALAG|R|D)_(%s)$|^(%s)_0$",
+    paste(file_names, collapse = "|"),
+    paste(file_names, collapse = "|")
+  )
+  check_dosing_names(individual, function(n) grepl(pattern, n), file, "$MAIN")
+  list(individual = individual, dosing = dosing)
+}
+
+# $ODE's dxdt_CMT names compartment CMT.
+mrg_derivative <- function(compartments, file) {
+  function(x) {
+    target <- as.character(x[[2]])
+    if (!startsWith(target, "dxdt_")) {
+      return(NULL)
+    }
+    cmt <- sub("^dxdt_", "", target)
+    if (!cmt %in% compartments) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = target,
+        expected = "dxdt_ of a compartment",
+        call = NULL
+      )
+    }
+    cmt
+  }
 }

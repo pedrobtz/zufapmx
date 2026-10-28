@@ -28,8 +28,8 @@
 #' @return A `zupkpmx_model`.
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
-#' pmx_read_nonmem(file.path(corpus$path[[4]], "model.ctl"))
+#' path <- system.file("corpus", "twocmt-bolus", "model.ctl", package = "zupkpmx")
+#' pmx_read_nonmem(path)
 pmx_read_nonmem <- function(
   file,
   estimates = c("auto", "xml", "ext", "lst", "none")
@@ -199,10 +199,12 @@ nm_read <- function(file) {
     structure <- nm_closed_structure(sub, closed, pk$individual, file)
     defobs <- closed$central
   } else {
-    structure <- nm_ode_structure(
+    structure <- split_ode(
       nm_code(one("DES"), file, cmt),
       compartments,
-      file
+      nm_derivative(compartments, file),
+      file,
+      "$DES"
     )
   }
 
@@ -222,6 +224,16 @@ nm_read <- function(file) {
   }
   if (length(scaled) == 1) {
     defobs <- as.integer(scaled)
+    if (defobs < 1 || defobs > length(compartments)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = paste0("S", scaled),
+        expected = "a scale of a compartment",
+        call = NULL
+      )
+    }
   }
   observed <- as.symbol(compartments[[defobs]])
   prediction <- if (length(scaled) == 1) {
@@ -230,7 +242,12 @@ nm_read <- function(file) {
     observed
   }
 
-  error <- nm_error(nm_code(one("ERROR"), file, cmt), file)
+  error <- read_observation(
+    nm_code(one("ERROR"), file, cmt),
+    file,
+    "$ERROR",
+    prediction = quote(F)
+  )
   losses <- union(losses, error$losses)
 
   parameters <- thetas
@@ -362,53 +379,6 @@ nm_compartments <- function(r, file) {
   list(names = names, defobs = if (length(defobs) == 1) defobs else 1L)
 }
 
-# $PK: individual statements, scale factors and dosing attributes.
-nm_pk <- function(stmts, compartments, file) {
-  dosing <- list()
-  scale <- list()
-  individual <- list()
-  attrs <- c(ALAG = "lag", F = "bioavailability", R = "rate", D = "duration")
-  for (x in stmts) {
-    target <- if (is_call(x, "<-")) x[[2]]
-    name <- if (is.symbol(target)) toupper(as.character(target)) else ""
-    m <- regmatches(name, regexec("^(S|ALAG|F|R|D)([0-9]+)$", name))[[1]]
-    if (length(m) == 3) {
-      n <- as.integer(m[[3]])
-      if (m[[2]] == "S") {
-        scale[[as.character(n)]] <- x[[3]]
-        next
-      }
-      if (n < 1 || n > length(compartments)) {
-        parse_error(
-          file,
-          NA_integer_,
-          NA_integer_,
-          seen = name,
-          expected = "a compartment of the model",
-          call = NULL
-        )
-      }
-      cmt <- compartments[[n]]
-      dosing[[cmt]] <- c(
-        dosing[[cmt]],
-        stats::setNames(list(x[[3]]), attrs[[m[[2]]]])
-      )
-      next
-    }
-    if (is_call(target, "A_0")) {
-      cmt <- compartments[[target[[2]]]]
-      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
-      next
-    }
-    individual[[length(individual) + 1]] <- x
-  }
-  list(
-    individual = individual,
-    scale = scale,
-    dosing = dosing[intersect(compartments, names(dosing))]
-  )
-}
-
 nm_closed_structure <- function(sub, closed, individual, file) {
   targets <- stmt_targets(individual)
   found <- vapply(
@@ -443,162 +413,6 @@ nm_closed_structure <- function(sub, closed, individual, file) {
     parameters = found,
     advan = sub$advan,
     trans = sub$trans
-  )
-}
-
-nm_ode_structure <- function(stmts, compartments, file) {
-  derivatives <- list()
-  statements <- list()
-  for (x in stmts) {
-    if (is_call(x, "<-") && is_call(x[[2]], "DADT")) {
-      derivatives[[compartments[[x[[2]][[2]]]]]] <- x[[3]]
-    } else {
-      statements[[length(statements) + 1]] <- x
-    }
-  }
-  missing <- setdiff(compartments, names(derivatives))
-  if (length(missing) > 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$DES",
-      expected = sprintf("DADT for %s", missing[[1]]),
-      call = NULL
-    )
-  }
-  list(
-    type = "ode",
-    compartments = compartments,
-    statements = statements,
-    derivatives = derivatives[compartments]
-  )
-}
-
-# $ERROR: the residual model of Y over the prediction F. Statements Y does
-# not use are outputs, recorded as losses.
-nm_error <- function(stmts, file) {
-  defs <- list()
-  conditional <- character()
-  for (x in stmts) {
-    if (is_call(x, "<-") && is.symbol(x[[2]])) {
-      defs[[as.character(x[[2]])]] <- x[[3]]
-    } else {
-      conditional <- c(conditional, stmt_targets(list(x)))
-    }
-  }
-  y <- names(defs)[toupper(names(defs)) == "Y"]
-  if (length(y) == 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$ERROR",
-      expected = "Y = ...",
-      call = NULL
-    )
-  }
-
-  used <- character()
-  subst <- function(e) {
-    if (is.symbol(e)) {
-      name <- as.character(e)
-      if (name %in% conditional) {
-        parse_error(
-          file,
-          NA_integer_,
-          NA_integer_,
-          seen = name,
-          expected = "Y to depend on unconditional statements",
-          call = NULL
-        )
-      }
-      if (name %in% names(defs) && name != "F") {
-        used <<- union(used, name)
-        return(call("(", subst(defs[[name]])))
-      }
-      return(e)
-    }
-    if (is.call(e)) {
-      e[-1] <- lapply(as.list(e)[-1], subst)
-    }
-    e
-  }
-  expr <- subst(defs[[y]])
-  outputs <- setdiff(c(names(defs), conditional), c(y, used))
-  list(
-    residual = nm_residual(strip_parens(expr), expr),
-    losses = if (length(outputs) > 0) {
-      sprintf(
-        "$ERROR outputs not used by Y: %s",
-        paste(unique(outputs), collapse = ", ")
-      )
-    } else {
-      character()
-    }
-  )
-}
-
-nm_residual <- function(e, original) {
-  f <- quote(F)
-  is_eps <- function(x) is.symbol(x) && grepl("^EPS[0-9]+$", as.character(x))
-  # F * (1 + EPS) or F + F * EPS
-  prop <- function(x) {
-    if (
-      is_call(x, "*") &&
-        identical(x[[2]], f) &&
-        is_call(x[[3]], "+") &&
-        identical(x[[3]][[2]], 1) &&
-        is_eps(x[[3]][[3]])
-    ) {
-      return(as.character(x[[3]][[3]]))
-    }
-    if (
-      is_call(x, "+") &&
-        identical(x[[2]], f) &&
-        is_call(x[[3]], "*") &&
-        identical(x[[3]][[2]], f) &&
-        is_eps(x[[3]][[3]])
-    ) {
-      return(as.character(x[[3]][[3]]))
-    }
-    NULL
-  }
-  if (!is.null(p <- prop(e))) {
-    return(list(type = "proportional", parameters = p))
-  }
-  if (is_call(e, "+") && identical(e[[2]], f) && is_eps(e[[3]])) {
-    return(list(type = "additive", parameters = as.character(e[[3]])))
-  }
-  if (
-    is_call(e, "*") &&
-      identical(e[[2]], f) &&
-      is_call(e[[3]], "exp") &&
-      is_eps(e[[3]][[2]])
-  ) {
-    return(list(type = "exponential", parameters = as.character(e[[3]][[2]])))
-  }
-  if (is_call(e, "+") && is_eps(e[[3]]) && !is.null(p <- prop(e[[2]]))) {
-    return(list(type = "combined", parameters = c(as.character(e[[3]]), p)))
-  }
-  if (
-    is_call(e, "+") &&
-      is_call(e[[2]], "+") &&
-      identical(e[[2]][[2]], f) &&
-      is_call(e[[2]][[3]], "*") &&
-      identical(e[[2]][[3]][[2]], f) &&
-      is_eps(e[[2]][[3]][[3]]) &&
-      is_eps(e[[3]])
-  ) {
-    return(list(
-      type = "combined",
-      parameters = c(as.character(e[[3]]), as.character(e[[2]][[3]][[3]]))
-    ))
-  }
-  list(
-    type = "expression",
-    parameters = grep("^EPS[0-9]+$", all.vars(original), value = TRUE),
-    expression = original
   )
 }
 
@@ -785,4 +599,92 @@ nm_init_items <- function(records, file) {
     items[[length(items) + 1]] <- list(values = values, fixed = fixed)
   }
   items
+}
+
+# $PK: individual statements, scale factors and dosing attributes.
+nm_pk <- function(stmts, compartments, file) {
+  dosing <- list()
+  scale <- list()
+  individual <- list()
+  attrs <- c(ALAG = "lag", F = "bioavailability", R = "rate", D = "duration")
+  check_cmt <- function(n, name) {
+    if (n < 1 || n > length(compartments)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = name,
+        expected = sprintf("a compartment from 1 to %d", length(compartments)),
+        call = NULL
+      )
+    }
+    compartments[[n]]
+  }
+  for (x in stmts) {
+    target <- if (is_call(x, "<-")) x[[2]]
+    name <- if (is.symbol(target)) as.character(target) else ""
+    m <- regmatches(name, regexec("^(S|ALAG|F|R|D)([0-9]+)$", name))[[1]]
+    if (length(m) == 3) {
+      n <- as.integer(m[[3]])
+      if (m[[2]] == "S") {
+        check_cmt(n, name)
+        scale[[as.character(n)]] <- x[[3]]
+      } else {
+        cmt <- check_cmt(n, name)
+        dosing[[cmt]] <- c(
+          dosing[[cmt]],
+          stats::setNames(list(x[[3]]), attrs[[m[[2]]]])
+        )
+      }
+    } else if (is_call(target, "A_0")) {
+      cmt <- check_cmt(target[[2]], expr_text(target))
+      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
+    } else if (is_call(target, "DADT")) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = expr_text(target),
+        expected = "DADT(n) in $DES",
+        call = NULL
+      )
+    } else {
+      individual[[length(individual) + 1]] <- x
+    }
+  }
+  check_dosing_names(
+    individual,
+    function(n) grepl("^(S|ALAG|F|R|D)[0-9]+$|^A_0\\(", n),
+    file,
+    "$PK"
+  )
+  list(
+    individual = individual,
+    scale = scale,
+    dosing = dosing[intersect(compartments, names(dosing))]
+  )
+}
+
+# $DES's DADT(n) names compartment n.
+nm_derivative <- function(compartments, file) {
+  function(x) {
+    if (!is_call(x[[2]], "DADT")) {
+      return(NULL)
+    }
+    n <- x[[2]][[2]]
+    if (n < 1 || n > length(compartments)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = expr_text(x[[2]]),
+        expected = sprintf(
+          "DADT of a compartment from 1 to %d",
+          length(compartments)
+        ),
+        call = NULL
+      )
+    }
+    compartments[[n]]
+  }
 }

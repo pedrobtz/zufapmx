@@ -14,8 +14,8 @@
 #' @return A written model: the text as lines, its fidelity and its losses.
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
-#' fun <- eval(parse(file.path(corpus$path[[2]], "model-rxode2.R")))
+#' path <- system.file("corpus", "onecmt-oral-mm", "model-rxode2.R", package = "zupkpmx")
+#' fun <- eval(parse(path))
 #' pmx_write_rxode2(pmx_read_rxode2(fun))
 pmx_write_rxode2 <- function(model) {
   check_model(model)

@@ -241,3 +241,271 @@ model_compartments <- function(structure) {
 closed_advan <- function(ncmt, depot) {
   if (depot) c(2L, 4L, 12L)[[ncmt]] else c(1L, 3L, 11L)[[ncmt]]
 }
+
+# Every statement inside an `if`, at any depth.
+nested_statements <- function(x) {
+  if (!is_call(x, "if")) {
+    return(list())
+  }
+  out <- list()
+  for (body in as.list(x)[-(1:2)]) {
+    for (y in stmt_body(body)) {
+      out <- c(out, list(y), nested_statements(y))
+    }
+  }
+  out
+}
+
+# Split ODE code ($DES, $ODE) into structure statements and one derivative
+# per compartment. `derivative_of(x)` names the compartment an assignment
+# differentiates, or returns NULL; it refuses a malformed one itself.
+split_ode <- function(stmts, compartments, derivative_of, file, record) {
+  derivatives <- list()
+  statements <- list()
+  for (x in stmts) {
+    for (y in nested_statements(x)) {
+      if (is_call(y, "<-") && !is.null(derivative_of(y))) {
+        parse_error(
+          file,
+          NA_integer_,
+          NA_integer_,
+          seen = expr_text(y[[2]]),
+          message = sprintf(
+            "not translated: a derivative inside an if in %s",
+            record
+          ),
+          call = NULL
+        )
+      }
+    }
+    cmt <- if (is_call(x, "<-")) derivative_of(x)
+    if (is.null(cmt)) {
+      statements[[length(statements) + 1]] <- x
+    } else {
+      derivatives[[cmt]] <- x[[3]]
+    }
+  }
+  missing <- setdiff(compartments, names(derivatives))
+  if (length(missing) > 0) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = record,
+      expected = sprintf("a derivative of %s", missing[[1]]),
+      call = NULL
+    )
+  }
+  list(
+    type = "ode",
+    compartments = compartments,
+    statements = statements,
+    derivatives = derivatives[compartments]
+  )
+}
+
+# The observation from $ERROR or $TABLE: the residual model of Y. Each
+# definition is stored expanded as it stands where it is made, so Y sees
+# the definitions in force where Y is assigned (design §6). `prediction` is
+# NONMEM's F; without one (mrgsolve), the prediction is the term in F's
+# place of a recognised residual form, and anything else is refused.
+# `outputs` are other names the record makes visible ($CAPTURE).
+read_observation <- function(
+  stmts,
+  file,
+  record,
+  prediction = NULL,
+  outputs = character()
+) {
+  defs <- list()
+  deps <- list()
+  conditional <- character()
+  y <- NULL
+  used <- character()
+  expand <- function(e, track) {
+    if (is.symbol(e)) {
+      name <- as.character(e)
+      if (name %in% conditional) {
+        parse_error(
+          file,
+          NA_integer_,
+          NA_integer_,
+          seen = name,
+          expected = sprintf(
+            "Y in %s to depend on unconditional statements",
+            record
+          ),
+          call = NULL
+        )
+      }
+      if (!is.null(defs[[name]])) {
+        track(c(name, deps[[name]]))
+        return(call("(", defs[[name]]))
+      }
+      return(e)
+    }
+    if (is.call(e)) {
+      e[-1] <- lapply(as.list(e)[-1], expand, track = track)
+    }
+    e
+  }
+  for (x in stmts) {
+    if (is_call(x, "<-") && is.symbol(x[[2]])) {
+      name <- as.character(x[[2]])
+      if (identical(name, "Y")) {
+        y <- expand(x[[3]], function(n) used <<- union(used, n))
+      } else {
+        seen <- character()
+        defs[[name]] <- expand(x[[3]], function(n) seen <<- union(seen, n))
+        deps[[name]] <- seen
+        conditional <- setdiff(conditional, name)
+      }
+    } else {
+      conditional <- union(conditional, stmt_targets(list(x)))
+    }
+  }
+  if (is.null(y)) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = record,
+      expected = "Y = ... over EPS(n)",
+      call = NULL
+    )
+  }
+
+  form <- residual_form(strip_parens(y), prediction)
+  if (is.null(form)) {
+    if (is.null(prediction)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = expr_text(y),
+        expected = "Y as an additive, proportional, combined or exponential model over one prediction",
+        call = NULL
+      )
+    }
+    form <- list(
+      type = "expression",
+      parameters = grep("^EPS[0-9]+$", all.vars(y), value = TRUE),
+      expression = y,
+      prediction = prediction
+    )
+  }
+  unused <- setdiff(c(names(defs), conditional, outputs), c("Y", used))
+  list(
+    prediction = form$prediction,
+    residual = form[setdiff(names(form), "prediction")],
+    losses = if (length(unused) > 0) {
+      sprintf(
+        "%s outputs not used by Y: %s",
+        record,
+        paste(unique(unused), collapse = ", ")
+      )
+    } else {
+      character()
+    }
+  )
+}
+
+# The residual model of Y over its prediction p: p * (1 + E) or p + p * E
+# (proportional), p + E (additive), p * exp(E) (exponential), either
+# proportional form plus E2 (combined). `prediction`, when given, must be p.
+residual_form <- function(e, prediction = NULL) {
+  is_eps <- function(x) is.symbol(x) && grepl("^EPS[0-9]+$", as.character(x))
+  fits <- function(p) {
+    !any(grepl("^EPS[0-9]+$", all.vars(p))) &&
+      (is.null(prediction) || identical(p, prediction))
+  }
+  form <- function(type, p, parameters) {
+    list(type = type, parameters = parameters, prediction = p)
+  }
+  prop <- function(x) {
+    if (
+      is_call(x, "*") &&
+        is_call(x[[3]], "+") &&
+        identical(x[[3]][[2]], 1) &&
+        is_eps(x[[3]][[3]]) &&
+        fits(x[[2]])
+    ) {
+      return(list(p = x[[2]], eps = as.character(x[[3]][[3]])))
+    }
+    if (
+      is_call(x, "+") &&
+        is_call(x[[3]], "*") &&
+        is_eps(x[[3]][[3]]) &&
+        identical(x[[2]], x[[3]][[2]]) &&
+        fits(x[[2]])
+    ) {
+      return(list(p = x[[2]], eps = as.character(x[[3]][[3]])))
+    }
+    NULL
+  }
+  if (!is.null(r <- prop(e))) {
+    return(form("proportional", r$p, r$eps))
+  }
+  if (is_call(e, "+") && is_eps(e[[3]]) && !is.null(r <- prop(e[[2]]))) {
+    return(form("combined", r$p, c(as.character(e[[3]]), r$eps)))
+  }
+  if (is_call(e, "+") && is_eps(e[[3]]) && fits(e[[2]])) {
+    return(form("additive", e[[2]], as.character(e[[3]])))
+  }
+  if (is_call(e, "+") && is_eps(e[[2]]) && fits(e[[3]])) {
+    return(form("additive", e[[3]], as.character(e[[2]])))
+  }
+  if (
+    is_call(e, "*") &&
+      is_call(e[[3]], "exp") &&
+      is_eps(e[[3]][[2]]) &&
+      fits(e[[2]])
+  ) {
+    return(form("exponential", e[[2]], as.character(e[[3]][[2]])))
+  }
+  NULL
+}
+
+# Dosing and scale assignments are PREDPP's and mrgsolve's, not variables:
+# refuse them inside an `if` (where the representation cannot hold them) and
+# refuse reading them as variables. `reserved(name)` says whether a name is
+# one of them.
+check_dosing_names <- function(individual, reserved, file, record) {
+  for (x in individual) {
+    for (y in nested_statements(x)) {
+      target <- if (is_call(y, "<-")) expr_text(y[[2]])
+      if (!is.null(target) && reserved(target)) {
+        parse_error(
+          file,
+          NA_integer_,
+          NA_integer_,
+          seen = target,
+          message = sprintf(
+            "not translated: %s assigned inside an if in %s",
+            target,
+            record
+          ),
+          call = NULL
+        )
+      }
+    }
+  }
+  reads <- unique(unlist(lapply(individual, function(x) {
+    if (is_call(x, "<-")) all.vars(x[[3]]) else all.vars(x)
+  })))
+  bad <- reads[vapply(reads, reserved, logical(1))]
+  if (length(bad) > 0) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = bad[[1]],
+      message = sprintf(
+        "not translated: %s is read as a variable in %s",
+        bad[[1]],
+        record
+      ),
+      call = NULL
+    )
+  }
+}

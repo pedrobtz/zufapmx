@@ -162,3 +162,46 @@ test_that("code outside mrgsolve's documented C++ is refused", {
     "double Y = IPRED + EPS(1);"
   ))
 })
+
+test_that("dosing macros under $PKMODEL use the file's compartment names", {
+  m <- pmx_read_mrgsolve(corpus_file("onecmt-oral-lag", "model.cpp"))
+
+  expect_equal(
+    unclass(m)$dosing,
+    list(depot = list(lag = quote(TVLAG), bioavailability = quote(TVF)))
+  )
+  expect_false(any(
+    c("ALAG_GUT", "F_GUT") %in% stmt_targets(unclass(m)$individual)
+  ))
+})
+
+test_that("dosing macros inside if, or read as variables, are refused", {
+  refused <- function(lines) {
+    expect_error(read_cpp(lines), class = "zupkpmx_parse_error")
+  }
+
+  refused(cpp_onecmt(main = "if (CL > 1) F_CENT = 0.5;"))
+  refused(cpp_onecmt(main = c("F_CENT = 0.5;", "double X = F_CENT * 2.0;")))
+})
+
+test_that("the $TABLE prediction is the term in F's place, fully expanded", {
+  m <- read_cpp(cpp_onecmt(
+    table = c(
+      "double CP = CENT / V;",
+      "double IPRED = CP;",
+      "double Y = IPRED * (1 + EPS(1));"
+    )
+  ))
+  expect_equal(unclass(m)$observations$Y$prediction, quote(CENT / V))
+
+  expect_error(
+    read_cpp(cpp_onecmt(
+      table = c(
+        "double IPRED = CENT / V;",
+        "double W = 0.5;",
+        "double Y = W * EPS(1) + IPRED;"
+      )
+    )),
+    class = "zupkpmx_parse_error"
+  )
+})

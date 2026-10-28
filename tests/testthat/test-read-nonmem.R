@@ -150,7 +150,7 @@ test_that("unsupported control streams are refused with a position", {
 })
 
 test_that("an ODE model needs a derivative for every compartment", {
-  lines <- readLines(file.path(zupkpmx_corpus()$path[[2]], "model.ctl"))
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   expect_error(
     read_ctl(lines[!grepl("DADT\\(2\\)", lines)]),
     class = "zupkpmx_parse_error"
@@ -192,11 +192,33 @@ test_that("auto falls back to .ext without zuxml", {
 })
 
 test_that("auto reads no estimates when there are no output files", {
-  m <- pmx_read_nonmem(file.path(zupkpmx_corpus()$path[[1]], "model.ctl"))
+  m <- pmx_read_nonmem(corpus_file("onecmt-oral", "model.ctl"))
 
   expect_true(all(is.na(pmx_parameters(m)$estimate)))
   expect_error(
-    pmx_read_nonmem(file.path(zupkpmx_corpus()$path[[1]], "model.ctl"), "ext"),
+    pmx_read_nonmem(corpus_file("onecmt-oral", "model.ctl"), "ext"),
     class = "zupkpmx_model_error"
+  )
+})
+
+test_that("dosing and scale assignments inside IF, or read as variables, are refused", {
+  refused <- function(pk) {
+    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zupkpmx_parse_error")
+  }
+
+  refused("IF (KA.GT.0) F1 = 0.5")
+  refused(c("IF (V.GT.0) THEN", "S2 = V", "ENDIF"))
+  refused(c("F1 = THETA(1)", "X = F1 * 2"))
+  refused("A_0(5) = 1")
+})
+
+test_that("$ERROR uses the definitions in force where Y is assigned", {
+  m <- read_ctl(ctl_onecmt(
+    error = c("IPRED = F", "Y = IPRED * (1 + EPS(1))", "IPRED = 0")
+  ))
+
+  expect_equal(
+    unclass(m)$observations$Y$residual,
+    list(type = "proportional", parameters = "EPS1")
   )
 })

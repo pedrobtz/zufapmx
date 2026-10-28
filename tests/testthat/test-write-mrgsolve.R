@@ -130,3 +130,51 @@ test_that("constructs mrgsolve cannot hold are refused", {
     class = "zupkpmx_write_error"
   )
 })
+
+test_that("every dosing attribute round-trips through every writer", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tka <- c(0, 1)
+      tcl <- c(0, 4)
+      tv <- c(0, 50)
+      sd <- c(0, 0.2)
+    })
+    model({
+      ka <- tka
+      cl <- tcl
+      v <- tv
+      d / dt(depot) <- -ka * depot
+      d / dt(central) <- ka * depot - cl / v * central
+      alag(depot) <- 0.5
+      f(depot) <- 0.8
+      dur(central) <- 2
+      rate(central) <- 3
+      central(0) <- 1
+      cp <- central / v
+      cp ~ prop(sd)
+    })
+  })
+  dosing <- unclass(m)$dosing
+
+  for (write in list(pmx_write_rxode2, pmx_write_nonmem, pmx_write_mrgsolve)) {
+    w <- write(m)
+    expect_true(pmx_fidelity(w) %in% c("exact", "equivalent"))
+  }
+  nm <- pmx_write_nonmem(m)$text
+  expect_true(all(
+    c("ALAG1 = 0.5", "F1 = 0.8", "D2 = 2", "R2 = 3", "A_0(2) = 1") %in% nm
+  ))
+  mrg <- pmx_write_mrgsolve(m)$text
+  expect_true(all(
+    c(
+      "ALAG_depot = 0.5;",
+      "F_depot = 0.8;",
+      "D_central = 2.0;",
+      "R_central = 3.0;",
+      "central_0 = 1.0;"
+    ) %in%
+      mrg
+  ))
+  back <- read_cpp(mrg)
+  expect_equal(names(unclass(back)$dosing), names(dosing))
+})

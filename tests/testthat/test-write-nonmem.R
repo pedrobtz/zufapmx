@@ -70,8 +70,8 @@ test_that("estimates are written as final or initial values, and the other is lo
 })
 
 test_that("a model without estimates writes its initial values and loses nothing", {
-  w <- pmx_write_nonmem(pmx_read_nonmem(file.path(
-    zupkpmx_corpus()$path[[1]],
+  w <- pmx_write_nonmem(pmx_read_nonmem(corpus_file(
+    "onecmt-oral",
     "model.ctl"
   )))
   expect_equal(pmx_losses(w), character())
