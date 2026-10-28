@@ -177,38 +177,38 @@ tokenize <- function(
 token_stream <- function(tokens, file, end) {
   i <- 1L
   peek <- function(k = 0L) if (i + k <= length(tokens)) tokens[[i + k]]
-  is <- function(value, k = 0L) {
-    t <- peek(k)
-    !is.null(t) && t$value %in% value
+  at <- function(value, k = 0L) {
+    tok <- peek(k)
+    !is.null(tok) && tok$value %in% value
   }
   fail <- function(expected) {
-    t <- peek() %||%
+    tok <- peek() %||%
       list(value = end$value, line = end$line, column = NA_integer_)
     parse_error(
       file,
-      t$line,
-      t$column,
-      seen = t$value,
+      tok$line,
+      tok$column,
+      seen = tok$value,
       expected = expected,
       call = NULL
     )
   }
   take <- function(value = NULL) {
-    t <- peek()
-    if (is.null(t) || (!is.null(value) && !t$value %in% value)) {
+    tok <- peek()
+    if (is.null(tok) || (!is.null(value) && !tok$value %in% value)) {
       fail(
         if (is.null(value)) "more input" else paste(value, collapse = " or ")
       )
     }
     i <<- i + 1L
-    t
+    tok
   }
   # A left-associative binary level: `ops` are token values, `map` gives
   # each one's R operator (the token itself when NULL).
   binary <- function(next_level, ops, map = NULL) {
     function() {
       left <- next_level()
-      while (is(ops)) {
+      while (at(ops)) {
         op <- take()$value
         left <- call(if (is.null(map)) op else map[[op]], left, next_level())
       }
@@ -217,7 +217,7 @@ token_stream <- function(tokens, file, end) {
   }
   list(
     peek = peek,
-    is = is,
+    at = at,
     fail = fail,
     take = take,
     binary = binary,

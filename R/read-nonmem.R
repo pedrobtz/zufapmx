@@ -112,10 +112,10 @@ nm_lost_records <- c(
 )
 
 nm_read <- function(file) {
-  split <- nm_split(readLines(file, warn = FALSE), file)
-  records <- split$records
+  stream <- nm_split(readLines(file, warn = FALSE), file)
+  records <- stream$records
   names <- vapply(records, `[[`, character(1), "name")
-  losses <- if (split$comments) "comments" else character()
+  losses <- if (stream$comments) "comments" else character()
 
   for (r in records) {
     if (r$name %in% c("PRED", "INFN", "MIX", "PRIOR")) {
@@ -171,9 +171,9 @@ nm_read <- function(file) {
     found[[1]]
   }
 
-  sub <- nm_subroutines(one("SUBROUTINES"), file)
-  losses <- union(losses, sub$losses)
-  closed <- nm_closed[[as.character(sub$advan)]]
+  subroutines <- nm_subroutines(one("SUBROUTINES"), file)
+  losses <- union(losses, subroutines$losses)
+  closed <- nm_closed[[as.character(subroutines$advan)]]
   if (!is.null(closed)) {
     if (length(record("DES")) > 0 || length(record("MODEL")) > 0) {
       r <- c(record("DES"), record("MODEL"))[[1]]
@@ -182,7 +182,7 @@ nm_read <- function(file) {
         r$line[[1]],
         1L,
         seen = paste0("$", r$name),
-        expected = sprintf("no $%s with ADVAN%d", r$name, sub$advan),
+        expected = sprintf("no $%s with ADVAN%d", r$name, subroutines$advan),
         call = NULL
       )
     }
@@ -214,12 +214,11 @@ nm_read <- function(file) {
   pk <- nm_pk(nm_code(one("PK"), file, cmt), compartments, file)
   if (!is.null(closed)) {
     structure <- nm_closed_structure(
-      sub,
+      subroutines,
       closed,
       stmt_targets(pk$individual),
       file
     )
-    defobs <- closed$central
   } else {
     structure <- split_ode(
       nm_code(one("DES"), file, cmt),
@@ -274,7 +273,7 @@ nm_read <- function(file) {
 
   parameters <- thetas
   parameters$role <- infer_roles(parameters$name, pk$individual, structure)
-  model <- read_model(
+  read_model(
     file,
     parameters = parameters,
     random_effects = list(
@@ -302,7 +301,6 @@ nm_read <- function(file) {
       losses = losses
     )
   )
-  model
 }
 
 nm_subroutines <- function(r, file) {
@@ -404,7 +402,7 @@ nm_compartments <- function(r, file) {
 
 # The variables a closed form's ADVAN parameters are. `names` are the
 # candidates: $PK targets, and for mrgsolve also $PARAM names.
-nm_closed_structure <- function(sub, closed, names, file) {
+nm_closed_structure <- function(subroutines, closed, names, file) {
   targets <- names
   found <- vapply(
     closed$names,
@@ -421,8 +419,8 @@ nm_closed_structure <- function(sub, closed, names, file) {
           expected = sprintf(
             "%s for ADVAN%d TRANS%d",
             name,
-            sub$advan,
-            sub$trans
+            subroutines$advan,
+            subroutines$trans
           ),
           call = NULL
         )
@@ -436,8 +434,8 @@ nm_closed_structure <- function(sub, closed, names, file) {
     ncmt = sum(c("v", "vp", "vp2") %in% names(found)),
     depot = "ka" %in% names(found),
     parameters = found,
-    advan = sub$advan,
-    trans = sub$trans
+    advan = subroutines$advan,
+    trans = subroutines$trans
   )
 }
 
@@ -560,28 +558,28 @@ nm_init_items <- function(records, file) {
   tokens <- list()
   for (r in records) {
     for (k in seq_along(r$lines)) {
-      for (t in nm_tokenize(r$lines[[k]], r$line[[k]], file)) {
-        t$line <- r$line[[k]]
-        tokens[[length(tokens) + 1]] <- t
+      for (tok in nm_tokenize(r$lines[[k]], r$line[[k]], file)) {
+        tok$line <- r$line[[k]]
+        tokens[[length(tokens) + 1]] <- tok
       }
     }
   }
   i <- 1L
   peek <- function() if (i <= length(tokens)) tokens[[i]]
   fail <- function(expected) {
-    t <- peek()
+    tok <- peek()
     parse_error(
       file,
-      if (is.null(t)) NA_integer_ else t$line,
-      if (is.null(t)) NA_integer_ else t$column,
-      seen = if (is.null(t)) "end of record" else t$value,
+      if (is.null(tok)) NA_integer_ else tok$line,
+      if (is.null(tok)) NA_integer_ else tok$column,
+      seen = if (is.null(tok)) "end of record" else tok$value,
       expected = expected,
       call = NULL
     )
   }
   is_fix <- function() {
-    t <- peek()
-    !is.null(t) && toupper(t$value) %in% c("FIX", "FIXED")
+    tok <- peek()
+    !is.null(tok) && toupper(tok$value) %in% c("FIX", "FIXED")
   }
   number <- function() {
     sign <- 1
@@ -589,15 +587,15 @@ nm_init_items <- function(records, file) {
       sign <- if (peek()$value == "-") -1 else 1
       i <<- i + 1L
     }
-    t <- peek()
-    if (is.null(t)) {
+    tok <- peek()
+    if (is.null(tok)) {
       fail("a number")
     }
     i <<- i + 1L
-    if (t$type == "number") {
-      return(sign * as.numeric(sub("[Dd]", "E", t$value)))
+    if (tok$type == "number") {
+      return(sign * as.numeric(sub("[Dd]", "E", tok$value)))
     }
-    if (toupper(t$value) == "INF") {
+    if (toupper(tok$value) == "INF") {
       return(sign * Inf)
     }
     i <<- i - 1L

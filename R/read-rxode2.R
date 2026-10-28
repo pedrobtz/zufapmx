@@ -373,8 +373,7 @@ rxode2_read_model <- function(stmts, reader) {
     function(x) if (is_call(x, "<-")) as.character(x[[2]]) else "",
     character(1)
   )
-  is_prediction <- targets %in%
-    endpoints &
+  is_prediction <- (targets %in% endpoints) &
     !duplicated(targets, fromLast = TRUE)
   predictions <- lapply(assigns[is_prediction], `[[`, 3)
   names(predictions) <- targets[is_prediction]

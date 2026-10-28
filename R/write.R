@@ -72,7 +72,7 @@ closed_free_names <- function(vars, spelled, structure) {
   }
   required <- nm_closed[[as.character(structure$advan)]]$names
   owner <- unname(structure$parameters[names(required)])
-  taken <- spelled %in% required & vars != owner[match(spelled, required)]
+  taken <- (spelled %in% required) & (vars != owner[match(spelled, required)])
   spelled[taken] <- paste0(spelled[taken], "_")
   spelled
 }

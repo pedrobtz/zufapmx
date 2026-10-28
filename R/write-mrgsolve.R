@@ -70,7 +70,7 @@ pmx_write_mrgsolve <- function(model) {
     "$MAIN",
     mrg_stmt_lines(m$individual, spelling),
     closed_alias_lines(m$structure, spelling, "double %s = %s;"),
-    mrg_dosing_lines(m, spelling, compartments),
+    mrg_dosing_lines(m, spelling),
     if (!closed) {
       c(
         "",
@@ -172,11 +172,10 @@ mrg_names <- function(m) {
   )
   out <- gsub(".", "_", vars, fixed = TRUE)
   out <- closed_free_names(vars, out, m$structure)
-  all <- c(unname(map), out)
+  spelled <- c(unname(map), out)
   bad <- vars[
-    out %in%
-      mrg_reserved |
-      duplicated(all)[-seq_along(map)] |
+    (out %in% mrg_reserved) |
+      duplicated(spelled)[-seq_along(map)] |
       !grepl("^[A-Za-z_][A-Za-z0-9_]*$", out)
   ]
   if (length(bad) > 0) {
@@ -208,7 +207,7 @@ mrg_param_lines <- function(p, spelling) {
   )
 }
 
-mrg_dosing_lines <- function(m, spelling, compartments) {
+mrg_dosing_lines <- function(m, spelling) {
   macro <- c(lag = "ALAG", bioavailability = "F", rate = "R", duration = "D")
   out <- character()
   for (cmt in names(m$dosing)) {
@@ -293,53 +292,48 @@ mrg_residual <- function(m, spelling) {
 # assigned at the top level; one assigned only inside `if` is declared
 # first with the value 0 (D14). Readers already make that 0 explicit, so
 # this only matters for models built by other means.
-mrg_stmt_lines <- function(
-  stmts,
-  spelling,
-  declared = character(),
-  indent = 0
-) {
-  pad <- strrep(" ", indent)
+mrg_stmt_lines <- function(stmts, spelling, declared = character(), depth = 0) {
+  pad <- strrep(" ", depth)
   out <- character()
   for (x in stmts) {
     if (is_call(x, "<-")) {
       name <- as.character(x[[2]])
       text <- spelling[name] %|NA|% name
-      decl <- if (indent == 0 && !name %in% declared) "double " else ""
+      decl <- if (depth == 0 && !name %in% declared) "double " else ""
       declared <- c(declared, name)
       out <- c(
         out,
         sprintf("%s%s%s = %s;", pad, decl, text, cpp_expr(x[[3]], spelling))
       )
     } else {
-      if (indent == 0) {
+      if (depth == 0) {
         fresh <- setdiff(stmt_targets(list(x)), declared)
         out <- c(out, sprintf("double %s = 0.0;", spelling[fresh] %|NA|% fresh))
         declared <- c(declared, fresh)
       }
-      out <- c(out, mrg_if_lines(x, spelling, declared, indent))
+      out <- c(out, mrg_if_lines(x, spelling, declared, depth))
     }
   }
   out
 }
 
-mrg_if_lines <- function(x, spelling, declared, indent) {
-  pad <- strrep(" ", indent)
+mrg_if_lines <- function(x, spelling, declared, depth) {
+  pad <- strrep(" ", depth)
   out <- c(
     sprintf("%sif (%s) {", pad, cpp_expr(x[[2]], spelling)),
-    mrg_stmt_lines(stmt_body(x[[3]]), spelling, declared, indent + 2)
+    mrg_stmt_lines(stmt_body(x[[3]]), spelling, declared, depth + 2)
   )
   if (length(x) == 4) {
     other <- x[[4]]
     if (is_call(other, "if")) {
-      inner <- mrg_if_lines(other, spelling, declared, indent)
+      inner <- mrg_if_lines(other, spelling, declared, depth)
       inner[[1]] <- sprintf("%s} else %s", pad, trimws(inner[[1]]))
       return(c(out, inner))
     }
     out <- c(
       out,
       sprintf("%s} else {", pad),
-      mrg_stmt_lines(stmt_body(other), spelling, declared, indent + 2)
+      mrg_stmt_lines(stmt_body(other), spelling, declared, depth + 2)
     )
   }
   c(out, sprintf("%s}", pad))

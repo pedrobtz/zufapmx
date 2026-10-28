@@ -1,8 +1,6 @@
 # A writer's result: the text, the format, and what the translation kept
 # (design §6). `refused` is never a value here; a refused write is an error.
 
-fidelity_levels <- c("exact", "equivalent", "lossy")
-
 new_written <- function(text, format, fidelity, losses) {
   structure(
     list(text = text, format = format, fidelity = fidelity, losses = losses),

@@ -122,13 +122,13 @@ mrg_strip_comments <- function(lines) {
 
 mrg_read <- function(file) {
   blocks <- mrg_split(readLines(file, warn = FALSE), file)
-  names <- vapply(blocks, `[[`, character(1), "name")
-  block <- function(...) blocks[names %in% c(...)]
+  block_names <- vapply(blocks, `[[`, character(1), "name")
+  block <- function(...) blocks[block_names %in% c(...)]
   losses <- character()
-  if ("PROB" %in% names) {
+  if ("PROB" %in% block_names) {
     losses <- c(losses, "title ($PROB)")
   }
-  if ("SET" %in% names) {
+  if ("SET" %in% block_names) {
     losses <- c(losses, "simulation settings ($SET)")
   }
   for (b in block("PLUGIN")) {
@@ -700,7 +700,7 @@ mrg_nonmem <- function(b, file) {
   } else {
     nm_estimates_ext(path)
   }
-  split <- function(full, prefix) {
+  as_blocks <- function(full, prefix) {
     n <- nrow(full)
     names <- paste0(prefix, seq_len(n))
     dimnames(full) <- list(names, names)
@@ -723,8 +723,8 @@ mrg_nonmem <- function(b, file) {
       fixed = FALSE,
       estimate = unname(est$theta)
     ),
-    omega = split(est$omega, "ETA"),
-    sigma = split(est$sigma, "EPS")
+    omega = as_blocks(est$omega, "ETA"),
+    sigma = as_blocks(est$sigma, "EPS")
   )
 }
 

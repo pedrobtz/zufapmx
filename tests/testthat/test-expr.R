@@ -25,15 +25,6 @@ test_that("a table function with the wrong number of arguments is an error", {
   expect_error(expr_check(quote(max(a))), class = "zupkpmx_model_error")
 })
 
-test_that("expr_names() lists the names an expression reads", {
-  expect_equal(
-    expr_names(quote(tcl * exp(eta.cl + wt))),
-    c("tcl", "eta.cl", "wt")
-  )
-  expect_equal(expr_names(quote(2 * 3)), character())
-  expect_equal(expr_names(quote(a + a)), "a")
-})
-
 test_that("assignments and if/else are valid statements", {
   expect_silent(stmt_check(quote(cl <- tcl * exp(eta.cl))))
   expect_silent(stmt_check(quote(

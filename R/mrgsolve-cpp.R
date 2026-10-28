@@ -39,49 +39,49 @@ cpp_parse <- function(block, file) {
     end = list(value = "end of block", line = max(block$line))
   )
   peek <- s$peek
-  is <- s$is
+  at <- s$at
   take <- s$take
   fail <- s$fail
   binary <- s$binary
 
   primary <- function() {
-    t <- peek()
-    if (is.null(t)) {
+    tok <- peek()
+    if (is.null(tok)) {
       fail("an expression")
     }
-    if (t$type == "number") {
+    if (tok$type == "number") {
       take()
       # A literal without a point or exponent is an int in C++; it stays
       # integer until cpp_integers() has checked the arithmetic.
-      if (grepl("^[0-9]+$", t$value)) {
-        return(as.integer(t$value))
+      if (grepl("^[0-9]+$", tok$value)) {
+        return(as.integer(tok$value))
       }
-      return(as.numeric(sub("[fF]$", "", t$value)))
+      return(as.numeric(sub("[fF]$", "", tok$value)))
     }
-    if (t$value == "(") {
+    if (tok$value == "(") {
       take()
       inner <- or_expr()
       take(")")
       return(call("(", inner))
     }
-    if (t$type != "name") {
+    if (tok$type != "name") {
       fail("an expression")
     }
     take()
-    if (!is("(")) {
-      return(as.symbol(t$value))
+    if (!at("(")) {
+      return(as.symbol(tok$value))
     }
     take("(")
     args <- list()
-    if (!is(")")) {
+    if (!at(")")) {
       args <- list(or_expr())
-      while (is(",")) {
+      while (at(",")) {
         take()
         args[[length(args) + 1]] <- or_expr()
       }
     }
     take(")")
-    name <- t$value
+    name <- tok$value
     if (name %in% c("ETA", "EPS", "THETA")) {
       if (
         length(args) != 1 ||
@@ -91,8 +91,8 @@ cpp_parse <- function(block, file) {
       ) {
         parse_error(
           file,
-          t$line,
-          t$column,
+          tok$line,
+          tok$column,
           seen = name,
           expected = sprintf("%s(n) with a whole number n", name),
           call = NULL
@@ -108,8 +108,8 @@ cpp_parse <- function(block, file) {
       if (length(args) != arity) {
         parse_error(
           file,
-          t$line,
-          t$column,
+          tok$line,
+          tok$column,
           seen = name,
           expected = sprintf("%s() with %d arguments", name, arity),
           call = NULL
@@ -119,15 +119,15 @@ cpp_parse <- function(block, file) {
     }
     parse_error(
       file,
-      t$line,
-      t$column,
+      tok$line,
+      tok$column,
       seen = name,
       expected = "a function of mrgsolve's documented C++",
       call = NULL
     )
   }
   unary <- function() {
-    if (is(c("-", "+", "!"))) {
+    if (at(c("-", "+", "!"))) {
       return(call(take()$value, unary()))
     }
     primary()
@@ -140,10 +140,10 @@ cpp_parse <- function(block, file) {
   or_expr <- binary(and_expr, "||", c(`||` = "|"))
 
   body <- function() {
-    if (is("{")) {
+    if (at("{")) {
       take()
       stmts <- list()
-      while (!is("}")) {
+      while (!at("}")) {
         if (is.null(peek())) {
           fail("}")
         }
@@ -159,38 +159,38 @@ cpp_parse <- function(block, file) {
     if (is.null(s)) list() else list(s)
   }
   statement <- function() {
-    if (is(";")) {
+    if (at(";")) {
       take()
       return(NULL)
     }
-    if (is("if")) {
+    if (at("if")) {
       take()
       take("(")
       cond <- or_expr()
       take(")")
       yes <- as.call(c(as.symbol("{"), body()))
-      if (is("else")) {
+      if (at("else")) {
         take()
-        no <- if (is("if")) statement() else as.call(c(as.symbol("{"), body()))
+        no <- if (at("if")) statement() else as.call(c(as.symbol("{"), body()))
         return(call("if", cond, yes, no))
       }
       return(call("if", cond, yes))
     }
-    if (is("int")) {
+    if (at("int")) {
       fail("double: an int declaration truncates")
     }
-    while (is(c("double", "bool", "capture", "const", "localdouble"))) {
+    while (at(c("double", "bool", "capture", "const", "localdouble"))) {
       take()
     }
-    t <- peek()
-    if (is.null(t) || t$type != "name" || !is("=", 1L)) {
+    tok <- peek()
+    if (is.null(tok) || tok$type != "name" || !at("=", 1L)) {
       fail("a declaration or an assignment")
     }
     take()
     take("=")
     value <- or_expr()
     take(";")
-    call("<-", as.symbol(t$value), value)
+    call("<-", as.symbol(tok$value), value)
   }
 
   out <- list()

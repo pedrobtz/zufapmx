@@ -54,7 +54,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
     "; zupkpmx: $INPUT and $DATA are placeholders; point them at your dataset.",
     "$INPUT ID TIME EVID AMT RATE CMT DV",
     "$DATA data.csv IGNORE=@",
-    nm_structure_lines(m, spelling),
+    nm_structure_lines(m),
     "$PK",
     nm_stmt_lines(m$individual, spelling),
     closed_alias_lines(m$structure, spelling, "%s = %s"),
@@ -121,11 +121,11 @@ nm_sigma_from_sd <- function(m) {
       )
     }
     eps <- character()
+    used <- unlist(lapply(
+      c(m$individual, m$structure$statements, m$structure$derivatives),
+      all.vars
+    ))
     for (sd in r$parameters) {
-      used <- unlist(lapply(
-        c(m$individual, m$structure$statements, m$structure$derivatives),
-        all.vars
-      ))
       if (sd %in% used) {
         write_error(
           sprintf("the residual parameter `%s`, which the model also uses", sd),
@@ -284,7 +284,7 @@ nm_index_names <- function(blocks, prefix) {
   stats::setNames(sprintf("%s(%d)", prefix, seq_along(symbols)), symbols)
 }
 
-nm_structure_lines <- function(m, spelling) {
+nm_structure_lines <- function(m) {
   s <- m$structure
   if (identical(s$type, "closed")) {
     return(sprintf("$SUBROUTINES ADVAN%d TRANS%d", s$advan, s$trans))
@@ -293,7 +293,13 @@ nm_structure_lines <- function(m, spelling) {
     "$SUBROUTINES ADVAN13 TOL=9",
     paste0(
       "$MODEL ",
-      paste(sprintf("COMP=(%s)", toupper(s$compartments)), collapse = " ")
+      paste(
+        sprintf(
+          "COMP=(%s)",
+          toupper(gsub(".", "_", s$compartments, fixed = TRUE))
+        ),
+        collapse = " "
+      )
     )
   )
 }
@@ -441,8 +447,8 @@ nm_number <- function(x) {
   num_text(x)
 }
 
-nm_stmt_lines <- function(stmts, spelling, indent = 0) {
-  pad <- strrep(" ", indent)
+nm_stmt_lines <- function(stmts, spelling, depth = 0) {
+  pad <- strrep(" ", depth)
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "<-")) {
       return(sprintf(
@@ -453,25 +459,25 @@ nm_stmt_lines <- function(stmts, spelling, indent = 0) {
         nm_expr(x[[3]], spelling)
       ))
     }
-    nm_if_lines(x, spelling, indent)
+    nm_if_lines(x, spelling, depth)
   }))
 }
 
-nm_if_lines <- function(x, spelling, indent, keyword = "IF") {
-  pad <- strrep(" ", indent)
+nm_if_lines <- function(x, spelling, depth, keyword = "IF") {
+  pad <- strrep(" ", depth)
   out <- c(
     sprintf("%s%s (%s) THEN", pad, keyword, nm_expr(x[[2]], spelling)),
-    nm_stmt_lines(stmt_body(x[[3]]), spelling, indent + 2)
+    nm_stmt_lines(stmt_body(x[[3]]), spelling, depth + 2)
   )
   if (length(x) == 4) {
     other <- x[[4]]
     out <- if (is_call(other, "if")) {
-      c(out, nm_if_lines(other, spelling, indent, "ELSE IF"))
+      c(out, nm_if_lines(other, spelling, depth, "ELSE IF"))
     } else {
       c(
         out,
         sprintf("%sELSE", pad),
-        nm_stmt_lines(stmt_body(other), spelling, indent + 2)
+        nm_stmt_lines(stmt_body(other), spelling, depth + 2)
       )
     }
   }
