@@ -19,9 +19,10 @@ fidelity (see \code{\link[=pmx_fidelity]{pmx_fidelity()}}). Evaluate the text to
 \details{
 rxode2's \code{ini()} holds one value per parameter: a model with estimates
 is written with its estimates, and its initial values are recorded as
-lost. Constructs rxode2 cannot hold, such as residual error written as
-an expression over epsilons, stop with an error of class
-\code{zupkpmx_write_error}.
+lost. Residual error held as sigma variances, as NONMEM holds it, is
+written as standard-deviation parameters named after the epsilons. Constructs rxode2 cannot hold,
+such as residual error written as an expression over epsilons, stop
+with an error of class \code{zupkpmx_write_error}.
 }
 \examples{
 corpus <- zupkpmx_corpus()

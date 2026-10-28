@@ -6,7 +6,7 @@ test_that("every corpus model round-trips exactly", {
 
     expect_equal(pmx_fidelity(w), "exact", label = id)
     expect_equal(pmx_losses(w), character(), label = id)
-    expect_identical(model_content(back), model_content(m), label = id)
+    expect_true(same_content(model_content(back), model_content(m)), label = id)
   }
 })
 
@@ -111,15 +111,36 @@ test_that("a fixed omega block written by the writer parses in rxode2", {
   expect_true(all(ui$iniDf$fix[!is.na(ui$iniDf$neta1)]))
 })
 
-test_that("sigma blocks and inter-occasion variability are refused", {
+test_that("sigma variances become standard-deviation parameters", {
+  m <- model_twocmt_oral()
+  w <- pmx_write_rxode2(m)
+
+  expect_equal(pmx_fidelity(w), "equivalent")
+  expect_true("eps.prop <- c(0, 0.2)" %in% trimws(w$text))
+  expect_true("cp ~ prop(eps.prop)" %in% trimws(w$text))
+})
+
+test_that("correlated sigma, expression residuals and IOV are refused", {
+  m <- model_twocmt_oral()
+  re <- unclass(m)$random_effects
+  re$sigma <- list(model_block(c("e1", "e2"), c(0.04, 0.01)))
   expect_error(
-    pmx_write_rxode2(model_twocmt_oral()),
+    pmx_write_rxode2(model_with(m, random_effects = re)),
     class = "zupkpmx_write_error"
   )
 
-  m <- model_twocmt_oral()
+  obs <- unclass(m)$observations
+  obs$cp$residual <- list(
+    type = "expression",
+    parameters = "eps.prop",
+    expression = quote(F + eps.prop)
+  )
+  expect_error(
+    pmx_write_rxode2(model_with(m, observations = obs)),
+    class = "zupkpmx_write_error"
+  )
+
   re <- unclass(m)$random_effects
-  re$sigma <- list()
   re$iov <- list(present = TRUE, occasion = "OCC")
   expect_error(
     pmx_write_rxode2(model_with(m, random_effects = re)),
@@ -130,4 +151,18 @@ test_that("sigma blocks and inter-occasion variability are refused", {
 test_that("fidelity accessors reject anything but a written model", {
   expect_error(pmx_fidelity(list()), class = "zupkpmx_model_error")
   expect_error(pmx_losses("x"), class = "zupkpmx_model_error")
+})
+
+test_that("fidelity tolerates a parser that is off by one ulp", {
+  x <- 0.12345678901234568
+  near <- x * (1 + .Machine$double.eps)
+
+  expect_true(same_content(
+    list(quote(a <- 0.12345678901234568 * b), x),
+    list(call("<-", quote(a), call("*", near, quote(b))), near)
+  ))
+  expect_false(same_content(list(x), list(x * (1 + 1e-12))))
+  expect_false(same_content(list(quote(a <- b)), list(quote(a <- c))))
+  expect_false(same_content(data.frame(a = 1), data.frame(b = 1)))
+  expect_false(same_content(list(NA_real_), list(1)))
 })

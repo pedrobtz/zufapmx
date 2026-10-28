@@ -21,7 +21,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | [#19](https://github.com/pedrobtz/zupkpmx/pull/19) | 2026-10-28 |
 | 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | [#20](https://github.com/pedrobtz/zupkpmx/pull/20) | 2026-10-28 |
 | 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zupkpmx/issues/6) | [#21](https://github.com/pedrobtz/zupkpmx/pull/21) | 2026-10-28 |
-| 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zupkpmx/issues/7) | | |
+| 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zupkpmx/issues/7) | [#22](https://github.com/pedrobtz/zupkpmx/pull/22) | 2026-10-28 |
 | 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zupkpmx/issues/8) | | |
 | 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zupkpmx/issues/9) | | |
 | 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zupkpmx/issues/10) | | |
@@ -196,7 +196,9 @@ and write back out, with a fidelity and a list of losses.
 - §6's "a model without estimates writes initial values and sets a loss"
   is read per writer: rxode2's `ini()` holds one value, so writing a model
   without estimates loses nothing, and writing one with estimates loses
-  the initial values. The loss applies as written to the NONMEM writer.
+  the initial values. Stage 5 applies the same rule to the NONMEM writer:
+  a loss only when the model has estimates, of whichever of estimates and
+  initial values is not written.
 - Reading also records top-level metadata (`reference`, `units`), labels
   and constant `ini()` expressions such as `log(90)` as losses.
 
@@ -256,6 +258,16 @@ NONMEM control stream.
 - `R CMD check` passes on the quick profile.
 
 **Design.** §4.3, §6, D9.
+
+**Notes (2026-10-28).**
+
+- Residual error is parameterised differently in the two formats: NONMEM
+  as sigma variances over `EPS`, rxode2 as standard-deviation parameters.
+  Each writer converts (`σ²` to a parameter `σ`, and back), which
+  simulates identically, so cross-format writes are `equivalent`.
+- First commit: fidelity compares constants within a few ulps. The full
+  run on `main` for Stage 3 failed on macOS and `nold`, where R's decimal
+  parser is not correctly rounded ([#12](https://github.com/pedrobtz/zupkpmx/issues/12)).
 
 ## Stage 6 — mrgsolve reader and writer
 
