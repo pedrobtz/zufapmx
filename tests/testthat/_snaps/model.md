@@ -10,6 +10,28 @@
       Dosing: depot lag
       Endpoints: cp (proportional)
 
+# a closed-form model prints its summary
+
+    Code
+      print(model_twocmt_oral())
+    Output
+      <zupkpmx_model> read from test
+      Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)
+      Parameters: 5, initial values only
+      Random effects: eta.cl on cl (exp), eta.v on v (exp)
+      Endpoints: cp (proportional)
+
+---
+
+    Code
+      print(model_twocmt_oral(estimates = TRUE))
+    Output
+      <zupkpmx_model> read from test
+      Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)
+      Parameters: 5, 5 with estimates
+      Random effects: eta.cl on cl (exp), eta.v on v (exp)
+      Endpoints: cp (proportional)
+
 # the representation's structure is stable
 
     Code
@@ -144,26 +166,4 @@
         ..$ estimates: chr NA
         ..$ hash     : chr NA
         ..$ fidelity : chr NA
-
-# a closed-form model prints its summary
-
-    Code
-      print(model_twocmt_oral())
-    Output
-      <zupkpmx_model> read from test
-      Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)
-      Parameters: 5, initial values only
-      Random effects: eta.cl on cl (exp), eta.v on v (exp)
-      Endpoints: cp (proportional)
-
----
-
-    Code
-      print(model_twocmt_oral(estimates = TRUE))
-    Output
-      <zupkpmx_model> read from test
-      Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)
-      Parameters: 5, 5 with estimates
-      Random effects: eta.cl on cl (exp), eta.v on v (exp)
-      Endpoints: cp (proportional)
 

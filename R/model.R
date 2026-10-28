@@ -129,6 +129,15 @@ validate_block <- function(block) {
       paste(block$names, collapse = ", ")
     )
   }
+  est <- block$estimate
+  if (
+    !is.null(est) && (!identical(dim(est), dim(m)) || !isSymmetric(unname(est)))
+  ) {
+    model_abort(
+      "The estimate for %s must be a symmetric matrix like its block.",
+      paste(block$names, collapse = ", ")
+    )
+  }
 }
 
 # Returns the structure's compartment names.
@@ -214,13 +223,17 @@ check_model <- function(x) {
 #' equations of an ODE model.
 #'
 #' @param model A model read by one of the `pmx_read_*()` functions.
+#' @param values For `pmx_omega()`: `"estimate"` (the default) or
+#'   `"init"`.
 #' @return
 #' * `pmx_parameters()`: a data frame with one row per fixed effect and
 #'   columns `name` (the tool's name), `role` (`"clearance"`, `"volume"`,
 #'   `"ka"` or `"other"`), `init`, `lower`, `upper`, `fixed`, and
 #'   `estimate` (`NA` when the model was read without estimates).
 #' * `pmx_omega()`: a symmetric matrix with the random effects' names as
-#'   dimnames, built block-diagonally from the model's omega blocks.
+#'   dimnames, built block-diagonally from the model's omega blocks. With
+#'   `values = "estimate"`, a block read with estimates contributes them
+#'   and any other block its initial values.
 #' * `pmx_ode()`: a named list of expressions, one derivative per
 #'   compartment, or `NULL` for a closed-form model.
 #' @name pmx_inspect
@@ -235,15 +248,20 @@ pmx_parameters <- function(model) {
 
 #' @rdname pmx_inspect
 #' @export
-pmx_omega <- function(model) {
+pmx_omega <- function(model, values = c("estimate", "init")) {
   check_model(model)
+  values <- match.arg(values)
   blocks <- model$random_effects$omega
   names <- unlist(lapply(blocks, `[[`, "names"))
   out <- matrix(0, length(names), length(names), dimnames = list(names, names))
   at <- 0
   for (block in blocks) {
     i <- at + seq_along(block$names)
-    out[i, i] <- block$matrix
+    out[i, i] <- if (values == "estimate" && !is.null(block$estimate)) {
+      block$estimate
+    } else {
+      block$matrix
+    }
     at <- at + length(block$names)
   }
   out

@@ -9,12 +9,15 @@
 \usage{
 pmx_parameters(model)
 
-pmx_omega(model)
+pmx_omega(model, values = c("estimate", "init"))
 
 pmx_ode(model)
 }
 \arguments{
 \item{model}{A model read by one of the \verb{pmx_read_*()} functions.}
+
+\item{values}{For \code{pmx_omega()}: \code{"estimate"} (the default) or
+\code{"init"}.}
 }
 \value{
 \itemize{
@@ -23,7 +26,9 @@ columns \code{name} (the tool's name), \code{role} (\code{"clearance"}, \code{"v
 \code{"ka"} or \code{"other"}), \code{init}, \code{lower}, \code{upper}, \code{fixed}, and
 \code{estimate} (\code{NA} when the model was read without estimates).
 \item \code{pmx_omega()}: a symmetric matrix with the random effects' names as
-dimnames, built block-diagonally from the model's omega blocks.
+dimnames, built block-diagonally from the model's omega blocks. With
+\code{values = "estimate"}, a block read with estimates contributes them
+and any other block its initial values.
 \item \code{pmx_ode()}: a named list of expressions, one derivative per
 compartment, or \code{NULL} for a closed-form model.
 }

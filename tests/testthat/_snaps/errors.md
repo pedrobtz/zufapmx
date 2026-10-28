@@ -1,16 +1,16 @@
-# an engine error without a parent says the engine is missing
-
-    Code
-      cat(conditionMessage(err))
-    Output
-      The rxode2 engine is not installed.
-
 # engine errors carry the engine and its own error
 
     Code
       cat(conditionMessage(err))
     Output
       The mrgsolve engine failed: compilation failed
+
+# an engine error without a parent says the engine is missing
+
+    Code
+      cat(conditionMessage(err))
+    Output
+      The rxode2 engine is not installed.
 
 # write errors carry the construct, location and formats
 

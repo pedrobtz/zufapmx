@@ -71,10 +71,10 @@ read_rxode2_body <- function(body, source) {
 
   ini <- read_rxode2_ini(stmt_body(ini), reader)
   parts <- read_rxode2_model(stmt_body(model), reader)
-  attach <- rxode2_attach(ini$etas, parts$individual)
+  attach <- attach_etas(ini$etas, parts$individual)
   structure <- parts$structure
   parameters <- ini$parameters
-  parameters$role <- rxode2_roles(parameters$name, parts$individual, structure)
+  parameters$role <- infer_roles(parameters$name, parts$individual, structure)
 
   new_model(
     parameters = parameters,
@@ -260,16 +260,43 @@ model_parameters_empty <- function() {
   )
 }
 
-# Canonical closed-form parameters and the names linCmt() accepts for each.
-lincmt_names <- list(
-  cl = "cl",
-  v = c("v", "vc", "v1"),
-  q = c("q", "q1"),
-  vp = c("vp", "v2", "vp1"),
-  q2 = "q2",
-  vp2 = c("vp2", "v3"),
-  ka = "ka"
-)
+# linCmt() names its parameters in one of two styles: rxode2's (cl, v or
+# vc, q, vp, q2, vp2) or NONMEM's numbered TRANS4 names, where the central
+# volume is V1 without a depot or V2 with one, and the volumes and
+# clearances after it are numbered on (V2/V3/V4, Q2/Q3/Q4).
+lincmt_aliases <- function(lower) {
+  if ("v1" %in% lower) {
+    return(list(
+      cl = "cl",
+      v = "v1",
+      q = c("q", "q2"),
+      vp = "v2",
+      q2 = "q3",
+      vp2 = "v3",
+      ka = "ka"
+    ))
+  }
+  if ("v2" %in% lower && !any(c("v", "vc") %in% lower)) {
+    return(list(
+      cl = "cl",
+      v = "v2",
+      q = c("q", "q3"),
+      vp = "v3",
+      q2 = "q4",
+      vp2 = "v4",
+      ka = "ka"
+    ))
+  }
+  list(
+    cl = "cl",
+    v = c("v", "vc"),
+    q = "q",
+    vp = "vp",
+    q2 = "q2",
+    vp2 = "vp2",
+    ka = "ka"
+  )
+}
 
 rxode2_dosing <- c(
   alag = "lag",
@@ -463,7 +490,7 @@ rxode2_residual <- function(x, stmt, reader) {
 
 rxode2_lincmt <- function(targets, reader) {
   lower <- tolower(targets)
-  found <- lapply(lincmt_names, function(alias) {
+  found <- lapply(lincmt_aliases(lower), function(alias) {
     hit <- targets[lower %in% alias]
     if (length(hit) > 0) hit[[1]]
   })
@@ -497,7 +524,7 @@ closed_compartments <- function(structure) {
 }
 
 # Each eta attaches to the first individual statement that reads it.
-rxode2_attach <- function(etas, individual) {
+attach_etas <- function(etas, individual) {
   rows <- lapply(etas, function(eta) {
     for (x in individual) {
       if (is_call(x, "<-") && eta %in% all.vars(x[[3]])) {
@@ -537,7 +564,7 @@ eta_transform <- function(x, eta) {
 
 # A fixed effect takes the role of the closed-form parameter whose
 # statement reads it as the only fixed effect.
-rxode2_roles <- function(params, individual, structure) {
+infer_roles <- function(params, individual, structure) {
   roles <- rep("other", length(params))
   if (!identical(structure$type, "closed")) {
     return(roles)
