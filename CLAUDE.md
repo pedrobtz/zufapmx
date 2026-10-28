@@ -83,7 +83,13 @@ Rscript -e 'devtools::test(filter = "<name>")'   # one test file
 Rscript -e 'devtools::test(shuffle = TRUE)'      # order independence
 Rscript -e 'devtools::check()'                   # R CMD check
 air format .                                     # format R sources
+Rscript tools/corpus-expected.R                  # rewrite expected.csv
+Rscript tools/oracle-agreement.R                 # rewrite oracle table
 ```
+
+The two `tools/` scripts need rxode2, mrgsolve and the oracles
+installed. Run them only when the corpus changes, and review the diff
+before committing it.
 
 ## Architecture
 
@@ -119,8 +125,15 @@ stage.
   today.
 - **Siblings on CRAN are used, not re-implemented (D9a):** `zuxml` for
   `run.xml`, `zucsv` for tables.
-- **Exported functions are `pmx_*` (D10),** with `zupkpmx_corpus()` the
-  one package-level exception.
+- **The corpus ships only MIT-compatible models.** Entries are written
+  for this package; `nlmixr2lib` and `modlib()` are GPL and are loaded
+  from their installed copies at test time, never copied into `inst/`.
+- **Each mrgsolve compile needs its own model name.** mrgsolve names the
+  shared library after the model, and a second model of the same name in
+  one session silently runs the first one’s code.
+- **Exported functions are `pmx_*` (D10),** with
+  [`zupkpmx_corpus()`](https://pedrobtz.github.io/zupkpmx/reference/zupkpmx_corpus.md)
+  the one package-level exception.
 
 ## Testing conventions
 
@@ -139,10 +152,18 @@ stage.
 - **Borrow a conformance suite before writing one.** Mainstream
   implementations in Python, Java, Go or Node usually ship a test
   corpus. Use it as an oracle rather than inventing cases by hand. Here
-  the corpus is built from `nlmixr2lib`, mrgsolve’s `modlib()` and the
-  NONMEM PREDPP examples, with `nonmem2rx` and `nonmem2mrgsolve` as
-  oracles (design §7). None of it exists yet.
-- **Helpers live in `tests/testthat/helper-*.R`.** None yet.
+  the corpus is `inst/corpus/`, one directory per model in every format
+  that holds it, with `expected.csv` of typical-subject predictions. The
+  oracles are `nonmem2rx` (every entry) and `amp.sim` (general ODE
+  entries only);
+  [`.agents/oracle-agreement.md`](https://pedrobtz.github.io/zupkpmx/.agents/oracle-agreement.md)
+  records where each agrees and why it fails elsewhere.
+- **Helpers live in `tests/testthat/helper-*.R`.** `helper-corpus.R`
+  simulates the typical subject of a corpus entry through rxode2,
+  mrgsolve or an oracle at fixed tight tolerances, and
+  `corpus_max_rel_dev()` measures agreement. The `tools/` scripts source
+  it, so the corpus files, the scripts and the tests share one
+  implementation.
 - **Keep the suite inside the CRAN time budget.** No runtime recorded
   yet.
 

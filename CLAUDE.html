@@ -76,7 +76,10 @@
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "&lt;name&gt;")'</span>   <span class="co"># one test file</span></span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(shuffle = TRUE)'</span>      <span class="co"># order independence</span></span>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span>                   <span class="co"># R CMD check</span></span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">air</span> format .                                     <span class="co"># format R sources</span></span></code></pre></div>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">air</span> format .                                     <span class="co"># format R sources</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="ex">Rscript</span> tools/corpus-expected.R                  <span class="co"># rewrite expected.csv</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="ex">Rscript</span> tools/oracle-agreement.R                 <span class="co"># rewrite oracle table</span></span></code></pre></div>
+<p>The two <code>tools/</code> scripts need rxode2, mrgsolve and the oracles installed. Run them only when the corpus changes, and review the diff before committing it.</p>
 </div>
 <div class="section level2">
 <h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a></h2>
@@ -102,7 +105,11 @@
 <li>
 <strong>Siblings on CRAN are used, not re-implemented (D9a):</strong> <code>zuxml</code> for <code>run.xml</code>, <code>zucsv</code> for tables.</li>
 <li>
-<strong>Exported functions are <code>pmx_*</code> (D10),</strong> with <code>zupkpmx_corpus()</code> the one package-level exception.</li>
+<strong>The corpus ships only MIT-compatible models.</strong> Entries are written for this package; <code>nlmixr2lib</code> and <code>modlib()</code> are GPL and are loaded from their installed copies at test time, never copied into <code>inst/</code>.</li>
+<li>
+<strong>Each mrgsolve compile needs its own model name.</strong> mrgsolve names the shared library after the model, and a second model of the same name in one session silently runs the first one’s code.</li>
+<li>
+<strong>Exported functions are <code>pmx_*</code> (D10),</strong> with <code><a href="reference/zupkpmx_corpus.html">zupkpmx_corpus()</a></code> the one package-level exception.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="testing-conventions">Testing conventions<a class="anchor" aria-label="anchor" href="#testing-conventions"></a></h2>
@@ -115,9 +122,9 @@
 <li>
 <strong>Order independence.</strong> <code>devtools::test(shuffle = TRUE)</code> is part of the definition of done.</li>
 <li>
-<strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. Here the corpus is built from <code>nlmixr2lib</code>, mrgsolve’s <code>modlib()</code> and the NONMEM PREDPP examples, with <code>nonmem2rx</code> and <code>nonmem2mrgsolve</code> as oracles (design §7). None of it exists yet.</li>
+<strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. Here the corpus is <code>inst/corpus/</code>, one directory per model in every format that holds it, with <code>expected.csv</code> of typical-subject predictions. The oracles are <code>nonmem2rx</code> (every entry) and <code>amp.sim</code> (general ODE entries only); <a href=".agents/oracle-agreement.html"><code>.agents/oracle-agreement.md</code></a> records where each agrees and why it fails elsewhere.</li>
 <li>
-<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> None yet.</li>
+<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> <code>helper-corpus.R</code> simulates the typical subject of a corpus entry through rxode2, mrgsolve or an oracle at fixed tight tolerances, and <code>corpus_max_rel_dev()</code> measures agreement. The <code>tools/</code> scripts source it, so the corpus files, the scripts and the tests share one implementation.</li>
 <li>
 <strong>Keep the suite inside the CRAN time budget.</strong> No runtime recorded yet.</li>
 </ul></div>
