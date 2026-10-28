@@ -406,6 +406,9 @@ decides it and the maintainer may overturn it.
   cross-check, run by the `tools/` agreement script when installed and
   never a package dependency. Where §7 and §9 say `nonmem2mrgsolve`, read
   `amp.sim`.
+- **D13 (M), 2026-10-28.** The NONMEM reader accepts every general ODE
+  `ADVAN` (6, 8, 9 and 13) with `$DES`. The representation holds no solver,
+  so the read records the solver choice as a loss. Resolves Q3.
 
 ## 14. Later versions, in the order they are expected
 
@@ -442,6 +445,7 @@ decides it and the maintainer may overturn it.
 - **Q3.** Should the NONMEM reader accept `$SUBROUTINES ADVAN13` with
   `$DES` only, or also `ADVAN6`, `ADVAN8` and `ADVAN9`? This RFC accepts
   all general ODE `ADVAN`s and records the solver choice as a loss.
+  **Resolved by D13:** all of them.
 - **Q4.** Does the package submit to CRAN at 0.1.0, or wait until one
   external pharmacometrician has used `pmx_report()` on a real
   translation (§12)? This RFC requires the review before submission.
