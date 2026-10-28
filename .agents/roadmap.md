@@ -123,6 +123,14 @@ on it, and where they agree and disagree is recorded.
 - `daffiz` is not on CRAN as of 2026-10-28 and has no `CRAN-submission`
   issue. Stage 7 waits on it (D11).
 
+**CI tuning (2026-10-28, [#18](https://github.com/pedrobtz/zupkpmx/pull/18)).**
+With the engines in `Suggests`, the R-devel containers took 15 to 17
+minutes (`clang23` 17m, `ubuntu-clang` 16m, `ubuntu-gcc16` 15m), because
+they compile rxode2 and mrgsolve from source; the binary runners took 3 to
+3.5 minutes. `quick-containers` is now `[]`, so the quick profile is
+Ubuntu R-release only, and the containers run in every full profile.
+`nosuggests` and `nold` are on in the full profile.
+
 ## Stage 2 — Representation and expressions
 
 **Issue.** [#4](https://github.com/pedrobtz/zupkpmx/issues/4), sub-issue of
