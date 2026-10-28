@@ -42,6 +42,7 @@ pmx_read_rxode2 <- function(model) {
 }
 
 read_rxode2_body <- function(body, source) {
+  body <- strip_srcref(body)
   reader <- rxode2_reader(source)
   blocks <- if (is_call(body, "{")) as.list(body)[-1] else list(body)
 
@@ -506,6 +507,17 @@ rxode2_roles <- function(params, individual, structure) {
     }
   }
   roles
+}
+
+# Source references are where code was typed, not what it says; a model
+# read with them would differ from the same model read without.
+strip_srcref <- function(x) {
+  if (is.call(x)) {
+    attributes(x) <- NULL
+    x[] <- lapply(as.list(x), strip_srcref)
+    x <- as.call(x)
+  }
+  x
 }
 
 is_call <- function(x, name) {
