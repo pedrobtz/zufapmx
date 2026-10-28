@@ -479,98 +479,32 @@ nm_if_lines <- function(x, names, indent, keyword = "IF") {
   if (keyword == "IF") c(out, sprintf("%sENDIF", pad)) else out
 }
 
-nm_precedence <- function(x) {
-  if (!is.call(x)) {
-    return(9L)
-  }
-  op <- as.character(x[[1]])
-  unary <- length(x) == 2
-  switch(
-    op,
-    `|` = 1L,
-    `&` = 2L,
-    `!` = 3L,
-    `==` = ,
-    `!=` = ,
-    `<` = ,
-    `<=` = ,
-    `>` = ,
-    `>=` = 4L,
-    `+` = ,
-    `-` = if (unary) 7L else 5L,
-    `*` = ,
-    `/` = 6L,
-    `^` = 8L,
-    9L
-  )
-}
-
-nm_operators <- c(
-  `|` = ".OR.",
-  `&` = ".AND.",
-  `==` = ".EQ.",
-  `!=` = ".NE.",
-  `<` = ".LT.",
-  `<=` = ".LE.",
-  `>` = ".GT.",
-  `>=` = ".GE.",
-  `+` = "+",
-  `-` = "-",
-  `*` = "*",
-  `/` = "/",
-  `^` = "**"
-)
-
 # Print an expression as NM-TRAN, adding parentheses where Fortran's
 # precedence needs them.
 nm_expr <- function(x, names) {
-  if (is.numeric(x)) {
-    return(nm_number(x))
-  }
-  if (is.symbol(x)) {
-    name <- as.character(x)
-    if (!name %in% names(names)) {
-      write_error(
-        sprintf("the name `%s`", name),
-        "expression",
-        formats = "rxode2",
-        call = NULL
-      )
-    }
-    return(names[[name]])
-  }
-  op <- as.character(x[[1]])
-  p <- nm_precedence(x)
-  wrap <- function(e, needs) {
-    text <- nm_expr(e, names)
-    if (needs) paste0("(", text, ")") else text
-  }
-  if (op == "(") {
-    return(paste0("(", nm_expr(x[[2]], names), ")"))
-  }
-  if (op == "!") {
-    return(paste0(".NOT.", wrap(x[[2]], nm_precedence(x[[2]]) < p)))
-  }
-  if (op %in% c("-", "+") && length(x) == 2) {
-    return(paste0(op, wrap(x[[2]], nm_precedence(x[[2]]) < p)))
-  }
-  if (op %in% names(nm_operators)) {
-    left <- nm_precedence(x[[2]])
-    right <- nm_precedence(x[[3]])
-    return(paste(
-      wrap(x[[2]], left < p || (op == "^" && left <= p)),
-      nm_operators[[op]],
-      wrap(x[[3]], right < p || (op %in% c("-", "/") && right == p))
-    ))
-  }
-  fn <- names(nm_functions)[nm_functions == op]
-  if (length(fn) != 1) {
-    write_error(
-      sprintf("`%s()`, which NM-TRAN has no function for", op),
-      "expression",
-      formats = "rxode2",
-      call = NULL
-    )
-  }
-  sprintf("%s(%s)", fn, nm_expr(x[[2]], names))
+  expr_print(x, names, nm_dialect)
 }
+
+nm_dialect <- list(
+  name = "NM-TRAN",
+  formats = "rxode2",
+  operators = c(
+    `|` = ".OR.",
+    `&` = ".AND.",
+    `==` = ".EQ.",
+    `!=` = ".NE.",
+    `<` = ".LT.",
+    `<=` = ".LE.",
+    `>` = ".GT.",
+    `>=` = ".GE.",
+    `+` = "+",
+    `-` = "-",
+    `*` = "*",
+    `/` = "/",
+    `^` = "**"
+  ),
+  not = ".NOT.",
+  power = NULL,
+  functions = stats::setNames(names(nm_functions), nm_functions),
+  number = function(x) nm_number(x)
+)
