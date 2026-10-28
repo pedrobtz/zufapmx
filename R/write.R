@@ -118,3 +118,23 @@ check_writable <- function(m, one_endpoint = TRUE) {
     )
   }
 }
+
+# Read a writer's own output back. Text that does not read back is the
+# writer's failure, so it is a write error, not the reader's parse error.
+read_back <- function(expr, format) {
+  tryCatch(
+    expr,
+    error = function(e) {
+      write_error(
+        sprintf(
+          "a model whose %s text does not read back (%s)",
+          format,
+          conditionMessage(e)
+        ),
+        "text",
+        formats = character(),
+        call = NULL
+      )
+    }
+  )
+}

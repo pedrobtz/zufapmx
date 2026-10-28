@@ -6,7 +6,7 @@
 has_zuxml <- function() requireNamespace("zuxml", quietly = TRUE)
 
 nm_attach_estimates <- function(model, file, source) {
-  stem <- sub("\\.[^.]*$", "", file)
+  stem <- tools::file_path_sans_ext(file)
   paths <- c(
     xml = paste0(stem, ".xml"),
     ext = paste0(stem, ".ext"),
@@ -100,12 +100,22 @@ nm_estimates_ext <- function(path) {
       path,
       1L,
       1L,
-      seen = lines[[1]],
+      seen = if (length(lines) > 0) lines[[1]] else "an empty file",
       expected = "TABLE NO.",
       call = NULL
     )
   }
   last <- tables[[length(tables)]]
+  if (last + 1 > length(lines)) {
+    parse_error(
+      path,
+      last,
+      1L,
+      seen = "end of file",
+      expected = "a header and rows after TABLE NO.",
+      call = NULL
+    )
+  }
   body <- lines[(last + 1):length(lines)]
   header <- strsplit(trimws(body[[1]]), "\\s+")[[1]]
   rows <- lapply(strsplit(trimws(body[-1]), "\\s+"), as.numeric)

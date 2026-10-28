@@ -71,12 +71,22 @@ rxode2_read_body <- function(body, source) {
 
   ini <- rxode2_read_ini(stmt_body(ini), reader)
   parts <- rxode2_read_model(stmt_body(model), reader)
+  for (obs in parts$observations) {
+    unknown <- setdiff(obs$residual$parameters, ini$parameters$name)
+    if (length(unknown) > 0) {
+      reader$refuse(
+        as.symbol(unknown[[1]]),
+        "residual error parameters defined in ini()"
+      )
+    }
+  }
   attach <- attach_etas(ini$etas, parts$individual)
   structure <- parts$structure
   parameters <- ini$parameters
   parameters$role <- infer_roles(parameters$name, parts$individual, structure)
 
-  new_model(
+  read_model(
+    source,
     parameters = parameters,
     random_effects = list(
       omega = ini$omega,
@@ -148,12 +158,16 @@ rxode2_read_ini <- function(stmts, reader) {
       reader$lose("labels")
     } else if (is_call(x, "<-") && is.symbol(x[[2]])) {
       value <- rxode2_read_value(x[[3]], reader)
+      bounds <- read_bounds(value$values)
+      if (is.null(bounds)) {
+        reader$refuse(x, "one to three values, lower <= initial <= upper")
+      }
       params[[length(params) + 1]] <- data.frame(
         name = as.character(x[[2]]),
         role = "other",
-        init = value$values[[if (length(value$values) == 1) 1 else 2]],
-        lower = if (length(value$values) > 1) value$values[[1]] else -Inf,
-        upper = if (length(value$values) > 2) value$values[[3]] else Inf,
+        init = bounds$init,
+        lower = bounds$lower,
+        upper = bounds$upper,
         fixed = value$fixed,
         estimate = NA_real_
       )

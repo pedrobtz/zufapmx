@@ -509,3 +509,40 @@ check_dosing_names <- function(individual, reserved, file, record) {
     )
   }
 }
+
+# A value with optional bounds, as $THETA and ini() give it: `init`,
+# `c(lower, init)` or `c(lower, init, upper)`. NULL when there are not one
+# to three values or they are out of order.
+read_bounds <- function(values) {
+  n <- length(values)
+  if (n < 1 || n > 3 || anyNA(values)) {
+    return(NULL)
+  }
+  out <- list(
+    init = values[[if (n == 1) 1 else 2]],
+    lower = if (n > 1) values[[1]] else -Inf,
+    upper = if (n > 2) values[[3]] else Inf
+  )
+  if (out$lower > out$init || out$init > out$upper) {
+    return(NULL)
+  }
+  out
+}
+
+# new_model() for a reader: a model the validator rejects was read from
+# input, so the reader reports it as a parse error of that input.
+read_model <- function(file, ...) {
+  tryCatch(
+    new_model(...),
+    zupkpmx_model_error = function(e) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = "the model as read",
+        message = conditionMessage(e),
+        call = NULL
+      )
+    }
+  )
+}

@@ -86,7 +86,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   path <- tempfile(fileext = ".ctl")
   on.exit(unlink(path))
   writeLines(text, path)
-  back <- nm_read(path)
+  back <- read_back(nm_read(path), "NONMEM")
   new_written(
     text = text,
     format = "nonmem",
@@ -134,6 +134,17 @@ nm_sigma_from_sd <- function(m) {
         )
       }
       row <- m$parameters[m$parameters$name == sd, ]
+      if (nrow(row) != 1) {
+        write_error(
+          sprintf(
+            "the residual parameter `%s`, which is not a fixed effect",
+            sd
+          ),
+          sprintf("observations$%s$residual", e),
+          formats = character(),
+          call = NULL
+        )
+      }
       name <- paste0("EPS", length(m$random_effects$sigma) + 1)
       m$random_effects$sigma[[length(m$random_effects$sigma) + 1]] <- list(
         names = name,

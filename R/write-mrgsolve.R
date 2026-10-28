@@ -103,7 +103,7 @@ pmx_write_mrgsolve <- function(model) {
   path <- tempfile(fileext = ".cpp")
   on.exit(unlink(path))
   writeLines(text, path)
-  back <- mrg_read(path)
+  back <- read_back(mrg_read(path), "mrgsolve")
   new_written(
     text = text,
     format = "mrgsolve",

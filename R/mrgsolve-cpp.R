@@ -94,6 +94,17 @@ cpp_parse <- function(block, file) {
       return(call("^", args[[1]], args[[2]]))
     }
     if (name %in% names(cpp_functions)) {
+      arity <- expr_functions[[cpp_functions[[name]]]]
+      if (length(args) != arity) {
+        parse_error(
+          file,
+          t$line,
+          t$column,
+          seen = name,
+          expected = sprintf("%s() with %d arguments", name, arity),
+          call = NULL
+        )
+      }
       return(as.call(c(as.symbol(cpp_functions[[name]]), args)))
     }
     parse_error(

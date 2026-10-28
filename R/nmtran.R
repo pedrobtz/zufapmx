@@ -48,7 +48,7 @@ nm_split <- function(lines, file) {
       file,
       1L,
       1L,
-      seen = trimws(lines[[1]]),
+      seen = if (length(lines) > 0) trimws(lines[[1]]) else "an empty file",
       expected = "$PROBLEM",
       call = NULL
     )

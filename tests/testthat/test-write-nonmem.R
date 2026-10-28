@@ -150,7 +150,10 @@ test_that("constructs NM-TRAN cannot hold are refused", {
   )
 
   clash <- parts
-  clash$individual <- c(clash$individual, list(quote(cl.a <- 1), quote(cl_a <- 2)))
+  clash$individual <- c(
+    clash$individual,
+    list(quote(cl.a <- 1), quote(cl_a <- 2))
+  )
   expect_error(
     pmx_write_nonmem(do.call(new_model, clash)),
     class = "zupkpmx_write_error"

@@ -66,7 +66,7 @@ mrg_split <- function(lines, file) {
       file,
       1L,
       1L,
-      seen = trimws(lines[[1]]),
+      seen = if (length(lines) > 0) trimws(lines[[1]]) else "an empty file",
       expected = "a $BLOCK",
       call = NULL
     )
@@ -235,7 +235,8 @@ mrg_read <- function(file) {
   losses <- c(losses, table$losses)
 
   parameters$role <- infer_roles(parameters$name, main$individual, structure)
-  new_model(
+  read_model(
+    file,
     parameters = parameters,
     random_effects = list(
       omega = omega,
@@ -297,20 +298,43 @@ mrg_params <- function(blocks, file) {
         if (nzchar(text) && length(bounds) == 0 && !grepl("^fixed$", text)) {
           losses <- c(losses, "parameter descriptions")
         }
+        if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", parts[[1]])) {
+          parse_error(
+            file,
+            b$line[[k]],
+            1L,
+            seen = parts[[1]],
+            expected = "a parameter name",
+            call = NULL
+          )
+        }
+        init <- mrg_number(parts[[2]], file, b$line[[k]])
+        values <- if (length(bounds) == 3) {
+          c(
+            mrg_number(bounds[[2]], file, b$line[[k]]),
+            init,
+            mrg_number(bounds[[3]], file, b$line[[k]])
+          )
+        } else {
+          init
+        }
+        checked <- read_bounds(values)
+        if (is.null(checked)) {
+          parse_error(
+            file,
+            b$line[[k]],
+            1L,
+            seen = line,
+            expected = "lower <= value <= upper",
+            call = NULL
+          )
+        }
         rows[[length(rows) + 1]] <- data.frame(
           name = parts[[1]],
           role = "other",
-          init = mrg_number(parts[[2]], file, b$line[[k]]),
-          lower = if (length(bounds) == 3) {
-            mrg_number(bounds[[2]], file, b$line[[k]])
-          } else {
-            -Inf
-          },
-          upper = if (length(bounds) == 3) {
-            mrg_number(bounds[[3]], file, b$line[[k]])
-          } else {
-            Inf
-          },
+          init = checked$init,
+          lower = checked$lower,
+          upper = checked$upper,
           fixed = grepl("\\bfixed\\b", text),
           estimate = NA_real_
         )
@@ -522,6 +546,16 @@ mrg_pkmodel <- function(b, file) {
     advan <- as.integer(args$advan)
   } else {
     ncmt <- as.integer(args$ncmt %||% 1L)
+    if (is.na(ncmt) || !ncmt %in% 1:3) {
+      parse_error(
+        file,
+        b$line[[1]],
+        1L,
+        seen = sprintf("ncmt = %s", args$ncmt),
+        expected = "ncmt 1, 2 or 3",
+        call = NULL
+      )
+    }
     depot <- isTRUE(args$depot)
     advan <- closed_advan(ncmt, depot)
   }

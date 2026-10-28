@@ -252,7 +252,8 @@ nm_read <- function(file) {
 
   parameters <- thetas
   parameters$role <- infer_roles(parameters$name, pk$individual, structure)
-  model <- new_model(
+  model <- read_model(
+    file,
     parameters = parameters,
     random_effects = list(
       omega = omega,
@@ -420,13 +421,23 @@ nm_closed_structure <- function(sub, closed, individual, file) {
 nm_inits <- function(records, kind, file) {
   items <- nm_init_items(records, file)
   rows <- lapply(seq_along(items), function(i) {
-    v <- items[[i]]$values
+    bounds <- read_bounds(items[[i]]$values)
+    if (is.null(bounds)) {
+      parse_error(
+        file,
+        items[[i]]$line,
+        NA_integer_,
+        seen = paste(items[[i]]$values, collapse = ", "),
+        expected = "one to three values, lower <= initial <= upper",
+        call = NULL
+      )
+    }
     data.frame(
       name = paste0(kind, i),
       role = "other",
-      init = if (length(v) == 1) v[[1]] else v[[2]],
-      lower = if (length(v) > 1) v[[1]] else -Inf,
-      upper = if (length(v) > 2) v[[3]] else Inf,
+      init = bounds$init,
+      lower = bounds$lower,
+      upper = bounds$upper,
       fixed = items[[i]]$fixed
     )
   })
@@ -570,6 +581,7 @@ nm_init_items <- function(records, file) {
   }
   items <- list()
   while (i <= length(tokens)) {
+    line <- peek()$line
     fixed <- FALSE
     if (peek()$value == "(") {
       i <- i + 1L
@@ -596,7 +608,11 @@ nm_init_items <- function(records, file) {
       fixed <- TRUE
       i <- i + 1L
     }
-    items[[length(items) + 1]] <- list(values = values, fixed = fixed)
+    items[[length(items) + 1]] <- list(
+      values = values,
+      fixed = fixed,
+      line = line
+    )
   }
   items
 }

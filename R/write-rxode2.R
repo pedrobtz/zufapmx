@@ -43,7 +43,10 @@ pmx_write_rxode2 <- function(model) {
     "}"
   )
 
-  back <- rxode2_read_body(body(eval(parse(text = text))), "written")
+  back <- read_back(
+    rxode2_read_body(body(eval(parse(text = text))), "written"),
+    "rxode2"
+  )
   new_written(
     text = text,
     format = "rxode2",
