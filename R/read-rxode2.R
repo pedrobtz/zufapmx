@@ -55,6 +55,12 @@ read_rxode2_body <- function(body, source) {
       model <- x[[2]]
     } else if (is_call(x, "<-") && identical(x[[2]], quote(description))) {
       reader$lose("description")
+    } else if (
+      (is_call(x, "<-") || is_call(x, "=")) &&
+        is.symbol(x[[2]]) &&
+        is_metadata(x[[3]])
+    ) {
+      reader$lose(sprintf("metadata `%s`", as.character(x[[2]])))
     } else {
       reader$refuse(x, "`ini({})`, `model({})` or `description`")
     }
@@ -99,6 +105,28 @@ rxode2_reader <- function(source) {
   list(
     lose = function(what) losses <<- union(losses, what),
     losses = function() losses,
+    # Check an expression or statement; a construct outside the table is a
+    # parse error of this read, not an invalid model.
+    check = function(x, stmt = x, fn = expr_check) {
+      tryCatch(
+        fn(x),
+        zupkpmx_model_error = function(e) {
+          parse_error(
+            source,
+            NA_integer_,
+            NA_integer_,
+            seen = expr_text(stmt),
+            message = sprintf(
+              "in `%s`: %s",
+              expr_text(stmt),
+              conditionMessage(e)
+            ),
+            call = NULL
+          )
+        }
+      )
+      x
+    },
     refuse = function(x, expected) {
       parse_error(
         source,
@@ -180,7 +208,32 @@ rxode2_number <- function(x, reader) {
   if (is_call(x, "-") && length(x) == 2) {
     return(-rxode2_number(x[[2]], reader))
   }
-  reader$refuse(x, "a number")
+  # A constant expression such as `log(90)` is evaluated; its text is lost.
+  if (is.call(x) && length(all.vars(x)) == 0) {
+    ok <- tryCatch(
+      {
+        expr_check(x)
+        TRUE
+      },
+      zupkpmx_model_error = function(e) FALSE
+    )
+    if (ok) {
+      reader$lose("initial values written as expressions, evaluated")
+      return(eval(x, baseenv()))
+    }
+  }
+  reader$refuse(x, "a number or a constant expression of the function table")
+}
+
+# Top-level assignments of text, such as `reference <- "..."` or
+# `dosing <- c("central", "depot")`, describe a model without being part of
+# it.
+is_metadata <- function(x) {
+  if (is.character(x)) {
+    return(TRUE)
+  }
+  (is_call(x, "c") || is_call(x, "list")) &&
+    all(vapply(as.list(x)[-1], is_metadata, logical(1)))
 }
 
 # A block's values are its lower triangle, row by row.
@@ -240,7 +293,7 @@ read_rxode2_model <- function(stmts, reader) {
       }
       residuals[[as.character(x[[2]])]] <- rxode2_residual(x[[3]], x, reader)
     } else if (is_call(x, "<-") && is_ddt(x[[2]])) {
-      derivatives[[as.character(x[[2]][[3]][[2]])]] <- x[[3]]
+      derivatives[[as.character(x[[2]][[3]][[2]])]] <- reader$check(x[[3]], x)
     } else if (is_call(x, "<-") && rxode2_is_dosing(x[[2]])) {
       # `alag(depot) <- e` names the compartment inside the call;
       # `depot(0) <- e` names it as the call.
@@ -254,14 +307,11 @@ read_rxode2_model <- function(stmts, reader) {
       if (is.null(dosing[[cmt]])) {
         dosing[[cmt]] <- list()
       }
-      dosing[[cmt]][[attr]] <- x[[3]]
+      dosing[[cmt]][[attr]] <- reader$check(x[[3]], x)
     } else if (is_call(x, "<-") && is_call(x[[3]], "linCmt")) {
       lincmt <- as.character(x[[2]])
     } else if (is_call(x, "<-") || is_call(x, "if")) {
-      tryCatch(
-        stmt_check(x),
-        zupkpmx_model_error = function(e) reader$refuse(x, conditionMessage(e))
-      )
+      reader$check(x, fn = stmt_check)
       assigns[[length(assigns) + 1]] <- x
     } else if (is_call(x, "label")) {
       reader$lose("labels")
@@ -326,6 +376,10 @@ read_rxode2_model <- function(stmts, reader) {
     )
   }
 
+  # An endpoint that is a compartment observes its amount directly.
+  for (e in intersect(setdiff(endpoints, names(predictions)), compartments)) {
+    predictions[[e]] <- as.symbol(e)
+  }
   missing <- setdiff(endpoints, names(predictions))
   if (length(missing) > 0) {
     reader$refuse(
@@ -395,8 +449,8 @@ rxode2_residual <- function(x, stmt, reader) {
     return(list(type = "power", parameters = p))
   }
   if (is_call(x, "+") && length(x) == 3) {
-    a <- one(x[[2]], "add")
-    p <- one(x[[3]], "prop")
+    a <- one(x[[2]], "add") %||% one(x[[3]], "add")
+    p <- one(x[[3]], "prop") %||% one(x[[2]], "prop")
     if (!is.null(a) && !is.null(p)) {
       return(list(type = "combined", parameters = c(a, p)))
     }

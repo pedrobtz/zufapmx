@@ -1,13 +1,3 @@
-corpus_rxode2_model <- function(id) {
-  fun <- eval(parse(system.file(
-    "corpus",
-    id,
-    "model-rxode2.R",
-    package = "zupkpmx"
-  )))
-  pmx_read_rxode2(fun)
-}
-
 test_that("every corpus model round-trips exactly", {
   for (id in zupkpmx_corpus()$id) {
     m <- corpus_rxode2_model(id)

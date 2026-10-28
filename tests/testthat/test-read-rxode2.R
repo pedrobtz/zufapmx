@@ -1,7 +1,3 @@
-corpus_rxode2 <- function(id) {
-  eval(parse(system.file("corpus", id, "model-rxode2.R", package = "zupkpmx")))
-}
-
 test_that("a closed-form corpus model reads into its structure", {
   m <- pmx_read_rxode2(corpus_rxode2("twocmt-oral"))
   s <- unclass(m)$structure
@@ -228,4 +224,72 @@ test_that("a function without ini() or model() is refused", {
     class = "zupkpmx_parse_error"
   )
   expect_error(pmx_read_rxode2("one.cmt"), class = "zupkpmx_model_error")
+})
+
+test_that("metadata, constant ini expressions and prop() + add() read", {
+  m <- pmx_read_rxode2(function() {
+    reference <- "Someone et al. 2020"
+    units <- list(time = "h", dosing = "mg")
+    ini({
+      lcl <- log(4)
+      lv <- 3
+      add.sd <- 0.1
+      prop.sd <- 0.2
+    })
+    model({
+      cl <- exp(lcl)
+      v <- exp(lv)
+      cp <- linCmt()
+      cp ~ prop(prop.sd) + add(add.sd)
+    })
+  })
+  m <- unclass(m)
+
+  expect_equal(m$parameters$init[[1]], log(4))
+  expect_equal(
+    m$observations$cp$residual,
+    list(type = "combined", parameters = c("add.sd", "prop.sd"))
+  )
+  expect_setequal(
+    m$provenance$losses,
+    c(
+      "metadata `reference`",
+      "metadata `units`",
+      "initial values written as expressions, evaluated"
+    )
+  )
+})
+
+test_that("a compartment can be an endpoint", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      kg <- 0.1
+      sd <- 0.1
+    })
+    model({
+      d / dt(tumor) <- kg * tumor
+      tumor(0) <- 1
+      tumor ~ prop(sd)
+    })
+  })
+
+  expect_equal(unclass(m)$observations$tumor$prediction, quote(tumor))
+  expect_equal(pmx_fidelity(pmx_write_rxode2(m)), "exact")
+})
+
+test_that("a construct outside the table in a derivative is a parse error", {
+  expect_error(
+    pmx_read_rxode2(function() {
+      ini({
+        k <- 0.1
+        sd <- 0.1
+      })
+      model({
+        d / dt(a) <- ifelse(a > 1, -k * a, 0)
+        cp <- a
+        cp ~ add(sd)
+      })
+    }),
+    class = "zupkpmx_parse_error"
+  )
 })

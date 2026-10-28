@@ -176,6 +176,9 @@ rxode2_model_lines <- function(m) {
 }
 
 rxode2_prediction <- function(s, endpoint, prediction) {
+  if (identical(prediction, as.symbol(endpoint))) {
+    return(character())
+  }
   if (identical(s$type, "closed")) {
     if (
       identical(
