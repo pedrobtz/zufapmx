@@ -2,7 +2,7 @@ $PROB Two-compartment model, first-order absorption
 
 $PARAM TVKA = 1, TVCL = 4, TVV2 = 20, TVQ = 2, TVV3 = 40
 
-$PKMODEL cmt = "DEPOT CENT PERIPH", depot = TRUE
+$PKMODEL advan = 4, trans = 4, cmt = "DEPOT CENT PERIPH"
 
 $MAIN
 double KA = TVKA;

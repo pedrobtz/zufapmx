@@ -2,7 +2,7 @@ $PROB Two-compartment model, intravenous bolus
 
 $PARAM TVCL = 4, TVV1 = 20, TVQ = 2, TVV2 = 40
 
-$PKMODEL cmt = "CENT PERIPH"
+$PKMODEL advan = 3, trans = 4, cmt = "CENT PERIPH"
 
 $MAIN
 double CL = TVCL * exp(ETA(1));

@@ -11,9 +11,15 @@ source("tests/testthat/helper-corpus.R")
 
 corpus <- zupkpmx_corpus()
 for (i in seq_len(nrow(corpus))) {
-  pred <- corpus_solve_rxode2(corpus$path[[i]], corpus$regimen[[i]])
-  pred$pred <- signif(pred$pred, 10)
-  out <- file.path("inst", "corpus", corpus$id[[i]], "expected.csv")
-  utils::write.csv(pred, out, row.names = FALSE, quote = FALSE)
-  message("Wrote ", out)
+  regimen <- corpus$regimen[[i]]
+  pred <- corpus_solve_entry_rxode2(corpus$path[[i]], regimen)
+  out <- data.frame(
+    regimen = regimen,
+    time = corpus_times(regimen),
+    endpoint = "cp",
+    pred = signif(pred, 10)
+  )
+  file <- file.path("inst", "corpus", corpus$id[[i]], "expected.csv")
+  utils::write.csv(out, file, row.names = FALSE, quote = FALSE)
+  message("Wrote ", file)
 }

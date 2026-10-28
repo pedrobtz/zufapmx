@@ -4,5 +4,4 @@ Structure: ADVAN11 TRANS4
 Regimen: infusion
 Formats: nonmem,rxode2,mrgsolve
 Source: Written for zupkpmx from the PREDPP ADVAN11 TRANS4 structure
- (NONMEM Users Guide, Part VI). mrgsolve has no three-compartment
- closed form, so model.cpp writes the same system as ODEs. MIT.
+ (NONMEM Users Guide, Part VI). MIT.
