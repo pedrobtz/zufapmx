@@ -2,6 +2,11 @@
 
 ## zupkpmx 0.0.0.9000
 
+- [`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_mrgsolve.md)
+  reads an mrgsolve model file and
+  [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_mrgsolve.md)
+  writes one.
+
 - [`pmx_write_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_nonmem.md)
   writes a NONMEM control stream.
 
