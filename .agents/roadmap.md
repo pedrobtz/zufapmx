@@ -18,7 +18,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupkpmx/issues/2) | [#16](https://github.com/pedrobtz/zupkpmx/pull/16) | 2026-10-28 |
 | 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zupkpmx/issues/3) | [#18](https://github.com/pedrobtz/zupkpmx/pull/18) | 2026-10-28 |
-| 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | | 2026-10-28 |
+| 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | [#19](https://github.com/pedrobtz/zupkpmx/pull/19) | 2026-10-28 |
 | 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | | |
 | 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zupkpmx/issues/6) | | |
 | 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zupkpmx/issues/7) | | |
