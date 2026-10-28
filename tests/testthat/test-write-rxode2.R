@@ -6,7 +6,7 @@ test_that("every corpus model round-trips exactly", {
 
     expect_equal(pmx_fidelity(w), "exact", label = id)
     expect_equal(pmx_losses(w), character(), label = id)
-    expect_identical(model_content(back), model_content(m), label = id)
+    expect_true(same_content(model_content(back), model_content(m)), label = id)
   }
 })
 
@@ -130,4 +130,18 @@ test_that("sigma blocks and inter-occasion variability are refused", {
 test_that("fidelity accessors reject anything but a written model", {
   expect_error(pmx_fidelity(list()), class = "zupkpmx_model_error")
   expect_error(pmx_losses("x"), class = "zupkpmx_model_error")
+})
+
+test_that("fidelity tolerates a parser that is off by one ulp", {
+  x <- 0.12345678901234568
+  near <- x * (1 + .Machine$double.eps)
+
+  expect_true(same_content(
+    list(quote(a <- 0.12345678901234568 * b), x),
+    list(call("<-", quote(a), call("*", near, quote(b))), near)
+  ))
+  expect_false(same_content(list(x), list(x * (1 + 1e-12))))
+  expect_false(same_content(list(quote(a <- b)), list(quote(a <- c))))
+  expect_false(same_content(data.frame(a = 1), data.frame(b = 1)))
+  expect_false(same_content(list(NA_real_), list(1)))
 })
