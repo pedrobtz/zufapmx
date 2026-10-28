@@ -1,0 +1,7 @@
+Id: twocmt-oral
+Title: Two-compartment model, first-order absorption
+Structure: ADVAN4 TRANS4
+Regimen: oral
+Formats: nonmem,rxode2,mrgsolve
+Source: Written for zupkpmx from the PREDPP ADVAN4 TRANS4 structure
+ (NONMEM Users Guide, Part VI). MIT.
