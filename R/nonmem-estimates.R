@@ -144,7 +144,19 @@ nm_estimates_ext <- function(path) {
 nm_estimates_xml <- function(path) {
   # NONMEM declares encoding="ASCII", which expat does not know by that
   # name. ISO-8859-1 reads every byte, and ASCII is a subset of it.
-  doc <- zuxml::xml_read(path, encoding = "ISO-8859-1")
+  doc <- tryCatch(
+    zuxml::xml_read(path, encoding = "ISO-8859-1"),
+    error = function(e) {
+      parse_error(
+        path,
+        NA_integer_,
+        NA_integer_,
+        seen = "the XML",
+        message = conditionMessage(e),
+        call = NULL
+      )
+    }
+  )
   ns <- "http://namespaces.oup.com/nonmem"
   est <- zuxml::xml_find(zuxml::xml_root(doc), "estimation", ns = ns)
   if (length(est) == 0) {

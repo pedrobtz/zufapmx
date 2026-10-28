@@ -95,8 +95,8 @@ closed_alias_lines <- function(structure, spelling, format) {
   out
 }
 
-# What no writer can hold yet: inter-occasion variability, and (for NONMEM
-# and mrgsolve) more than one endpoint.
+# What no writer can hold yet: inter-occasion variability, transformed
+# endpoints, and (for NONMEM and mrgsolve) more than one endpoint.
 check_writable <- function(m, one_endpoint = TRUE) {
   if (isTRUE(m$random_effects$iov$present)) {
     write_error(
@@ -105,6 +105,16 @@ check_writable <- function(m, one_endpoint = TRUE) {
       formats = character(),
       call = NULL
     )
+  }
+  for (e in names(m$observations)) {
+    if (!identical(m$observations[[e]]$transform, "none")) {
+      write_error(
+        sprintf("a %s-transformed endpoint", m$observations[[e]]$transform),
+        sprintf("observations$%s", e),
+        formats = character(),
+        call = NULL
+      )
+    }
   }
   if (one_endpoint && length(m$observations) != 1) {
     write_error(

@@ -178,3 +178,28 @@ test_that("every dosing attribute round-trips through every writer", {
   back <- read_cpp(mrg)
   expect_equal(names(unclass(back)$dosing), names(dosing))
 })
+
+test_that("every residual type round-trips through the mrgsolve writer", {
+  tables <- list(
+    additive = "double Y = IPRED + EPS(1);",
+    proportional = "double Y = IPRED * (1 + EPS(1));",
+    combined = "double Y = IPRED * (1 + EPS(1)) + EPS(2);",
+    exponential = "double Y = IPRED * exp(EPS(1));"
+  )
+  for (type in names(tables)) {
+    m <- read_cpp(cpp_onecmt(
+      table = c("double IPRED = CENT / V;", tables[[type]]),
+      extra = "$SIGMA 0.01"
+    ))
+    w <- pmx_write_mrgsolve(m)
+
+    expect_equal(unclass(m)$observations$Y$residual$type, type)
+    expect_equal(pmx_fidelity(w), "exact", label = type)
+    expect_true(tables[[type]] %in% w$text, label = type)
+  }
+
+  expression <- read_ctl(ctl_onecmt(
+    error = c("W = SQRT(THETA(1))", "Y = F + W * EPS(1)")
+  ))
+  expect_error(pmx_write_mrgsolve(expression), class = "zupkpmx_write_error")
+})

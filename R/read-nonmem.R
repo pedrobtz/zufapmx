@@ -34,6 +34,9 @@ pmx_read_nonmem <- function(
   file,
   estimates = c("auto", "xml", "ext", "lst", "none")
 ) {
+  if (!is.character(estimates) || anyNA(estimates)) {
+    zupkpmx_abort("`estimates` must be one of the documented strings.", "model")
+  }
   estimates <- match.arg(estimates)
   if (
     !is.character(file) ||
@@ -190,11 +193,11 @@ nm_read <- function(file) {
     compartments <- comp$names
     defobs <- comp$defobs
   }
-  cmt <- function(n, column) {
+  cmt <- function(n, line, column) {
     if (n < 1 || n > length(compartments)) {
       parse_error(
         file,
-        NA_integer_,
+        line,
         column,
         seen = sprintf("A(%d)", n),
         expected = sprintf("a compartment from 1 to %d", length(compartments)),

@@ -295,14 +295,6 @@ rxode2_write_model <- function(m) {
 
   for (endpoint in names(m$observations)) {
     obs <- m$observations[[endpoint]]
-    if (obs$transform != "none") {
-      write_error(
-        sprintf("a %s-transformed endpoint", obs$transform),
-        sprintf("observations$%s", endpoint),
-        formats = character(),
-        call = NULL
-      )
-    }
     lines <- c(lines, rxode2_write_prediction(s, endpoint, obs$prediction))
   }
   for (endpoint in names(m$observations)) {

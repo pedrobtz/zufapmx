@@ -237,3 +237,39 @@ test_that("$SIZES and $ERROR (ONLY OBSERVATIONS) are read as losses", {
   expect_true("array sizes ($SIZES)" %in% losses)
   expect_true("record options ($ERROR (ONLY OBSERVATIONS))" %in% losses)
 })
+
+test_that("estimate matrices keep their orientation from every source", {
+  omega <- matrix(
+    c(0.11, 0.012, 0.023, 0.012, 0.21, 0.034, 0.023, 0.034, 0.31),
+    3,
+    dimnames = list(paste0("ETA", 1:3), paste0("ETA", 1:3))
+  )
+  sigma <- matrix(c(0.031, 0, 0, 0.41), 2)
+  sources <- c(
+    "ext",
+    "lst",
+    if (requireNamespace("zuxml", quietly = TRUE)) "xml"
+  )
+
+  for (source in sources) {
+    m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run2.ctl"), source)
+    re <- unclass(m)$random_effects
+
+    expect_equal(
+      pmx_parameters(m)$estimate,
+      c(1.21, 4.31, 51.1),
+      label = source
+    )
+    expect_equal(pmx_omega(m), omega, label = source)
+    expect_equal(
+      diag(pmx_omega(m, "init")),
+      c(ETA1 = 0.1, ETA2 = 0.2, ETA3 = 0.3),
+      label = source
+    )
+    expect_equal(
+      c(re$sigma[[1]]$estimate[[1]], re$sigma[[2]]$estimate[[1]]),
+      diag(sigma),
+      label = source
+    )
+  }
+})

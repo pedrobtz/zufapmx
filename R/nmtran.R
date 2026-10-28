@@ -199,7 +199,7 @@ nm_parser <- function(tokens, line, file, cmt) {
       ETA = as.symbol(paste0("ETA", index())),
       EPS = ,
       ERR = as.symbol(paste0("EPS", index())),
-      A = as.symbol(cmt(index(), t$column)),
+      A = as.symbol(cmt(index(), line, t$column)),
       if (name %in% names(nm_functions) && length(args) == 1) {
         as.call(c(as.symbol(nm_functions[[name]]), args))
       } else {

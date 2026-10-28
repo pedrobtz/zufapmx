@@ -272,7 +272,14 @@ mrg_residual <- function(m, spelling) {
     proportional = sprintf("IPRED * (1 + %s)", p[[1]]),
     combined = sprintf("IPRED * (1 + %s) + %s", p[[2]], p[[1]]),
     exponential = sprintf("IPRED * exp(%s)", p[[1]]),
-    expression = cpp_expr(r$expression, c(spelling, F = "IPRED")),
+    # mrgsolve's reader finds the prediction by Y's form, so a residual
+    # written as an expression would not read back.
+    expression = write_error(
+      "a residual model written as an expression over epsilons",
+      "observations",
+      formats = "nonmem",
+      call = NULL
+    ),
     write_error(
       sprintf("a %s residual model", r$type),
       "observations",

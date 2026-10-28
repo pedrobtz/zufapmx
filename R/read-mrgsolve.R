@@ -109,10 +109,15 @@ mrg_split <- function(lines, file) {
 # Remove // and /* */ comments, keeping line numbers.
 mrg_strip_comments <- function(lines) {
   text <- paste(lines, collapse = "\n")
-  text <- gsub("/\\*.*?\\*/", "", text, perl = TRUE)
+  # A /* */ comment keeps its new lines, so later lines keep their numbers.
+  comments <- gregexpr("/\\*.*?\\*/", text, perl = TRUE)
+  regmatches(text, comments) <- lapply(regmatches(text, comments), function(m) {
+    gsub("[^\n]", "", m)
+  })
   out <- strsplit(text, "\n", fixed = TRUE)[[1]]
   out <- c(out, rep("", length(lines) - length(out)))
-  sub("//.*$", "", out)
+  # A // comment starts outside a string: a path such as "a//b" is kept.
+  sub('^((?:[^"/]|"[^"]*"|/(?!/))*)//.*$', "\\1", out, perl = TRUE)
 }
 
 mrg_read <- function(file) {
