@@ -114,6 +114,12 @@ land; see `.agents/design.md` (§4).
   error; a writer reads its own output back and sets the fidelity
   ([R/written.R](R/written.R)) from whether the representation came back
   identical.
+- **mrgsolve** ([R/mrgsolve-cpp.R](R/mrgsolve-cpp.R),
+  [R/read-mrgsolve.R](R/read-mrgsolve.R),
+  [R/write-mrgsolve.R](R/write-mrgsolve.R)): blocks and a C++ subset
+  parser; `$PKMODEL` uses NONMEM's names, so closed forms share
+  `nm_closed`. Expressions print through dialects
+  ([R/print-expr.R](R/print-expr.R)): NM-TRAN and C++.
 - **Writers** ([R/write-rxode2.R](R/write-rxode2.R),
   [R/write-nonmem.R](R/write-nonmem.R)) convert residual error between
   NONMEM's sigma variances and rxode2's standard-deviation parameters;
@@ -178,6 +184,11 @@ These come from the design's decisions (§13) and hold from the first stage.
   hold one for another purpose; the rxode2 writer renames variables
   `linCmt()` would take for parameters, with an `x_` prefix, because
   rxode2 matches those names by prefix.
+- **C++ literals carry a decimal point.** `1/2` is integer division in
+  C++; the mrgsolve dialect writes `1.0 / 2.0`.
+- **`$PARAM @annotated` descriptions hold bounds.** `[lower, upper]` and
+  `fixed` are zupkpmx's convention; without it every mrgsolve write of a
+  bounded model would be `lossy`.
 - **Exported functions are `pmx_*` (D10),** with `zupkpmx_corpus()` the one
   package-level exception.
 

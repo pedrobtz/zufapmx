@@ -1,5 +1,8 @@
 # zupkpmx 0.0.0.9000
 
+* `pmx_read_mrgsolve()` reads an mrgsolve model file and
+  `pmx_write_mrgsolve()` writes one.
+
 * `pmx_write_nonmem()` writes a NONMEM control stream.
 
 * `pmx_read_nonmem()` reads a NONMEM control stream, with final estimates
