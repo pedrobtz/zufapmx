@@ -53,10 +53,8 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
     "$DATA data.csv IGNORE=@",
     nm_structure_lines(m, spelling),
     "$PK",
-    nm_stmt_lines(
-      c(m$individual, closed_aliases(m$structure, spelling)),
-      spelling
-    ),
+    nm_stmt_lines(m$individual, spelling),
+    closed_alias_lines(m$structure, spelling, "%s = %s"),
     nm_dosing_lines(m, spelling),
     nm_scale_lines(m, spelling),
     if (identical(m$structure$type, "ode")) {

@@ -196,7 +196,12 @@ nm_read <- function(file) {
 
   pk <- nm_pk(nm_code(one("PK"), file, cmt), compartments, file)
   if (!is.null(closed)) {
-    structure <- nm_closed_structure(sub, closed, pk$individual, file)
+    structure <- nm_closed_structure(
+      sub,
+      closed,
+      stmt_targets(pk$individual),
+      file
+    )
     defobs <- closed$central
   } else {
     structure <- split_ode(
@@ -380,8 +385,10 @@ nm_compartments <- function(r, file) {
   list(names = names, defobs = if (length(defobs) == 1) defobs else 1L)
 }
 
-nm_closed_structure <- function(sub, closed, individual, file) {
-  targets <- stmt_targets(individual)
+# The variables a closed form's ADVAN parameters are. `names` are the
+# candidates: $PK targets, and for mrgsolve also $PARAM names.
+nm_closed_structure <- function(sub, closed, names, file) {
+  targets <- names
   found <- vapply(
     closed$names,
     function(name) {

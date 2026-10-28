@@ -65,7 +65,7 @@ bounded_values <- function(lower, value, upper) {
 # A closed form's ADVAN names its parameters (CL, V2, ...). `spelled` holds
 # the target's spelling of `vars`; a variable holding one of these names for
 # another purpose (rxode2's q2 is ADVAN11's Q3) gets a `_` suffix, and
-# closed_aliases() assigns the name.
+# closed_alias_lines() assigns the name.
 closed_free_names <- function(vars, spelled, structure) {
   if (!identical(structure$type, "closed")) {
     return(spelled)
@@ -77,22 +77,19 @@ closed_free_names <- function(vars, spelled, structure) {
   spelled
 }
 
-# `NAME <- var` for each parameter name the ADVAN needs that the model
-# spells differently.
-closed_aliases <- function(structure, spelling) {
+# `NAME = var` lines, in `format`, for each parameter name the ADVAN needs
+# that the model spells differently (a variable, or a parameter such as
+# THETA(2)).
+closed_alias_lines <- function(structure, spelling, format) {
   if (!identical(structure$type, "closed")) {
-    return(list())
+    return(character())
   }
   required <- nm_closed[[as.character(structure$advan)]]$names
-  out <- list()
+  out <- character()
   for (canonical in names(required)) {
-    var <- structure$parameters[[canonical]]
-    if (spelling[[var]] != required[[canonical]]) {
-      out[[length(out) + 1]] <- call(
-        "<-",
-        as.symbol(required[[canonical]]),
-        as.symbol(var)
-      )
+    spelled <- spelling[[structure$parameters[[canonical]]]]
+    if (spelled != required[[canonical]]) {
+      out <- c(out, sprintf(format, required[[canonical]], spelled))
     }
   }
   out

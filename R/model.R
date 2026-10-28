@@ -64,7 +64,10 @@ validate_model <- function(model) {
   lapply(model$individual, stmt_check)
   targets <- stmt_targets(model$individual)
   validate_random_effects(model$random_effects, targets)
-  compartments <- validate_structure(model$structure, targets)
+  compartments <- validate_structure(
+    model$structure,
+    c(targets, model$parameters$name)
+  )
   validate_dosing(model$dosing, compartments)
   validate_observations(model$observations)
   model
@@ -156,7 +159,7 @@ validate_structure <- function(x, targets) {
     unassigned <- setdiff(x$parameters, targets)
     if (length(unassigned) > 0) {
       model_abort(
-        "The closed form uses `%s`, which no statement assigns.",
+        "The closed form uses `%s`, which is neither a parameter nor assigned.",
         unassigned[[1]]
       )
     }

@@ -30,7 +30,13 @@ corpus_solve_rxode2 <- function(model, regimen, output, cmt = 1) {
   events <- rxode2::et(events, corpus_times(regimen))
 
   # Predictions are read, not simulated observations: only etas matter.
-  model <- suppressMessages(rxode2::zeroRe(model, which = "omega"))
+  # A model without etas has nothing to zero; rxode2 warns about that.
+  model <- withCallingHandlers(
+    suppressMessages(rxode2::zeroRe(model, which = "omega")),
+    warning = function(w) {
+      if (grepl("No omega", conditionMessage(w))) invokeRestart("muffleWarning")
+    }
+  )
   sim <- suppressMessages(rxode2::rxSolve(
     model,
     events,

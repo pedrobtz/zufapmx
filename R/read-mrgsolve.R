@@ -169,8 +169,15 @@ mrg_read <- function(file) {
         file,
         pkmodel[[1]]$line[[1]],
         1L,
-        seen = paste(closed$cmt, collapse = " "),
-        expected = sprintf("%d compartments", length(canonical)),
+        seen = if (length(closed$cmt) == 0) {
+          "no compartment names"
+        } else {
+          paste(closed$cmt, collapse = " ")
+        },
+        expected = sprintf(
+          "%d compartment names, in `cmt =` or $CMT",
+          length(canonical)
+        ),
         call = NULL
       )
     }
@@ -212,7 +219,8 @@ mrg_read <- function(file) {
     structure <- nm_closed_structure(
       list(advan = closed$structure$advan, trans = closed$structure$trans),
       nm_closed[[as.character(closed$structure$advan)]],
-      main$individual,
+      # mrgsolve's usual idiom is $PKMODEL over $PARAM names directly.
+      c(stmt_targets(main$individual), parameters$name),
       file
     )
   } else {

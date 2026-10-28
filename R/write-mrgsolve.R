@@ -68,10 +68,8 @@ pmx_write_mrgsolve <- function(model) {
     },
     "",
     "$MAIN",
-    mrg_stmt_lines(
-      c(m$individual, closed_aliases(m$structure, spelling)),
-      spelling
-    ),
+    mrg_stmt_lines(m$individual, spelling),
+    closed_alias_lines(m$structure, spelling, "double %s = %s;"),
     mrg_dosing_lines(m, spelling, compartments),
     if (!closed) {
       c(

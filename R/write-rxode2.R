@@ -23,6 +23,7 @@ pmx_write_rxode2 <- function(model) {
   losses <- character()
 
   m <- rxode2_write_sd_from_sigma(m)
+  m <- rxode2_write_lincmt_parameters(m)
   m <- rxode2_write_free_lincmt(m)
   check_writable(m, one_endpoint = FALSE)
   # The record's time in individual statements (D15) has no rxode2
@@ -107,6 +108,38 @@ rxode2_write_sd_from_sigma <- function(m) {
   m$parameters <- do.call(rbind, c(list(m$parameters), sd))
   rownames(m$parameters) <- NULL
   m$random_effects$sigma <- list()
+  m
+}
+
+# linCmt() finds its parameters among model() variables, never ini()
+# parameters. A closed form whose CL is a parameter (mrgsolve's $PKMODEL
+# over $PARAM) gets the parameter renamed tCL and `CL <- tCL` in model().
+rxode2_write_lincmt_parameters <- function(m) {
+  if (!identical(m$structure$type, "closed")) {
+    return(m)
+  }
+  direct <- intersect(m$structure$parameters, m$parameters$name)
+  if (length(direct) == 0) {
+    return(m)
+  }
+  taken <- unique(c(
+    m$parameters$name,
+    stmt_targets(m$individual),
+    unlist(lapply(model_expressions(m), all.vars))
+  ))
+  renamed <- make.unique(c(taken, paste0("t", direct)))[
+    length(taken) + seq_along(direct)
+  ]
+  map <- stats::setNames(renamed, direct)
+  m$parameters$name <- map[m$parameters$name] %|NA|% m$parameters$name
+  rename <- function(x) rename_symbols(x, map)
+  m$individual <- c(
+    lapply(seq_along(direct), function(i) {
+      call("<-", as.symbol(direct[[i]]), as.symbol(renamed[[i]]))
+    }),
+    lapply(m$individual, rename)
+  )
+  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
   m
 }
 

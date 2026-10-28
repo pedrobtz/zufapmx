@@ -205,3 +205,34 @@ test_that("the $TABLE prediction is the term in F's place, fully expanded", {
     class = "zupkpmx_parse_error"
   )
 })
+
+test_that("$PKMODEL parameters can come straight from $PARAM", {
+  lines <- c(
+    "$PARAM CL = 4, V = 50, KA = 1",
+    "$PKMODEL ncmt = 1, depot = TRUE, cmt = \"GUT CENT\"",
+    "$SIGMA 0.04",
+    "$TABLE",
+    "double IPRED = CENT / V;",
+    "double Y = IPRED * (1 + EPS(1));"
+  )
+  m <- read_cpp(lines)
+
+  expect_equal(
+    unclass(m)$structure$parameters,
+    c(cl = "CL", v = "V", ka = "KA")
+  )
+  expect_equal(pmx_fidelity(pmx_write_mrgsolve(m)), "exact")
+  expect_true(all(
+    c("CL = THETA(1)", "V = THETA(2)", "KA = THETA(3)") %in%
+      pmx_write_nonmem(m)$text
+  ))
+  expect_true(pmx_fidelity(pmx_write_rxode2(m)) %in% c("exact", "equivalent"))
+
+  skip_on_cran()
+  skip_if_not_installed("rxode2")
+  got <- corpus_solve_rxode2(as_rxode2_function(m), "oral", "Y")
+  expected <- corpus_expected(
+    corpus_file("onecmt-oral", "expected.csv") |> dirname()
+  )$pred
+  expect_lte(corpus_max_rel_dev(got, expected), 1e-6)
+})
