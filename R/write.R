@@ -151,3 +151,19 @@ read_back <- function(expr, format) {
     }
   )
 }
+
+# The formats that hold a residual model a writer refuses: rxode2 alone
+# writes a power model; an expression over standard deviations has no
+# writer. (An expression over epsilons is NONMEM's, refused elsewhere.)
+residual_formats <- function(type) {
+  if (identical(type, "power")) "rxode2" else character()
+}
+
+closed_prediction_error <- function(endpoint) {
+  write_error(
+    "a closed-form prediction other than the central concentration",
+    sprintf("observations$%s", endpoint),
+    formats = character(),
+    call = NULL
+  )
+}

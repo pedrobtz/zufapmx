@@ -131,24 +131,41 @@ test_that("dosing attributes and IF blocks in $PK read", {
 })
 
 test_that("unsupported control streams are refused with a position", {
-  refused <- function(lines) {
-    expect_error(read_ctl(lines), class = "zufapmx_parse_error")
-  }
   base <- ctl_onecmt()
 
-  err <- refused(c(base[1:4], "\"  CALL USER", base[5:length(base)]))
-  expect_equal(err$line, 5L)
-  refused(c(base, "$INFN", "CALL SUPP"))
-  refused(sub("ADVAN2 TRANS2", "ADVAN2 TRANS2 OTHER=user.f90", base))
-  refused(sub("ADVAN2 TRANS2", "ADVAN5", base))
-  refused(sub("ADVAN2 TRANS2", "ADVAN2 TRANS1", base))
-  refused(sub("^\\$OMEGA .*", "$OMEGA BLOCK(1) SAME", base))
-  refused(sub("^\\$OMEGA .*", "$OMEGA SD 0.3 0.3", base))
-  refused(ctl_onecmt(error = "IPRED = F"))
-  refused(ctl_onecmt(pk = "X = SIN(T)"))
-  refused(ctl_onecmt(pk = "X = A(5)"))
-  refused(base[base != "V = THETA(3) * EXP(ETA(2))"])
-  refused(c(base, "$FOO"))
+  expect_refused(
+    read_ctl(c(base[1:4], "\"  CALL USER", base[5:length(base)])),
+    "\"",
+    5
+  )
+  expect_refused(read_ctl(c(base, "$INFN", "CALL SUPP")), "$INFN", 14)
+  expect_refused(
+    read_ctl(sub("ADVAN2 TRANS2", "ADVAN2 TRANS2 OTHER=user.f90", base)),
+    "OTHER=",
+    2
+  )
+  expect_refused(read_ctl(sub("ADVAN2 TRANS2", "ADVAN5", base)), "ADVAN5", 2)
+  expect_refused(
+    read_ctl(sub("ADVAN2 TRANS2", "ADVAN2 TRANS1", base)),
+    "ADVAN2 TRANS1",
+    2
+  )
+  expect_refused(
+    read_ctl(sub("^\\$OMEGA .*", "$OMEGA BLOCK(1) SAME", base)),
+    "SAME",
+    12
+  )
+  expect_refused(
+    read_ctl(sub("^\\$OMEGA .*", "$OMEGA SD 0.3 0.3", base)),
+    "SD",
+    12
+  )
+  # Refusals of statements point at their record: $ERROR, $PK.
+  expect_refused(read_ctl(ctl_onecmt(error = "IPRED = F")), "$ERROR", 8)
+  expect_refused(read_ctl(ctl_onecmt(pk = "X = SIN(T)")), "SIN", 8)
+  expect_refused(read_ctl(ctl_onecmt(pk = "X = A(5)")), "A(5)", 8)
+  expect_refused(read_ctl(base[base != "V = THETA(3) * EXP(ETA(2))"]), "$PK", 3)
+  expect_refused(read_ctl(c(base, "$FOO")), "$FOO", 14)
 })
 
 test_that("an ODE model needs a derivative for every compartment", {
@@ -204,14 +221,15 @@ test_that("auto reads no estimates when there are no output files", {
 })
 
 test_that("dosing and scale assignments inside IF, or read as variables, are refused", {
-  refused <- function(pk) {
-    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zufapmx_parse_error")
+  refused <- function(pk, seen) {
+    # Statements point at their record, $PK on line 3.
+    expect_refused(read_ctl(ctl_onecmt(pk = pk)), seen, 3)
   }
 
-  refused("IF (KA.GT.0) F1 = 0.5")
-  refused(c("IF (V.GT.0) THEN", "S2 = V", "ENDIF"))
-  refused(c("F1 = THETA(1)", "X = F1 * 2"))
-  refused("A_0(5) = 1")
+  refused("IF (KA.GT.0) F1 = 0.5", "F1")
+  refused(c("IF (V.GT.0) THEN", "S2 = V", "ENDIF"), "S2")
+  refused(c("F1 = THETA(1)", "X = F1 * 2"), "F1")
+  refused("A_0(5) = 1", "A_0(5)")
 })
 
 test_that("$ERROR uses the definitions in force where Y is assigned", {

@@ -147,26 +147,47 @@ test_that("$NMEXT reads a NONMEM run's estimates as parameters", {
 })
 
 test_that("code outside mrgsolve's documented C++ is refused", {
-  refused <- function(lines) {
-    expect_error(read_cpp(lines), class = "zufapmx_parse_error")
-  }
   base <- cpp_onecmt()
 
-  refused(c("$GLOBAL", "double z = 1;", base))
-  refused(c("$PLUGIN nm-vars", base))
-  refused(cpp_onecmt(main = "double X = sin(CL);"))
-  refused(cpp_onecmt(main = "for (int i = 0; i < 2; i++) CL = CL;"))
-  refused(cpp_onecmt(main = "double X = CL > 1 ? 1 : 2;"))
-  refused(cpp_onecmt(table = "double IPRED = CENT / V;"))
-  refused(base[base != "dxdt_CENT = -CL / V * CENT;"])
-  refused(c(base, "$OMEGA @correlation", "0.1 0.5 0.1"))
-  refused(c(
-    "$PARAM CL = 1, V1 = 2, Q = 1, V2 = 3",
-    "$PKMODEL ncmt = 2, cmt = \"CENT PERIPH\"",
+  expect_refused(read_cpp(c("$GLOBAL", "double z = 1;", base)), "$GLOBAL", 1)
+  expect_refused(read_cpp(c("$PLUGIN nm-vars", base)), "nm-vars", 1)
+  expect_refused(read_cpp(cpp_onecmt(main = "double X = sin(CL);")), "sin", 6)
+  expect_refused(
+    read_cpp(cpp_onecmt(main = "for (int i = 0; i < 2; i++) CL = CL;")),
+    "for",
+    6
+  )
+  expect_refused(
+    read_cpp(cpp_onecmt(main = "double X = CL > 1 ? 1 : 2;")),
+    "?",
+    6
+  )
+  expect_refused(
+    read_cpp(cpp_onecmt(table = "double IPRED = CENT / V;")),
     "$TABLE",
-    "double IPRED = CENT / V1;",
-    "double Y = IPRED + EPS(1);"
-  ))
+    10
+  )
+  expect_refused(
+    read_cpp(base[base != "dxdt_CENT = -CL / V * CENT;"]),
+    "$ODE",
+    6
+  )
+  expect_refused(
+    read_cpp(c(base, "$OMEGA @correlation", "0.1 0.5 0.1")),
+    "@correlation",
+    13
+  )
+  expect_refused(
+    read_cpp(c(
+      "$PARAM CL = 1, V1 = 2, Q = 1, V2 = 3",
+      "$PKMODEL ncmt = 2, cmt = \"CENT PERIPH\"",
+      "$TABLE",
+      "double IPRED = CENT / V1;",
+      "double Y = IPRED + EPS(1);"
+    )),
+    "ncmt = 2, cmt = \"CENT PERIPH\"",
+    2
+  )
 })
 
 test_that("dosing macros under $PKMODEL use the file's compartment names", {
@@ -182,12 +203,17 @@ test_that("dosing macros under $PKMODEL use the file's compartment names", {
 })
 
 test_that("dosing macros inside if, or read as variables, are refused", {
-  refused <- function(lines) {
-    expect_error(read_cpp(lines), class = "zufapmx_parse_error")
-  }
-
-  refused(cpp_onecmt(main = "if (CL > 1) F_CENT = 0.5;"))
-  refused(cpp_onecmt(main = c("F_CENT = 0.5;", "double X = F_CENT * 2.0;")))
+  # Statements point at their record, $MAIN on line 3.
+  expect_refused(
+    read_cpp(cpp_onecmt(main = "if (CL > 1) F_CENT = 0.5;")),
+    "F_CENT",
+    3
+  )
+  expect_refused(
+    read_cpp(cpp_onecmt(main = c("F_CENT = 0.5;", "double X = F_CENT * 2.0;"))),
+    "F_CENT",
+    3
+  )
 })
 
 test_that("the $TABLE prediction is the term in F's place, fully expanded", {
@@ -386,4 +412,19 @@ test_that("C++ comparisons are ints, and wide int literals are refused", {
     class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "3000000000")
+})
+
+test_that("a $PARAM value cannot run code", {
+  marker <- withr::local_tempfile()
+  lines <- sub(
+    "TVCL = 4",
+    sprintf(
+      "TVCL = file.create(\"%s\")",
+      normalizePath(marker, winslash = "/", mustWork = FALSE)
+    ),
+    cpp_onecmt(),
+    fixed = TRUE
+  )
+  expect_error(read_cpp(lines), class = "zufapmx_parse_error")
+  expect_false(file.exists(marker))
 })

@@ -35,12 +35,12 @@
 # the representation's structure is stable
 
     Code
-      str(unclass(model_twocmt_oral()))
+      str_full(unclass(model_twocmt_oral()))
     Output
       List of 7
        $ parameters    :'data.frame':	5 obs. of  7 variables:
-        ..$ name    : chr [1:5] "tka" "tcl" "tv" "tq" ...
-        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" ...
+        ..$ name    : chr [1:5] "tka" "tcl" "tv" "tq" "tvp"
+        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" "volume"
         ..$ init    : num [1:5] 1 4 20 2 40
         ..$ lower   : num [1:5] 0 0 0 0 0
         ..$ upper   : num [1:5] Inf Inf Inf Inf Inf
@@ -80,8 +80,8 @@
         ..$ type      : chr "closed"
         ..$ ncmt      : int 2
         ..$ depot     : logi TRUE
-        ..$ parameters: Named chr [1:5] "ka" "cl" "v" "q" ...
-        .. ..- attr(*, "names")= chr [1:5] "ka" "cl" "v" "q" ...
+        ..$ parameters: Named chr [1:5] "ka" "cl" "v" "q" "vp"
+        .. ..- attr(*, "names")= chr [1:5] "ka" "cl" "v" "q" "vp"
         ..$ advan     : int 4
         ..$ trans     : int 4
        $ dosing        : list()
@@ -102,7 +102,7 @@
 ---
 
     Code
-      str(unclass(model_onecmt_mm()))
+      str_full(unclass(model_onecmt_mm()))
     Output
       List of 7
        $ parameters    :'data.frame':	4 obs. of  7 variables:

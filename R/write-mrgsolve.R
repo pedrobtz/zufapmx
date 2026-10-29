@@ -297,12 +297,7 @@ mrg_prediction <- function(m, spelling) {
       return(sprintf("%s / %s", spelling[["central"]], v))
     }
     if (any(all.vars(pred) %in% closed_compartments(s))) {
-      write_error(
-        "a closed-form prediction other than the central concentration",
-        "observations",
-        formats = "rxode2",
-        call = NULL
-      )
+      closed_prediction_error(names(m$observations)[[1]])
     }
   }
   cpp_expr(pred, spelling)
@@ -321,14 +316,14 @@ mrg_residual <- function(m, spelling) {
     # written as an expression would not read back.
     expression = write_error(
       "a residual model written as an expression over epsilons",
-      "observations",
+      sprintf("observations$%s$residual", names(m$observations)[[1]]),
       formats = "nonmem",
       call = NULL
     ),
     write_error(
       sprintf("a %s residual model", r$type),
-      "observations",
-      formats = "rxode2",
+      sprintf("observations$%s$residual", names(m$observations)[[1]]),
+      formats = residual_formats(r$type),
       call = NULL
     )
   )

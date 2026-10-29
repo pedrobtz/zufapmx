@@ -259,6 +259,12 @@ nested_statements <- function(x) {
 # Split ODE code ($DES, $ODE) into structure statements and one derivative
 # per compartment. `derivative_of(x)` names the compartment an assignment
 # differentiates, or returns NULL; it refuses a malformed one itself.
+# A record's name with the line it starts on. Statements are R calls with
+# no positions of their own, so a refusal of one points at its record.
+record_at <- function(name, line) structure(name, line = line)
+
+record_line <- function(record) attr(record, "line") %||% NA_integer_
+
 split_ode <- function(stmts, compartments, derivative_of, file, record) {
   derivatives <- list()
   statements <- list()
@@ -267,7 +273,7 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
       if (is_call(y, "<-") && !is.null(derivative_of(y))) {
         parse_error(
           file,
-          NA_integer_,
+          record_line(record),
           NA_integer_,
           seen = expr_text(y[[2]]),
           message = sprintf(
@@ -289,9 +295,9 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
   if (length(missing) > 0) {
     parse_error(
       file,
+      record_line(record),
       NA_integer_,
-      NA_integer_,
-      seen = record,
+      seen = as.vector(record),
       expected = sprintf("a derivative of %s", missing[[1]]),
       call = NULL
     )
@@ -307,7 +313,7 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
 y_error <- function(file, record) {
   parse_error(
     file,
-    NA_integer_,
+    record_line(record),
     NA_integer_,
     seen = "Y",
     expected = sprintf("Y assigned once in %s, outside IF", record),
@@ -340,7 +346,7 @@ read_observation <- function(
       if (name %in% conditional) {
         parse_error(
           file,
-          NA_integer_,
+          record_line(record),
           NA_integer_,
           seen = name,
           expected = sprintf(
@@ -385,9 +391,9 @@ read_observation <- function(
   if (is.null(y)) {
     parse_error(
       file,
+      record_line(record),
       NA_integer_,
-      NA_integer_,
-      seen = record,
+      seen = as.vector(record),
       expected = "Y = ... over EPS(n)",
       call = NULL
     )
@@ -406,7 +412,7 @@ read_observation <- function(
     if (is.null(prediction) || derived) {
       parse_error(
         file,
-        NA_integer_,
+        record_line(record),
         NA_integer_,
         seen = expr_text(y),
         expected = "Y as an additive, proportional, combined or exponential model over one prediction",
@@ -503,7 +509,7 @@ check_dosing_names <- function(individual, reserved, file, record) {
       if (!is.null(target) && reserved(target)) {
         parse_error(
           file,
-          NA_integer_,
+          record_line(record),
           NA_integer_,
           seen = target,
           message = sprintf(
@@ -521,7 +527,7 @@ check_dosing_names <- function(individual, reserved, file, record) {
   if (length(bad) > 0) {
     parse_error(
       file,
-      NA_integer_,
+      record_line(record),
       NA_integer_,
       seen = bad[[1]],
       message = sprintf(

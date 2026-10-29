@@ -74,7 +74,7 @@ test_that("block IF, ELSE IF and ELSE nest", {
 test_that("DADT and A_0 are statement targets", {
   expect_equal(
     nm_parse_lines(c("DADT(1) = -KA*A(1)", "A_0(2) = 10")),
-    list(quote(DADT(1L) <- -KA * DEPOT), quote(A_0(2L) <- 10))
+    list(quote(DADT(1) <- -KA * DEPOT), quote(A_0(2) <- 10))
   )
 })
 

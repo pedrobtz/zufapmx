@@ -7,7 +7,8 @@ test_that("every corpus entry's representation is stable", {
     for (from in names(models)) {
       expect_snapshot({
         cat(id, "read from", from, "\n")
-        str(model_content(models[[from]]))
+        str_full(model_content(models[[from]]))
+        cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
       })
     }
   }

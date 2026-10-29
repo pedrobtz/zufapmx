@@ -262,3 +262,23 @@ test_that("bounds on a residual standard deviation are a loss in $SIGMA", {
     expect_match(pmx_losses(w), "bounds of residual standard deviations: sd")
   }
 })
+
+test_that("a residual standard deviation is written as its variance", {
+  parts <- unclass(pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.2
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ prop(sd)
+    })
+  }))
+  parts$parameters$estimate <- c(4.4, 55, 0.3)
+  m <- do.call(new_model, parts)
+  expect_true("$SIGMA 0.09" %in% pmx_write_nonmem(m)$text)
+  expect_true("$SIGMA 0.04" %in% pmx_write_nonmem(m, "initial")$text)
+})

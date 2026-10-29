@@ -129,7 +129,7 @@ nm_read <- function(file) {
     if (length(found) == 0) {
       parse_error(
         file,
-        NA_integer_,
+        stream$lines,
         NA_integer_,
         seen = "end of file",
         expected = paste0("$", name),
@@ -189,21 +189,23 @@ nm_read <- function(file) {
   omega <- nm_blocks(record("OMEGA"), "ETA", file)
   sigma <- nm_blocks(record("SIGMA"), "EPS", file)
 
-  pk <- nm_pk(nm_code(one("PK"), file, cmt), compartments, file)
+  at <- function(name) record_at(paste0("$", name), one(name)$line[[1]])
+  pk <- nm_pk(nm_code(one("PK"), file, cmt), compartments, file, at("PK"))
   if (!is.null(closed)) {
     structure <- nm_closed_structure(
       subroutines,
       closed,
       stmt_targets(pk$individual),
-      file
+      file,
+      at("PK")
     )
   } else {
     structure <- split_ode(
       nm_code(one("DES"), file, cmt, des = TRUE),
       compartments,
-      nm_derivative(compartments, file),
+      nm_derivative(compartments, file, at("DES")),
       file,
-      "$DES"
+      at("DES")
     )
   }
 
@@ -212,13 +214,14 @@ nm_read <- function(file) {
     compartments,
     defobs,
     !is.null(closed),
-    file
+    file,
+    at("PK")
   )
 
   error <- read_observation(
     nm_code(one("ERROR"), file, cmt),
     file,
-    "$ERROR",
+    at("ERROR"),
     prediction = quote(F)
   )
   losses <- union(losses, error$losses)
@@ -373,7 +376,7 @@ nm_compartments <- function(r, file) {
 
 # The variables a closed form's ADVAN parameters are. `names` are the
 # candidates: $PK targets, and for mrgsolve also $PARAM names.
-nm_closed_structure <- function(subroutines, closed, names, file) {
+nm_closed_structure <- function(subroutines, closed, names, file, record) {
   targets <- names
   found <- vapply(
     closed$names,
@@ -384,7 +387,7 @@ nm_closed_structure <- function(subroutines, closed, names, file) {
       if (length(hit) == 0) {
         parse_error(
           file,
-          NA_integer_,
+          record_line(record),
           NA_integer_,
           seen = "$PK",
           expected = sprintf(
@@ -536,12 +539,14 @@ nm_init_items <- function(records, file) {
     }
   }
   i <- 1L
+  # Running out of items is reported at the last line of the records.
+  last_line <- max(unlist(lapply(records, `[[`, "line")))
   peek <- function() if (i <= length(tokens)) tokens[[i]]
   fail <- function(expected) {
     tok <- peek()
     parse_error(
       file,
-      if (is.null(tok)) NA_integer_ else tok$line,
+      if (is.null(tok)) last_line else tok$line,
       if (is.null(tok)) NA_integer_ else tok$column,
       seen = if (is.null(tok)) "end of record" else tok$value,
       expected = expected,
@@ -611,7 +616,7 @@ nm_init_items <- function(records, file) {
 }
 
 # $PK: individual statements, scale factors and dosing attributes.
-nm_pk <- function(stmts, compartments, file) {
+nm_pk <- function(stmts, compartments, file, record) {
   dosing <- list()
   scale <- list()
   individual <- list()
@@ -620,7 +625,7 @@ nm_pk <- function(stmts, compartments, file) {
     if (n < 1 || n > length(compartments)) {
       parse_error(
         file,
-        NA_integer_,
+        record_line(record),
         NA_integer_,
         seen = name,
         expected = sprintf("a compartment from 1 to %d", length(compartments)),
@@ -633,7 +638,7 @@ nm_pk <- function(stmts, compartments, file) {
   refuse <- function(name, expected) {
     parse_error(
       file,
-      NA_integer_,
+      record_line(record),
       NA_integer_,
       seen = name,
       expected = expected,
@@ -677,7 +682,7 @@ nm_pk <- function(stmts, compartments, file) {
     individual,
     function(n) grepl("^(S|ALAG|F|R|D)[0-9]+$|^A_0\\(", n),
     file,
-    "$PK"
+    record
   )
   list(
     individual = individual,
@@ -687,7 +692,7 @@ nm_pk <- function(stmts, compartments, file) {
 }
 
 # $DES's DADT(n) names compartment n.
-nm_derivative <- function(compartments, file) {
+nm_derivative <- function(compartments, file, record) {
   function(x) {
     if (!is_call(x[[2]], "DADT")) {
       return(NULL)
@@ -696,7 +701,7 @@ nm_derivative <- function(compartments, file) {
     if (n < 1 || n > length(compartments)) {
       parse_error(
         file,
-        NA_integer_,
+        record_line(record),
         NA_integer_,
         seen = expr_text(x[[2]]),
         expected = sprintf(
@@ -749,7 +754,7 @@ nm_record_losses <- function(records, file) {
 # The prediction F: the observed compartment over its scale. A closed form
 # scales its central compartment; an ODE model the one its S<n> names, or
 # its DEFOBS compartment unscaled.
-nm_prediction <- function(scale, compartments, defobs, closed, file) {
+nm_prediction <- function(scale, compartments, defobs, closed, file, record) {
   scaled <- names(scale)
   if (
     length(scaled) > 1 ||
@@ -757,7 +762,7 @@ nm_prediction <- function(scale, compartments, defobs, closed, file) {
   ) {
     parse_error(
       file,
-      NA_integer_,
+      record_line(record),
       NA_integer_,
       seen = paste0("S", scaled[[length(scaled)]]),
       expected = sprintf("one scale, S%d", defobs),
@@ -769,7 +774,7 @@ nm_prediction <- function(scale, compartments, defobs, closed, file) {
     if (defobs < 1 || defobs > length(compartments)) {
       parse_error(
         file,
-        NA_integer_,
+        record_line(record),
         NA_integer_,
         seen = paste0("S", scaled),
         expected = "a scale of a compartment",

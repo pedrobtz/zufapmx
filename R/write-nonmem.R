@@ -142,7 +142,7 @@ nm_sigma_from_sd <- function(m) {
       write_error(
         sprintf("a %s residual model", r$type),
         sprintf("observations$%s$residual", e),
-        formats = "rxode2",
+        formats = residual_formats(r$type),
         call = NULL
       )
     }
@@ -386,12 +386,7 @@ nm_scale_lines <- function(m, spelling) {
     if (
       identical(m$structure$type, "closed") && compartments[[n]] != "central"
     ) {
-      write_error(
-        "a closed-form prediction other than the central concentration",
-        "observations",
-        formats = "rxode2",
-        call = NULL
-      )
+      closed_prediction_error(names(m$observations)[[1]])
     }
     scale <- nm_expr(pred[[3]], spelling)
     # Scale a closed form by its ADVAN's own name for the central volume,
@@ -406,8 +401,8 @@ nm_scale_lines <- function(m, spelling) {
   }
   write_error(
     "a prediction that is not a compartment amount over a scale",
-    "observations",
-    formats = "rxode2",
+    sprintf("observations$%s", names(m$observations)[[1]]),
+    formats = c("rxode2", "mrgsolve"),
     call = NULL
   )
 }
@@ -424,8 +419,8 @@ nm_error_lines <- function(m, spelling) {
     expression = nm_expr(r$expression, c(spelling, F = "F")),
     write_error(
       sprintf("a %s residual model", r$type),
-      "observations",
-      formats = "rxode2",
+      sprintf("observations$%s$residual", names(m$observations)[[1]]),
+      formats = residual_formats(r$type),
       call = NULL
     )
   )

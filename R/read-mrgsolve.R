@@ -128,7 +128,8 @@ mrg_strip_comments <- function(lines) {
 }
 
 mrg_read <- function(file) {
-  blocks <- mrg_split(readLines(file, warn = FALSE), file)
+  lines <- readLines(file, warn = FALSE)
+  blocks <- mrg_split(lines, file)
   block_names <- vapply(blocks, `[[`, character(1), "name")
   block <- function(...) blocks[block_names %in% c(...)]
   losses <- character()
@@ -173,7 +174,12 @@ mrg_read <- function(file) {
   parameters <- rbind(params$parameters, thetas)
   losses <- c(losses, params$losses)
 
-  layout <- mrg_compartments(block("PKMODEL"), block("CMT"), file)
+  layout <- mrg_compartments(
+    block("PKMODEL"),
+    block("CMT"),
+    file,
+    length(lines)
+  )
   closed <- layout$closed
   rename <- layout$rename
   compartments <- layout$compartments
@@ -186,7 +192,21 @@ mrg_read <- function(file) {
     lapply(stmts, rename_symbols, map = c(rename, time))
   }
 
-  main <- mrg_main(code("MAIN", "PK"), compartments, rename, file)
+  # The first of a record's blocks, for refusals of its statements.
+  at <- function(...) {
+    b <- block(...)
+    if (length(b) == 0) {
+      return(record_at(paste0("$", c(...)[[1]]), NA_integer_))
+    }
+    record_at(paste0("$", b[[1]]$name), b[[1]]$line[[1]])
+  }
+  main <- mrg_main(
+    code("MAIN", "PK"),
+    compartments,
+    rename,
+    file,
+    at("MAIN", "PK")
+  )
   init <- mrg_init(block("INIT"), file)
   for (cmt in names(init)) {
     target <- rename[cmt] %|NA|% cmt
@@ -216,15 +236,16 @@ mrg_read <- function(file) {
       nm_closed[[as.character(closed$structure$advan)]],
       # mrgsolve's usual idiom is $PKMODEL over $PARAM names directly.
       c(stmt_targets(main$individual), parameters$name),
-      file
+      file,
+      at("PKMODEL")
     )
   } else {
     structure <- split_ode(
       code("ODE", "DES", ode = TRUE),
       compartments,
-      mrg_derivative(compartments, file),
+      mrg_derivative(compartments, file, at("ODE", "DES")),
       file,
-      "$ODE"
+      at("ODE", "DES")
     )
   }
   captured <- unlist(lapply(block("CAPTURE"), function(b) {
@@ -233,7 +254,7 @@ mrg_read <- function(file) {
   table <- read_observation(
     code("TABLE", "ERROR"),
     file,
-    "$TABLE",
+    at("TABLE", "ERROR"),
     outputs = captured
   )
   losses <- c(losses, table$losses)
@@ -759,7 +780,7 @@ mrg_nonmem <- function(b, file) {
 # $MAIN: individual statements and the dosing macros. Macros name
 # compartments as the file does (`F_GUT`); `rename` maps those names to the
 # representation's (a closed form's `depot`).
-mrg_main <- function(stmts, compartments, rename, file) {
+mrg_main <- function(stmts, compartments, rename, file, record) {
   dosing <- list()
   individual <- list()
   macros <- c(F = "bioavailability", ALAG = "lag", R = "rate", D = "duration")
@@ -787,12 +808,12 @@ mrg_main <- function(stmts, compartments, rename, file) {
     paste(file_names, collapse = "|"),
     paste(file_names, collapse = "|")
   )
-  check_dosing_names(individual, function(n) grepl(pattern, n), file, "$MAIN")
+  check_dosing_names(individual, function(n) grepl(pattern, n), file, record)
   list(individual = individual, dosing = dosing)
 }
 
 # $ODE's dxdt_CMT names compartment CMT.
-mrg_derivative <- function(compartments, file) {
+mrg_derivative <- function(compartments, file, record) {
   function(x) {
     target <- as.character(x[[2]])
     if (!startsWith(target, "dxdt_")) {
@@ -802,7 +823,7 @@ mrg_derivative <- function(compartments, file) {
     if (!cmt %in% compartments) {
       parse_error(
         file,
-        NA_integer_,
+        record_line(record),
         NA_integer_,
         seen = target,
         expected = "dxdt_ of a compartment",
@@ -851,7 +872,7 @@ mrg_random_effects <- function(blocks, thetas, file) {
 
 # The compartments: a $PKMODEL's canonical ones, with `rename` from the
 # file's names (DEPOT CENT) to them, or an ODE model's $CMT.
-mrg_compartments <- function(pkmodel, cmt, file) {
+mrg_compartments <- function(pkmodel, cmt, file, last_line) {
   cmt_names <- unlist(lapply(cmt, mrg_cmt_names))
   closed <- NULL
   if (length(pkmodel) > 0) {
@@ -883,7 +904,7 @@ mrg_compartments <- function(pkmodel, cmt, file) {
     if (length(cmt_names) == 0) {
       parse_error(
         file,
-        NA_integer_,
+        last_line,
         NA_integer_,
         seen = "end of file",
         expected = "$CMT or $PKMODEL",

@@ -5,64 +5,47 @@
 test_that("NONMEM records are refused with their position", {
   base <- ctl_onecmt()
 
-  err <- expect_error(
-    read_ctl(c("CL = 1", base)),
-    class = "zufapmx_parse_error"
-  )
-  expect_equal(err$line, 1L)
-  err <- expect_error(
-    read_ctl(c(base, "$PK", "X = 1")),
-    class = "zufapmx_parse_error"
-  )
-  expect_equal(err$seen, "$PK")
-  expect_error(
+  expect_refused(read_ctl(c("CL = 1", base)), "CL = 1", 1)
+  expect_refused(read_ctl(c(base, "$PK", "X = 1")), "$PK", 14)
+  expect_refused(
     read_ctl(base[
       !startsWith(base, "$ERROR") &
         base != "IPRED = F" &
         !startsWith(base, "Y =")
     ]),
-    class = "zufapmx_parse_error"
+    "end of file",
+    10
   )
-  err <- expect_error(
-    read_ctl(c(base, "$DES", "DADT(1) = 1")),
-    class = "zufapmx_parse_error"
-  )
-  expect_equal(err$seen, "$DES")
-  expect_error(
-    read_ctl(ctl_onecmt(pk = c("S1 = V", "S2 = V"))),
-    class = "zufapmx_parse_error"
-  )
-  err <- expect_error(
-    read_ctl(sub("ADVAN2 TRANS2", "TRANS2", base)),
-    class = "zufapmx_parse_error"
-  )
-  expect_equal(err$seen, "TRANS2")
+  expect_refused(read_ctl(c(base, "$DES", "DADT(1) = 1")), "$DES", 14)
+  expect_refused(read_ctl(ctl_onecmt(pk = c("S1 = V", "S2 = V"))), "S2", 3)
+  expect_refused(read_ctl(sub("ADVAN2 TRANS2", "TRANS2", base)), "TRANS2", 2)
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
-  expect_error(
+  expect_refused(
     read_ctl(sub("COMP=", "CMP=", lines)),
-    class = "zufapmx_parse_error"
+    "CMP=(DEPOT, DEFDOSE)   CMP=(CENTRAL, DEFOBS)",
+    5
   )
-  err <- expect_error(
-    read_ctl(ctl_onecmt(pk = "ALAG3 = 1")),
-    class = "zufapmx_parse_error"
-  )
-  expect_equal(err$seen, "ALAG3")
-  expect_error(
+  expect_refused(read_ctl(ctl_onecmt(pk = "ALAG3 = 1")), "ALAG3", 3)
+  expect_refused(
     read_ctl(ctl_onecmt(error = c("IF (DV.GT.0) W = 1", "Y = F + W * EPS(1)"))),
-    class = "zufapmx_parse_error"
+    "W",
+    8
   )
-  expect_error(
+  expect_refused(
     read_ctl(sub("^\\$OMEGA .*", "$OMEGA BLOCK(2) 0.1 0.01", base)),
-    class = "zufapmx_parse_error"
+    "2 values",
+    12
   )
-  for (theta in c(
-    "$THETA (0, 1 FIX",
-    "$THETA (0, 1, 2, 3) (0, 4) (0, 50)",
-    "$THETA (0 1) (0, 4) (0, 50)"
-  )) {
-    expect_error(
-      read_ctl(sub("^\\$THETA .*", theta, base)),
-      class = "zufapmx_parse_error"
+  thetas <- list(
+    list("$THETA (0, 1 FIX", "end of record"),
+    list("$THETA (0, 1, 2, 3) (0, 4) (0, 50)", "("),
+    list("$THETA (0 1) (0, 4) (0, 50)", "1")
+  )
+  for (theta in thetas) {
+    expect_refused(
+      read_ctl(sub("^\\$THETA .*", theta[[1]], base)),
+      theta[[2]],
+      11
     )
   }
 })
@@ -104,7 +87,7 @@ test_that("abbreviated code is refused with its position", {
 test_that("mrgsolve blocks are refused with their position", {
   base <- cpp_onecmt()
 
-  err <- expect_error(
+  expect_refused(
     read_cpp(c(
       "$PARAM CL = 1, V = 2",
       "$PKMODEL advan = 4, trans = 4, cmt = \"A B\"",
@@ -112,22 +95,13 @@ test_that("mrgsolve blocks are refused with their position", {
       "double IPRED = B / V;",
       "double Y = IPRED + EPS(1);"
     )),
-    class = "zufapmx_parse_error"
+    "A B",
+    2
   )
-  expect_equal(err$line, 2L)
-  expect_error(
-    read_cpp(base[base != "$CMT CENT"]),
-    class = "zufapmx_parse_error"
-  )
-  expect_error(
-    read_cpp(c(base, "$OMEGA @block", "0.1 0.2")),
-    class = "zufapmx_parse_error"
-  )
-  err <- expect_error(
-    read_cpp(c(base, "$ODE", "dxdt_GUT = 1;")),
-    class = "zufapmx_parse_error"
-  )
-  expect_equal(err$seen, "dxdt_GUT")
+  expect_refused(read_cpp(base[base != "$CMT CENT"]), "end of file", 11)
+  expect_refused(read_cpp(c(base, "$OMEGA @block", "0.1 0.2")), "2 values", 13)
+  # The refusal points at the first $ODE block, the record's start.
+  expect_refused(read_cpp(c(base, "$ODE", "dxdt_GUT = 1;")), "dxdt_GUT", 6)
 })
 
 test_that("mrgsolve $INIT, $SET and annotated $CMT read", {
@@ -209,56 +183,88 @@ test_that("rxode2 models are refused for the constructs they lack", {
   )
 })
 
-test_that("writers refuse what their format cannot hold", {
-  m <- corpus_rxode2_model("twocmt-oral")
-  parts <- unclass(m)
-
-  log <- parts
-  log$observations$cp$transform <- "log"
-  for (write in list(pmx_write_rxode2, pmx_write_nonmem, pmx_write_mrgsolve)) {
-    expect_error(write(do.call(new_model, log)), class = "zufapmx_write_error")
+test_that("writers refuse what their format cannot hold, and say who can", {
+  writers <- list(
+    rxode2 = pmx_write_rxode2,
+    nonmem = pmx_write_nonmem,
+    mrgsolve = pmx_write_mrgsolve
+  )
+  # Each refusal names where the construct is, and every format it lists
+  # really writes the model.
+  expect_refusal <- function(model, formats, location) {
+    for (format in formats) {
+      err <- expect_error(
+        writers[[format]](model),
+        class = "zufapmx_write_error"
+      )
+      expect_equal(err$location, location)
+      for (other in err$formats) {
+        expect_s3_class(writers[[other]](model), "zufapmx_written")
+      }
+    }
+  }
+  parts <- unclass(corpus_rxode2_model("twocmt-oral"))
+  edit <- function(f) {
+    x <- parts
+    do.call(new_model, f(x))
   }
 
-  peripheral <- parts
-  peripheral$observations$cp$prediction <- quote(peripheral1 / vp)
-  for (write in list(pmx_write_rxode2, pmx_write_nonmem, pmx_write_mrgsolve)) {
-    expect_error(
-      write(do.call(new_model, peripheral)),
-      class = "zufapmx_write_error"
-    )
-  }
+  log <- edit(function(x) {
+    x$observations$cp$transform <- "log"
+    x
+  })
+  expect_refusal(log, names(writers), "observations$cp")
+
+  peripheral <- edit(function(x) {
+    x$observations$cp$prediction <- quote(peripheral1 / vp)
+    x
+  })
+  expect_refusal(peripheral, names(writers), "observations$cp")
 
   ode <- unclass(corpus_rxode2_model("onecmt-oral-mm"))
   ode$observations$cp$prediction <- quote(central / v + 1)
-  expect_error(
-    pmx_write_nonmem(do.call(new_model, ode)),
-    class = "zufapmx_write_error"
-  )
+  expect_refusal(do.call(new_model, ode), "nonmem", "observations$cp")
 
-  reused <- parts
-  reused$individual[[1]] <- quote(ka <- tka * prop.sd)
-  expect_error(
-    pmx_write_nonmem(do.call(new_model, reused)),
-    class = "zufapmx_write_error"
-  )
+  reused <- edit(function(x) {
+    x$individual[[1]] <- quote(ka <- tka * prop.sd)
+    x
+  })
+  expect_refusal(reused, c("nonmem", "mrgsolve"), "observations$cp$residual")
 
-  iov <- parts
-  iov$random_effects$iov <- list(present = TRUE, occasion = "OCC")
-  expect_error(
-    pmx_write_mrgsolve(do.call(new_model, iov)),
-    class = "zufapmx_write_error"
-  )
+  iov <- edit(function(x) {
+    x$random_effects$iov <- list(present = TRUE, occasion = "OCC")
+    x
+  })
+  expect_refusal(iov, names(writers), "random_effects$iov")
 
-  expr <- parts
-  expr$observations$cp$residual <- list(
-    type = "expression",
-    parameters = "prop.sd",
-    expression = quote(F + prop.sd)
-  )
-  expect_error(
-    pmx_write_rxode2(do.call(new_model, expr)),
-    class = "zufapmx_write_error"
-  )
+  over_sd <- edit(function(x) {
+    x$observations$cp$residual <- list(
+      type = "expression",
+      parameters = "prop.sd",
+      expression = quote(F + prop.sd)
+    )
+    x
+  })
+  expect_refusal(over_sd, names(writers), "observations$cp$residual")
+
+  over_eps <- read_ctl(ctl_onecmt(error = "Y = F + SQRT(F) * EPS(1)"))
+  expect_refusal(over_eps, c("rxode2", "mrgsolve"), "observations$Y$residual")
+
+  power <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+      pw <- 0.5
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ pow(sd, pw)
+    })
+  })
+  expect_refusal(power, c("nonmem", "mrgsolve"), "observations$cp$residual")
 })
 
 test_that("the validator refuses malformed components", {

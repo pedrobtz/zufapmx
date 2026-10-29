@@ -96,7 +96,7 @@ nm_split <- function(lines, file) {
     }
     list(name = name, lines = text, line = at, options = trimws(options))
   })
-  list(records = records, comments = any(comments))
+  list(records = records, comments = any(comments), lines = length(lines))
 }
 
 # Tokens of one line: a list of list(type, value, column).
@@ -412,7 +412,7 @@ nm_assignment <- function(p, file, line) {
         call = NULL
       )
     }
-    call(name, as.integer(n$value))
+    call(name, as.numeric(n$value))
   } else {
     as.symbol(tok$value)
   }

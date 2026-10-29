@@ -483,3 +483,28 @@ test_that("ini() takes = and combined2(), and refuses combined1()", {
     class = "zufapmx_parse_error"
   )
 })
+
+test_that("an ini() value cannot run code", {
+  marker <- withr::local_tempfile()
+  f <- function() NULL
+  body(f) <- call(
+    "{",
+    call(
+      "ini",
+      call(
+        "{",
+        call("<-", quote(tcl), call("file.create", marker)),
+        quote(tv <- 50),
+        quote(sd <- 0.1)
+      )
+    ),
+    quote(model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ add(sd)
+    }))
+  )
+  expect_error(pmx_read_rxode2(f), class = "zufapmx_parse_error")
+  expect_false(file.exists(marker))
+})

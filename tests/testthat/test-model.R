@@ -8,8 +8,8 @@ test_that("an ODE model prints its summary", {
 })
 
 test_that("the representation's structure is stable", {
-  expect_snapshot(str(unclass(model_twocmt_oral())))
-  expect_snapshot(str(unclass(model_onecmt_mm())))
+  expect_snapshot(str_full(unclass(model_twocmt_oral())))
+  expect_snapshot(str_full(unclass(model_onecmt_mm())))
 })
 
 test_that("pmx_parameters() returns the fixed effects", {

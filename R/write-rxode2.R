@@ -97,7 +97,7 @@ rxode2_write_sd_from_sigma <- function(m) {
       write_error(
         "a residual model written as an expression over epsilons",
         sprintf("observations$%s$residual", e),
-        formats = c("nonmem", "mrgsolve"),
+        formats = "nonmem",
         call = NULL
       )
     }
@@ -332,12 +332,7 @@ rxode2_write_prediction <- function(s, endpoint, prediction) {
       return(sprintf("%s <- linCmt()", endpoint))
     }
     if (any(all.vars(prediction) %in% closed_compartments(s))) {
-      write_error(
-        "a closed-form prediction other than the central concentration",
-        sprintf("observations$%s", endpoint),
-        formats = character(),
-        call = NULL
-      )
+      closed_prediction_error(endpoint)
     }
   }
   sprintf("%s <- %s", endpoint, expr_line(prediction))
@@ -353,9 +348,9 @@ rxode2_write_residual <- function(residual, endpoint) {
     exponential = sprintf("lnorm(%s)", p[[1]]),
     power = sprintf("pow(%s)", paste(p, collapse = ", ")),
     write_error(
-      sprintf("a residual model of type %s", residual$type),
+      sprintf("a %s residual model", residual$type),
       sprintf("observations$%s$residual", endpoint),
-      formats = "nonmem",
+      formats = residual_formats(residual$type),
       call = NULL
     )
   )

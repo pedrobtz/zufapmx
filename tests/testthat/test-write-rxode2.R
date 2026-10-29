@@ -215,3 +215,13 @@ test_that("variables linCmt() would read as parameters are renamed", {
     "rxUi"
   )
 })
+
+test_that("a sigma variance is written as its standard deviation", {
+  parts <- unclass(model_twocmt_oral())
+  parts$random_effects$sigma[[1]]$estimate <- matrix(
+    0.0625,
+    dimnames = list("eps.prop", "eps.prop")
+  )
+  text <- pmx_write_rxode2(do.call(new_model, parts))$text
+  expect_true("    eps.prop <- c(0, 0.25)" %in% text)
+})
