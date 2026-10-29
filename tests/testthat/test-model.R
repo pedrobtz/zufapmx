@@ -201,3 +201,44 @@ test_that("a missing component is an error", {
 
   expect_error(do.call(new_model, parts), class = "zufapmx_model_error")
 })
+
+test_that("parameters, random effects, compartments and time are not assigned", {
+  m <- model_onecmt_mm()
+  ind <- unclass(m)$individual
+  for (target in c("tka", "eta.vm", "eps.prop", "central", "t")) {
+    stmts <- c(ind, list(call("<-", as.symbol(target), 1)))
+    expect_error(
+      model_with(m, individual = stmts),
+      class = "zufapmx_model_error"
+    )
+  }
+})
+
+test_that("ODE code may not reassign an individual name", {
+  m <- model_onecmt_mm()
+  s <- unclass(m)$structure
+  s$statements <- c(s$statements, list(quote(vm <- vm / 2)))
+  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
+})
+
+test_that("individual statements may not read compartment amounts (D18)", {
+  m <- model_onecmt_mm()
+  ind <- c(unclass(m)$individual, list(quote(k <- central / 100)))
+  expect_error(model_with(m, individual = ind), class = "zufapmx_model_error")
+})
+
+test_that("a name assigned inside if needs a value before it (D14)", {
+  m <- model_onecmt_mm()
+  ind <- c(
+    unclass(m)$individual,
+    list(quote(
+      if (WT > 70) {
+        f <- 2
+      }
+    ))
+  )
+  expect_error(model_with(m, individual = ind), class = "zufapmx_model_error")
+
+  ind <- c(unclass(m)$individual, list(quote(f <- 1)), ind[length(ind)])
+  expect_s3_class(model_with(m, individual = ind), "zufapmx_model")
+})

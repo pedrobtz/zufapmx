@@ -304,11 +304,23 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
   )
 }
 
+y_error <- function(file, record) {
+  parse_error(
+    file,
+    NA_integer_,
+    NA_integer_,
+    seen = "Y",
+    expected = sprintf("Y assigned once in %s, outside IF", record),
+    call = NULL
+  )
+}
+
 # The observation from $ERROR or $TABLE: the residual model of Y. Each
 # definition is stored expanded as it stands where it is made, so Y sees
 # the definitions in force where Y is assigned (design §6). `prediction` is
-# NONMEM's F; without one (mrgsolve), the prediction is the term in F's
-# place of a recognised residual form, and anything else is refused.
+# NONMEM's F; without one (mrgsolve), or when Y does not use it, the
+# prediction is the term in F's place of a recognised residual form, and
+# anything else is refused.
 # `outputs` are other names the record makes visible ($CAPTURE).
 read_observation <- function(
   stmts,
@@ -353,6 +365,9 @@ read_observation <- function(
     if (is_call(x, "<-") && is.symbol(x[[2]])) {
       name <- as.character(x[[2]])
       if (identical(name, "Y")) {
+        if (!is.null(y)) {
+          y_error(file, record)
+        }
         y <- expand(x[[3]], function(n) used <<- union(used, n))
       } else {
         seen <- character()
@@ -361,6 +376,9 @@ read_observation <- function(
         conditional <- setdiff(conditional, name)
       }
     } else {
+      if ("Y" %in% stmt_targets(list(x))) {
+        y_error(file, record)
+      }
       conditional <- union(conditional, stmt_targets(list(x)))
     }
   }
@@ -376,8 +394,16 @@ read_observation <- function(
   }
 
   form <- residual_form(strip_parens(y), prediction)
+  # A Y that does not use the given prediction (NONMEM's F) names its own,
+  # as in `IPRED = A(2)/V; Y = IPRED*(1+EPS(1))`.
+  derived <- is.null(form) &&
+    !is.null(prediction) &&
+    !any(all.vars(prediction) %in% all.vars(y))
+  if (derived) {
+    form <- residual_form(strip_parens(y), NULL)
+  }
   if (is.null(form)) {
-    if (is.null(prediction)) {
+    if (is.null(prediction) || derived) {
       parse_error(
         file,
         NA_integer_,
@@ -490,9 +516,7 @@ check_dosing_names <- function(individual, reserved, file, record) {
       }
     }
   }
-  reads <- unique(unlist(lapply(individual, function(x) {
-    if (is_call(x, "<-")) all.vars(x[[3]]) else all.vars(x)
-  })))
+  reads <- stmt_reads(individual)
   bad <- reads[vapply(reads, reserved, logical(1))]
   if (length(bad) > 0) {
     parse_error(
@@ -546,7 +570,10 @@ read_model <- function(file, ...) {
   }
   parts$individual <- individual
   if (identical(parts$structure$type, "ode")) {
-    parts$structure$statements <- explicit_zero(parts$structure$statements)
+    parts$structure$statements <- explicit_zero(
+      parts$structure$statements,
+      assigned = stmt_targets(parts$individual)
+    )
   }
   parts$provenance$covariates <- model_covariates(file, parts)
   tryCatch(
@@ -567,9 +594,8 @@ read_model <- function(file, ...) {
 # A variable an `if` assigns before any statement outside it does starts at
 # 0 in every evaluation (D14). Readers make that explicit with `x <- 0`
 # before the `if`, so every writer prints the same model.
-explicit_zero <- function(stmts) {
+explicit_zero <- function(stmts, assigned = character()) {
   out <- list()
-  assigned <- character()
   for (x in stmts) {
     if (is_call(x, "if")) {
       for (v in setdiff(stmt_targets(list(x)), assigned)) {

@@ -336,3 +336,117 @@ test_that("linCmt() reads NONMEM's numbered names", {
     c(cl = "cl", v = "v", q = "q", vp = "vp", q2 = "q2", vp2 = "vp2")
   )
 })
+
+test_that("statements reassigning a name the ODE code uses move into it", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      k <- cl / v
+      if (time > 10) {
+        k <- k / 2
+      }
+      d / dt(central) <- -k * central
+      cp <- central / v
+      cp ~ add(sd)
+    })
+  })
+  expect_equal(
+    unclass(m)$individual,
+    list(quote(cl <- tcl), quote(v <- tv))
+  )
+  expect_equal(length(unclass(m)$structure$statements), 2)
+
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      k <- cl / v
+      k <- k / (1 + central / 100)
+      d / dt(central) <- -k * central
+      cp <- central / v
+      cp ~ add(sd)
+    })
+  })
+  expect_equal(
+    unclass(m)$structure$statements,
+    list(quote(k <- cl / v), quote(k <- k / (1 + central / 100)))
+  )
+  expect_true(any(grepl("$DES", pmx_write_nonmem(m)$text, fixed = TRUE)))
+})
+
+test_that("an endpoint another statement reads stays a statement", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      emax <- 10
+      ec50 <- 2
+      sd <- 0.1
+      sd2 <- 1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      d / dt(central) <- -cl / v * central
+      cp <- central / v
+      eff <- emax * cp / (ec50 + cp)
+      cp ~ add(sd)
+      eff ~ add(sd2)
+    })
+  })
+  obs <- unclass(m)$observations
+  expect_equal(obs$cp$prediction, quote(cp))
+  expect_equal(obs$eff$prediction, quote(emax * cp / (ec50 + cp)))
+  expect_equal(unclass(m)$structure$statements, list(quote(cp <- central / v)))
+  expect_equal(pmx_fidelity(pmx_write_rxode2(m)), "exact")
+})
+
+test_that("a parameter reassigned in model() is refused", {
+  expect_error(
+    pmx_read_rxode2(function() {
+      ini({
+        cl <- 4
+        v <- 50
+        eta.cl ~ 0.09
+        sd <- 0.1
+      })
+      model({
+        cl <- cl * exp(eta.cl)
+        cp <- linCmt()
+        cp ~ add(sd)
+      })
+    }),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("a linCmt() endpoint that is reassigned or read is refused", {
+  expect_error(
+    pmx_read_rxode2(function() {
+      ini({
+        tcl <- 4
+        tv <- 50
+        sd <- 0.1
+      })
+      model({
+        cl <- tcl
+        v <- tv
+        cp <- linCmt()
+        cp <- cp * 2
+        cp ~ add(sd)
+      })
+    }),
+    class = "zufapmx_parse_error"
+  )
+})

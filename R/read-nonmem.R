@@ -26,9 +26,10 @@
 #' starts them at 0).
 #'
 #' NONMEM's names are kept, upper case: `THETA(1)` reads as `THETA1`,
-#' `ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. `T` and `TIME` read as the
-#' representation's time, `t`. Free names such as `WT` are recorded as
-#' covariates. The observation is the endpoint `Y`.
+#' `ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. Time is `t`: read from `T` in
+#' `$DES` and from `TIME` elsewhere; `TIME` in `$DES` is refused. Free names
+#' such as `WT` are recorded as covariates. The observation is the endpoint
+#' `Y`.
 #'
 #' @param file Path to the control stream.
 #' @param estimates Where final estimates come from. `"auto"` reads
@@ -208,7 +209,7 @@ nm_read <- function(file) {
     )
   } else {
     structure <- split_ode(
-      nm_code(one("DES"), file, cmt),
+      nm_code(one("DES"), file, cmt, des = TRUE),
       compartments,
       nm_derivative(compartments, file),
       file,
@@ -248,7 +249,12 @@ nm_read <- function(file) {
     dosing = pk$dosing,
     observations = list(
       Y = list(
-        prediction = prediction,
+        # F is the scaled compartment; a Y without F names its own.
+        prediction = if (identical(error$prediction, quote(F))) {
+          prediction
+        } else {
+          error$prediction
+        },
         residual = error$residual,
         transform = "none"
       )
@@ -353,6 +359,20 @@ nm_compartments <- function(r, file) {
     strsplit(trimws(gsub("[(),]", " ", inner)), "\\s+")[[1]]
   })
   names <- vapply(words, `[[`, character(1), 1)
+  # INITIALOFF starts a compartment off, which changes predictions.
+  if (any(vapply(words, function(w) "INITIALOFF" %in% toupper(w[-1]), NA))) {
+    parse_error(
+      file,
+      r$line[[1]],
+      1L,
+      seen = "INITIALOFF",
+      message = sprintf(
+        "not translated: `INITIALOFF` in $MODEL at line %d",
+        r$line[[1]]
+      ),
+      call = NULL
+    )
+  }
   defobs <- which(vapply(
     words,
     function(w) "DEFOBS" %in% toupper(w[-1]),
@@ -619,34 +639,46 @@ nm_pk <- function(stmts, compartments, file) {
     }
     compartments[[n]]
   }
+  # Each PREDPP name is assigned once: the reader keeps one value for it.
+  refuse <- function(name, expected) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = name,
+      expected = expected,
+      call = NULL
+    )
+  }
+  once <- function(cmt, attr, name, value) {
+    if (!is.null(dosing[[cmt]][[attr]])) {
+      refuse(name, sprintf("%s assigned once in $PK", name))
+    }
+    dosing[[cmt]][[attr]] <<- value
+  }
   for (x in stmts) {
     target <- if (is_call(x, "<-")) x[[2]]
     name <- if (is.symbol(target)) as.character(target) else ""
     m <- regmatches(name, regexec("^(S|ALAG|F|R|D)([0-9]+)$", name))[[1]]
-    if (length(m) == 3) {
+    if (name %in% c("TSCALE", "XSCALE")) {
+      # They rescale time or amounts inside PREDPP.
+      refuse(name, "a $PK statement zufapmx translates")
+    } else if (length(m) == 3) {
       n <- as.integer(m[[3]])
       if (m[[2]] == "S") {
         check_cmt(n, name)
+        if (!is.null(scale[[as.character(n)]])) {
+          refuse(name, sprintf("%s assigned once in $PK", name))
+        }
         scale[[as.character(n)]] <- x[[3]]
       } else {
-        cmt <- check_cmt(n, name)
-        dosing[[cmt]] <- c(
-          dosing[[cmt]],
-          stats::setNames(list(x[[3]]), attrs[[m[[2]]]])
-        )
+        once(check_cmt(n, name), attrs[[m[[2]]]], name, x[[3]])
       }
     } else if (is_call(target, "A_0")) {
       cmt <- check_cmt(target[[2]], expr_text(target))
-      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
+      once(cmt, "initial", expr_text(target), x[[3]])
     } else if (is_call(target, "DADT")) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = expr_text(target),
-        expected = "DADT(n) in $DES",
-        call = NULL
-      )
+      refuse(expr_text(target), "DADT(n) in $DES")
     } else {
       individual[[length(individual) + 1]] <- x
     }

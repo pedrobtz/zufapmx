@@ -312,3 +312,34 @@ test_that("a directory is not a model file", {
     class = "zufapmx_model_error"
   )
 })
+
+test_that("time is SOLVERTIME in $ODE and TIME elsewhere", {
+  err <- expect_error(
+    read_cpp(cpp_onecmt(main = "double K = SOLVERTIME;")),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$seen, "SOLVERTIME")
+
+  lines <- cpp_onecmt()
+  lines <- sub("-CL / V * CENT", "-CL / V * CENT * TIME", lines, fixed = TRUE)
+  err <- expect_error(read_cpp(lines), class = "zufapmx_parse_error")
+  expect_equal(err$seen, "TIME")
+})
+
+test_that("$ODE beside $PKMODEL is refused", {
+  err <- expect_error(
+    read_cpp(c(
+      "$PARAM CL = 1, V = 20, KA = 1, KE0 = 0.5",
+      "$PKMODEL cmt = \"GUT CENT\", depot = TRUE",
+      "$CMT EFF",
+      "$ODE",
+      "dxdt_EFF = KE0 * (CENT / V - EFF);",
+      "$OMEGA 0.1",
+      "$SIGMA 0.01",
+      "$TABLE",
+      "double Y = CENT / V * (1 + EPS(1));"
+    )),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$line, 4)
+})

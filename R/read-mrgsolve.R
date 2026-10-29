@@ -17,8 +17,9 @@
 #' `$PARAM` directly or from `$MAIN`.
 #'
 #' Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
-#' descriptions, and `$TABLE` outputs `Y` does not use. `TIME` and
-#' `SOLVERTIME` read as the representation's time, `t`. `$NMXML` and
+#' descriptions, and `$TABLE` outputs `Y` does not use. Time is `t`: read
+#' from `SOLVERTIME` in `$ODE` and from `TIME` elsewhere; the other name is
+#' refused, since it is a different time. `$NMXML` and
 #' `$NMEXT` resolve a relative path against the working directory, or the
 #' model file's with `root = "cppfile"`, as mrgsolve does.
 #'
@@ -182,13 +183,13 @@ mrg_read <- function(file) {
   closed <- layout$closed
   rename <- layout$rename
   compartments <- layout$compartments
-  code <- function(...) {
+  code <- function(..., ode = FALSE) {
     stmts <- unlist(
-      lapply(block(...), cpp_parse, file = file),
+      lapply(block(...), cpp_parse, file = file, ode = ode),
       recursive = FALSE
     )
-    # TIME and SOLVERTIME are the representation's time, t (D15).
-    lapply(stmts, rename_symbols, map = c(rename, TIME = "t", SOLVERTIME = "t"))
+    time <- if (ode) c(SOLVERTIME = "t") else c(TIME = "t")
+    lapply(stmts, rename_symbols, map = c(rename, time))
   }
 
   main <- mrg_main(code("MAIN", "PK"), compartments, rename, file)
@@ -201,6 +202,21 @@ mrg_read <- function(file) {
     )
   }
   if (!is.null(closed)) {
+    # Compartments beside a closed form need ODE code it cannot hold.
+    for (b in block("ODE", "DES")) {
+      parse_error(
+        file,
+        b$line[[1]],
+        1L,
+        seen = paste0("$", b$name),
+        message = sprintf(
+          "not translated: $%s beside $PKMODEL at line %d",
+          b$name,
+          b$line[[1]]
+        ),
+        call = NULL
+      )
+    }
     structure <- nm_closed_structure(
       list(advan = closed$structure$advan, trans = closed$structure$trans),
       nm_closed[[as.character(closed$structure$advan)]],
@@ -210,7 +226,7 @@ mrg_read <- function(file) {
     )
   } else {
     structure <- split_ode(
-      code("ODE", "DES"),
+      code("ODE", "DES", ode = TRUE),
       compartments,
       mrg_derivative(compartments, file),
       file,

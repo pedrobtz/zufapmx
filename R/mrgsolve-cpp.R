@@ -32,9 +32,28 @@ cpp_tokenize <- function(lines, line_numbers, file) {
   )
 }
 
-# Parse a block's code into statements.
-cpp_parse <- function(block, file) {
+# Parse a block's code into statements. Time is `SOLVERTIME` in $ODE and
+# the record's `TIME` elsewhere (D15); the other one is refused.
+cpp_parse <- function(block, file, ode = FALSE) {
   tokens <- cpp_tokenize(block$lines, block$line, file)
+  wrong_time <- if (ode) "TIME" else "SOLVERTIME"
+  for (tok in tokens) {
+    if (tok$type == "name" && tok$value == wrong_time) {
+      parse_error(
+        file,
+        tok$line,
+        tok$column,
+        seen = wrong_time,
+        message = sprintf(
+          "not translated: `%s` in $%s at line %d",
+          wrong_time,
+          block$name,
+          tok$line
+        ),
+        call = NULL
+      )
+    }
+  }
   s <- token_stream(
     tokens,
     file,

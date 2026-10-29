@@ -262,7 +262,10 @@ nm_parser <- function(tokens, line, file, cmt) {
 # Parse a record's abbreviated code into statements. Returns a list of
 # R statements, with `DADT(n) = e` as `DADT(n) <- e` and dosing names such
 # as `ALAG1` kept as symbols.
-nm_code <- function(record, file, cmt) {
+# Time is `T` in $DES and the data item `TIME` elsewhere; each is the
+# representation's `t` (D15) where NONMEM defines it. `TIME` in $DES is the
+# record's time, not the solver's, and is refused.
+nm_code <- function(record, file, cmt, des = FALSE) {
   out <- list()
   stack <- list()
   push <- function(stmt) {
@@ -293,7 +296,23 @@ nm_code <- function(record, file, cmt) {
         call = NULL
       )
     }
-    p <- nm_parser(nm_tokenize(text, line, file), line, file, cmt)
+    tokens <- nm_tokenize(text, line, file)
+    for (tok in tokens) {
+      if (des && tok$type == "name" && tok$value == "TIME") {
+        parse_error(
+          file,
+          line,
+          tok$column,
+          seen = "TIME",
+          message = sprintf(
+            "not translated: `TIME` in $DES at line %d; use `T`",
+            line
+          ),
+          call = NULL
+        )
+      }
+    }
+    p <- nm_parser(tokens, line, file, cmt)
 
     if (p$at(c("ENDIF", "END"))) {
       p$take()
@@ -315,6 +334,10 @@ nm_code <- function(record, file, cmt) {
         p$fail("a statement")
       }
       top <- length(stack)
+      # Nothing follows a plain ELSE but ENDIF.
+      if (isTRUE(stack[[top]]$plain_else)) {
+        p$fail("ENDIF")
+      }
       if (p$at("IF")) {
         p$take()
         p$take("(")
@@ -322,6 +345,8 @@ nm_code <- function(record, file, cmt) {
         p$take(")")
         p$take("THEN")
         stack[[top]]$conditions[[length(stack[[top]]$conditions) + 1]] <- cond
+      } else {
+        stack[[top]]$plain_else <- TRUE
       }
       p$expect_end()
       stack[[top]]$branch <- stack[[top]]$branch + 1L
@@ -359,8 +384,7 @@ nm_code <- function(record, file, cmt) {
       call = NULL
     )
   }
-  # T ($DES) and TIME (data) are the representation's time, t (D15).
-  lapply(out, rename_symbols, map = c(T = "t", TIME = "t"))
+  lapply(out, rename_symbols, map = if (des) c(T = "t") else c(TIME = "t"))
 }
 
 nm_assignment <- function(p, file, line) {
@@ -377,7 +401,8 @@ nm_assignment <- function(p, file, line) {
     p$take("(")
     n <- p$take()
     p$take(")")
-    if (n$type != "number" || !name %in% c("DADT", "A_0")) {
+    whole <- n$type == "number" && grepl("^[0-9]+$", n$value)
+    if (!whole || !name %in% c("DADT", "A_0")) {
       parse_error(
         file,
         line,

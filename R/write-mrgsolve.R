@@ -297,9 +297,9 @@ mrg_residual <- function(m, spelling) {
 }
 
 # Statements as C++. A variable is declared `double` where it is first
-# assigned at the top level; one assigned only inside `if` is declared
-# first with the value 0 (D14). Readers already make that 0 explicit, so
-# this only matters for models built by other means.
+# assigned at the top level. The validator guarantees that is before any
+# `if` assigns it (D14), and that `$ODE` assigns none of `$MAIN`'s names,
+# which mrgsolve would declare twice.
 mrg_stmt_lines <- function(stmts, spelling, declared = character(), depth = 0) {
   pad <- strrep(" ", depth)
   out <- character()
@@ -314,11 +314,6 @@ mrg_stmt_lines <- function(stmts, spelling, declared = character(), depth = 0) {
         sprintf("%s%s%s = %s;", pad, decl, text, cpp_expr(x[[3]], spelling))
       )
     } else {
-      if (depth == 0) {
-        fresh <- setdiff(stmt_targets(list(x)), declared)
-        out <- c(out, sprintf("double %s = 0.0;", spelling[fresh] %|NA|% fresh))
-        declared <- c(declared, fresh)
-      }
       out <- c(out, mrg_if_lines(x, spelling, declared, depth))
     }
   }

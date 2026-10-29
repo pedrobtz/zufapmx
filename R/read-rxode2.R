@@ -381,11 +381,30 @@ rxode2_read_model <- function(stmts, reader) {
     function(x) if (is_call(x, "<-")) as.character(x[[2]]) else "",
     character(1)
   )
-  is_prediction <- (targets %in% endpoints) &
+  # It is taken out as the prediction only when nothing reads the endpoint
+  # and no `if` reassigns it; otherwise the assignments stay statements and
+  # the prediction is the endpoint itself.
+  read_elsewhere <- stmt_reads(assigns)
+  conditional <- unlist(lapply(
+    Filter(function(x) is_call(x, "if"), assigns),
+    function(x) stmt_targets(list(x))
+  ))
+  kept <- endpoints[endpoints %in% c(read_elsewhere, conditional)]
+  if (!is.null(lincmt) && lincmt %in% c(kept, targets)) {
+    reader$refuse(
+      as.symbol(lincmt),
+      "a linCmt() endpoint that no other statement assigns or reads"
+    )
+  }
+  is_prediction <- (targets %in% setdiff(endpoints, kept)) &
     !duplicated(targets, fromLast = TRUE)
   predictions <- lapply(assigns[is_prediction], `[[`, 3)
   names(predictions) <- targets[is_prediction]
   rest <- assigns[!is_prediction]
+
+  for (e in kept) {
+    predictions[[e]] <- as.symbol(e)
+  }
 
   parts <- rxode2_read_structure(rest, lincmt, derivatives, reader)
   individual <- parts$individual
@@ -527,23 +546,27 @@ rxode2_read_structure <- function(rest, lincmt, derivatives, reader) {
     individual <- rest
     structure <- rxode2_read_lincmt(stmt_targets(individual), reader)
   } else {
-    # A statement belongs to the structure when it reads a compartment
-    # amount, or a name another structure statement assigns.
+    # A statement belongs to the structure when it reads or assigns a
+    # compartment amount, time (continuous in rxode2, D15), or a name a
+    # structure statement assigns; and a name the structure assigns is
+    # assigned only there, since ODE code re-runs at every solver step.
+    # Repeat until nothing moves, keeping the statements' order.
     compartments <- names(derivatives)
-    # Time is continuous in rxode2: statements reading it are part of the
-    # ODE structure, not individual parameters (D15).
-    state <- c(compartments, "t")
     in_structure <- logical(length(rest))
-    for (i in seq_along(rest)) {
-      reads <- if (is_call(rest[[i]], "<-")) {
-        all.vars(rest[[i]][[3]])
-      } else {
-        all.vars(rest[[i]])
+    repeat {
+      state <- c(compartments, "t", stmt_targets(rest[in_structure]))
+      moves <- !in_structure &
+        vapply(
+          rest,
+          function(x) {
+            any(c(stmt_reads(list(x)), stmt_targets(list(x))) %in% state)
+          },
+          logical(1)
+        )
+      if (!any(moves)) {
+        break
       }
-      if (any(reads %in% state)) {
-        in_structure[[i]] <- TRUE
-        state <- c(state, stmt_targets(rest[i]))
-      }
+      in_structure <- in_structure | moves
     }
     individual <- rest[!in_structure]
     structure <- list(

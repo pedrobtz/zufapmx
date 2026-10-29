@@ -164,3 +164,35 @@ test_that("record names need three letters, and an ambiguous one says so", {
   )
   expect_equal(err$seen, "$SI")
 })
+
+test_that("nothing but ENDIF follows a plain ELSE", {
+  expect_error(
+    nm_parse_lines(c(
+      "IF (KA.GT.1) THEN",
+      "Q = 1",
+      "ELSE",
+      "Q = 2",
+      "ELSE IF (KA.GT.0) THEN",
+      "Q = 3",
+      "ENDIF"
+    )),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    nm_parse_lines(c(
+      "IF (KA.GT.1) THEN",
+      "Q = 1",
+      "ELSE",
+      "Q = 2",
+      "ELSE",
+      "Q = 3",
+      "ENDIF"
+    )),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("compartment indices are whole numbers", {
+  expect_error(nm_parse_lines("DADT(1.7) = 0"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("A_0(1.0) = 0"), class = "zufapmx_parse_error")
+})

@@ -218,7 +218,75 @@ validate_model <- function(model) {
   )
   validate_dosing(model$dosing, compartments)
   validate_observations(model$observations)
+  validate_assignments(model, compartments)
   model
+}
+
+# Who may assign what. Parameters, random effects, compartments and time
+# are inputs, never assigned (#82). ODE code re-runs at every solver step
+# in NONMEM's $DES and mrgsolve's $ODE, so it may not reassign an
+# individual name (#81). Individual statements run once per record, so they
+# may not read compartment amounts (D18). A name an `if` assigns must hold
+# a value before it, so every evaluation starts from the same one (D14).
+validate_assignments <- function(model, compartments) {
+  individual <- model$individual
+  structure <- model$structure$statements
+  inputs <- c(
+    model$parameters$name,
+    unlist(lapply(
+      c(model$random_effects$omega, model$random_effects$sigma),
+      `[[`,
+      "names"
+    )),
+    compartments,
+    "t"
+  )
+  assigned <- intersect(stmt_targets(c(individual, structure)), inputs)
+  if (length(assigned) > 0) {
+    model_abort(
+      "`%s` is a parameter, random effect, compartment or time; it cannot be assigned.",
+      assigned[[1]]
+    )
+  }
+  shared <- intersect(stmt_targets(structure), stmt_targets(individual))
+  if (length(shared) > 0) {
+    model_abort(
+      "`%s` is assigned both by individual statements and by the ODE code.",
+      shared[[1]]
+    )
+  }
+  amounts <- intersect(stmt_reads(individual), compartments)
+  if (length(amounts) > 0) {
+    model_abort(
+      "Individual statements read the compartment amount `%s`.",
+      amounts[[1]]
+    )
+  }
+  check_zero_start(individual)
+  check_zero_start(structure, stmt_targets(individual))
+}
+
+check_zero_start <- function(stmts, assigned = character()) {
+  for (x in stmts) {
+    if (is_call(x, "if")) {
+      unset <- setdiff(stmt_targets(list(x)), assigned)
+      if (length(unset) > 0) {
+        model_abort(
+          "`%s` is assigned only inside an `if`; give it a value before.",
+          unset[[1]]
+        )
+      }
+    } else {
+      assigned <- c(assigned, as.character(x[[2]]))
+    }
+  }
+}
+
+# Names a statement list reads, including in `if` conditions.
+stmt_reads <- function(stmts) {
+  unique(unlist(lapply(stmts, function(x) {
+    if (is_call(x, "<-")) all.vars(x[[3]]) else all.vars(x)
+  })))
 }
 
 validate_parameters <- function(x) {

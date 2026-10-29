@@ -273,3 +273,67 @@ test_that("estimate matrices keep their orientation from every source", {
     )
   }
 })
+
+test_that("Y is assigned once, outside IF", {
+  expect_error(
+    read_ctl(ctl_onecmt(
+      error = c("IPRED = F", "Y = IPRED * (1 + EPS(1))", "IF (KA.GT.100) Y = 0")
+    )),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    read_ctl(ctl_onecmt(
+      error = c("Y = F * (1 + EPS(1))", "Y = Y + 1")
+    )),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("a Y that does not use F names its own prediction", {
+  lines <- ctl_onecmt(error = c("IPRED = A(2) / V", "Y = IPRED * (1 + EPS(1))"))
+  m <- read_ctl(lines[lines != "S2 = V"])
+  y <- unclass(m)$observations$Y
+  expect_equal(y$prediction, quote(central / V))
+  expect_equal(y$residual$type, "proportional")
+
+  expect_error(
+    read_ctl(ctl_onecmt(error = c("Y = A(2) / V + EXP(EPS(1))"))),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("scale and dosing names are assigned once", {
+  for (pk in list(
+    "S2 = S2 / 1000",
+    c("ALAG1 = 1", "ALAG1 = 2"),
+    c("A_0(2) = 1", "A_0(2) = 2")
+  )) {
+    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zufapmx_parse_error")
+  }
+})
+
+test_that("TSCALE, XSCALE and INITIALOFF are refused", {
+  for (pk in c("TSCALE = 60", "XSCALE = 1000")) {
+    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zufapmx_parse_error")
+  }
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
+  lines <- sub(
+    "(DEPOT, DEFDOSE)",
+    "(DEPOT, DEFDOSE, INITIALOFF)",
+    lines,
+    fixed = TRUE
+  )
+  err <- expect_error(read_ctl(lines), class = "zufapmx_parse_error")
+  expect_equal(err$seen, "INITIALOFF")
+})
+
+test_that("time is T in $DES and TIME elsewhere", {
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
+  des <- sub("C2 = A(2) / V", "C2 = A(2) / V * TIME", lines, fixed = TRUE)
+  err <- expect_error(read_ctl(des), class = "zufapmx_parse_error")
+  expect_equal(err$seen, "TIME")
+
+  m <- read_ctl(ctl_onecmt(pk = c("T = 2", "CL = CL * T")))
+  expect_true("T" %in% stmt_targets(unclass(m)$individual))
+  expect_false("t" %in% all.vars(unclass(m)$individual))
+})
