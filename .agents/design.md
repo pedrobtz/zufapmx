@@ -292,15 +292,25 @@ typical-subject predictions on the standard design.
 
 - `zufapmx_parse_error`: file, line, column, the token seen and the tokens
   expected. Verbatim code and user subroutines raise it with the message
-  "not translated: verbatim Fortran at line n".
+  "not translated: verbatim Fortran at line n". A refusal of a statement
+  gives its record's first line, since statements are R calls without
+  positions; running out of input gives the last line. An rxode2 model is
+  an R function, so its refusals have no line. (Added 2026-10-29, from
+  review issue #92.)
 - `zufapmx_write_error`: the construct refused, its location in the
-  representation, and the formats that could hold it.
+  representation, and the formats that could hold it. `formats` lists
+  only formats whose writer does write the model, and one refusal carries
+  the same fields from every writer. (Added 2026-10-29, from review issue
+  #89.)
 - `zufapmx_engine_error`: the engine missing or failing, with the engine's
   own message attached.
 - `zufapmx_model_error`: an invalid argument, or a model that fails
   validation. Readers never raise it for their input: what the validator
   rejects in a model read from a file is that file's `zufapmx_parse_error`.
   (Added 2026-10-28, from review issue #68.)
+- `zufapmx_corpus_error`: a corpus entry that is malformed, or a regimen
+  the corpus design does not know. Only `zufapmx_corpus()` and the corpus
+  helpers raise it. (Added 2026-10-29, from review issue #120.)
 - `pmx_compare()` never raises on a failed comparison; failure is a value.
 
 ## 9. Testing
@@ -416,13 +426,18 @@ decides it and the maintainer may overturn it.
   this explicit with `x <- 0` before the `if`, so every writer prints the
   same statements. NM-TRAN instead keeps the value from the previous
   record; a NONMEM model that relies on it records a loss when read.
-  Settles the review question in issue #54.
+  Settles the review question in issue #54. Since 2026-10-29 the
+  validator enforces it: a name an `if` assigns must hold a value before
+  the `if` (issue #112).
 - **D15 (M), 2026-10-28.** Time is one symbol, `t`. In individual
   statements it is the time of the record being evaluated (NONMEM `TIME`
   in `$PK`, mrgsolve `TIME` in `$MAIN`), which rxode2 cannot spell, so the
   rxode2 writer refuses it. In ODE code and observations it is continuous
   time (NONMEM `T` in `$DES`, mrgsolve `SOLVERTIME` in `$ODE`, rxode2 `t`);
   the rxode2 reader puts statements that read time into the ODE structure.
+  Each record reads only its own time: `TIME` in `$DES` or `$ODE`, and
+  `SOLVERTIME` outside `$ODE`, are refused, and `T` outside `$DES` is an
+  ordinary NONMEM variable (2026-10-29, issue #83).
 - **D16 (M), 2026-10-29.** The name is `zu` + `fa` + role: `zufapmx`, and
   RFC 0047's sibling is `zufaode`. `fa` replaces `pk` as the mark of the
   sub-family, so a later package would be `zufanca`. Supersedes D10's
@@ -435,6 +450,16 @@ decides it and the maintainer may overturn it.
   package's CRAN release. `daffiz` can return in a later version, in
   `Suggests`, for a richer diff report. Supersedes D11; resolves Q5 the
   other way.
+- **D18 (M), 2026-10-29.** Who may assign and read what. Parameters,
+  random effects, compartment amounts and time are inputs and are never
+  assigned. ODE code (NONMEM `$DES`, mrgsolve `$ODE`) re-runs at every
+  solver step, so it may not reassign a name the individual statements
+  assign; the rxode2 reader moves such statements into the ODE code
+  instead, until the split is consistent. Individual statements run once
+  per record and may not read compartment amounts: NM-TRAN's `A(n)` in
+  `$PK` is the amount at the previous record, which no other format
+  holds. The validator enforces all three, so every format reads and
+  writes the same split. Settles review issues #81, #82 and #99.
 
 ## 14. Later versions, in the order they are expected
 

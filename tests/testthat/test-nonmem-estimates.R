@@ -1,18 +1,6 @@
 # The estimate sources of design §6: each malformed or mismatched file is
 # refused with what was seen, never attached.
 
-# run1.ctl beside an output file of the given type, written from `lines`.
-local_run <- function(ext, lines, env = parent.frame()) {
-  dir <- withr::local_tempdir(.local_envir = env)
-  file.copy(test_path("fixtures", "nonmem", "run1.ctl"), dir)
-  writeLines(lines, file.path(dir, paste0("run1.", ext)))
-  file.path(dir, "run1.ctl")
-}
-
-fixture_lines <- function(file) {
-  readLines(test_path("fixtures", "nonmem", file))
-}
-
 test_that("an .ext with the wrong number of thetas is refused", {
   ctl <- local_run("ext", fixture_lines("run2.ext"))
   expect_refused(pmx_read_nonmem(ctl, "ext"), "3 thetas")
