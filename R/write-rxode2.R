@@ -65,7 +65,7 @@ pmx_write_rxode2 <- function(model) {
   )
 
   back <- read_back(
-    rxode2_read_body(body(eval(parse(text = text))), "written"),
+    rxode2_read_body(body(eval(rxode2_parse_text(text))), "written"),
     "rxode2"
   )
   new_written(
@@ -365,4 +365,21 @@ stmt_lines <- function(stmts) {
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "if")) expr_deparse(x) else expr_line(x)
   }))
+}
+
+# Written text as R code; a syntax error is a refusal of the text.
+rxode2_parse_text <- function(text) {
+  tryCatch(
+    parse(text = text, keep.source = FALSE)[[1]],
+    error = function(e) {
+      parse_error(
+        "written",
+        NA_integer_,
+        NA_integer_,
+        seen = "text",
+        message = conditionMessage(e),
+        call = NULL
+      )
+    }
+  )
 }

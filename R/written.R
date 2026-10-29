@@ -145,6 +145,8 @@ as_written <- function(model, values, fixed_blocks) {
 # statements, so they are left out.
 normalise_model <- function(model) {
   m <- unclass(model)
+  # A model whose residual error has no sigma form (an SD parameter used
+  # elsewhere) is compared as it stands; both sides then keep their SDs.
   m <- tryCatch(nm_sigma_from_sd(m), zufapmx_write_error = function(e) m)
   m <- drop_aliases(m)
 
@@ -170,13 +172,13 @@ normalise_model <- function(model) {
     unique(unlist(lapply(model_expressions(m), all.vars))),
     c(names(map), "t", "F")
   )
-  map <- c(
-    map,
-    stats::setNames(
-      toupper(gsub(".", "_", covariates, fixed = TRUE)),
-      covariates
-    )
-  )
+  folded <- toupper(gsub(".", "_", covariates, fixed = TRUE))
+  if (anyDuplicated(folded)) {
+    # `wt` and `WT` are two covariates here: folding would merge them, so a
+    # writer that does must fail the comparison.
+    folded <- covariates
+  }
+  map <- c(map, stats::setNames(folded, covariates))
   rename <- function(x) strip_parens(rename_symbols(x, map))
   block <- function(b) {
     b$names <- unname(map[b$names])
@@ -245,12 +247,20 @@ model_expressions <- function(m) {
 
 # Substitute aliases away: a top-level `A <- B`, B a name, makes A another
 # name for B in every later expression. Writers add such statements for
-# names a target requires (an ADVAN's V2, a renamed variable).
+# names a target requires (an ADVAN's V2, a renamed variable). Neither
+# name may be assigned again: after `A <- B; B <- 3`, A is not B.
 drop_aliases <- function(m) {
+  stmts <- c(m$individual, m$structure$statements)
   map <- character()
   keep <- list()
-  for (x in m$individual) {
-    if (is_call(x, "<-") && is.symbol(x[[3]])) {
+  for (i in seq_along(m$individual)) {
+    x <- m$individual[[i]]
+    later <- stmt_targets(stmts[-seq_len(i)])
+    if (
+      is_call(x, "<-") &&
+        is.symbol(x[[3]]) &&
+        !any(c(as.character(x[[2]]), as.character(x[[3]])) %in% later)
+    ) {
       map[[as.character(x[[2]])]] <- map[as.character(x[[3]])] %|NA|%
         as.character(x[[3]])
       next

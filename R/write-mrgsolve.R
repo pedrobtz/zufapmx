@@ -49,6 +49,7 @@ pmx_write_mrgsolve <- function(model) {
     losses <- c(losses, "fixed flags of $OMEGA and $SIGMA blocks")
   }
 
+  losses <- c(losses, sd_bound_losses(m))
   m <- nm_sigma_from_sd(m)
   spelling <- mrg_names(m)
   ode_spelling <- spelling
@@ -141,7 +142,30 @@ mrg_reserved <- c(
   "int",
   "bool",
   "if",
-  "else"
+  "else",
+  # C++ keywords a variable might be named after, and the functions model
+  # code calls.
+  "auto",
+  "break",
+  "case",
+  "char",
+  "const",
+  "continue",
+  "do",
+  "false",
+  "float",
+  "for",
+  "long",
+  "return",
+  "short",
+  "static",
+  "struct",
+  "switch",
+  "true",
+  "void",
+  "while",
+  "pow",
+  names(cpp_functions)
 )
 
 # Every symbol's C++ text.
@@ -176,6 +200,20 @@ mrg_names <- function(m) {
     )),
     names(map)
   )
+  bad_cmt <- compartments[
+    cmt_names %in% mrg_reserved | !grepl("^[A-Za-z_][A-Za-z0-9_]*$", cmt_names)
+  ]
+  if (length(bad_cmt) > 0) {
+    write_error(
+      sprintf(
+        "the compartment name `%s`, which mrgsolve reserves",
+        bad_cmt[[1]]
+      ),
+      "structure",
+      formats = "rxode2",
+      call = NULL
+    )
+  }
   out <- gsub(".", "_", vars, fixed = TRUE)
   out <- closed_free_names(vars, out, m$structure)
   spelled <- c(unname(map), out)

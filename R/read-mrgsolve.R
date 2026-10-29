@@ -17,7 +17,8 @@
 #' `$PARAM` directly or from `$MAIN`.
 #'
 #' Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
-#' descriptions, and `$TABLE` outputs `Y` does not use. Time is `t`: read
+#' descriptions, `$PARAM` values written as constant expressions
+#' (`log(2)`), which are evaluated, and `$TABLE` outputs `Y` does not use. Time is `t`: read
 #' from `SOLVERTIME` in `$ODE` and from `TIME` elsewhere; the other name is
 #' refused, since it is a different time. `$NMXML` and
 #' `$NMEXT` resolve a relative path against the working directory, or the
@@ -311,6 +312,12 @@ mrg_params <- function(blocks, file) {
             call = NULL
           )
         }
+        if (any(mrg_evaluated(c(parts[[2]], bounds[-1])))) {
+          losses <- c(
+            losses,
+            "parameter values written as expressions, evaluated"
+          )
+        }
         init <- mrg_number(parts[[2]], file, b$line[[k]])
         values <- if (length(bounds) == 3) {
           c(
@@ -344,6 +351,12 @@ mrg_params <- function(blocks, file) {
       }
     } else {
       items <- mrg_assignments(b, file)
+      if (any(attr(items, "evaluated"))) {
+        losses <- c(
+          losses,
+          "parameter values written as expressions, evaluated"
+        )
+      }
       for (name in names(items)) {
         rows[[length(rows) + 1]] <- data.frame(
           name = name,
@@ -373,6 +386,7 @@ mrg_assignments <- function(b, file) {
   items <- trimws(strsplit(text, ",", fixed = TRUE)[[1]])
   items <- items[nzchar(items)]
   out <- list()
+  evaluated <- logical()
   for (item in items) {
     parts <- trimws(strsplit(item, "=", fixed = TRUE)[[1]])
     if (length(parts) != 2 || !grepl("^[A-Za-z_][A-Za-z0-9_]*$", parts[[1]])) {
@@ -386,11 +400,22 @@ mrg_assignments <- function(b, file) {
       )
     }
     out[[parts[[1]]]] <- mrg_number(parts[[2]], file, b$line[[1]])
+    evaluated <- c(evaluated, mrg_evaluated(parts[[2]]))
   }
+  attr(out, "evaluated") <- evaluated
   out
 }
 
 # A number, or a constant expression of the function table (`log(2)`).
+# A value written as an expression rather than a number (`log(2)`): it is
+# evaluated, and its text is lost.
+mrg_evaluated <- function(text) {
+  !grepl(
+    "^[-+]?(Inf|([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][-+]?[0-9]+)?)$",
+    trimws(text)
+  )
+}
+
 mrg_number <- function(text, file, line) {
   text <- trimws(text)
   if (text %in% c("Inf", "-Inf")) {
@@ -628,6 +653,37 @@ mrg_nonmem <- function(b, file) {
       call = NULL
     )
   }
+  # Other options (`omega = FALSE`, `tname`, ...) change what is imported
+  # and how it is named; the defaults of theta, omega and sigma are TRUE.
+  known <- c("path", "run", "project", "root")
+  defaults <- c("theta", "omega", "sigma")
+  for (i in seq_along(args)) {
+    key <- names(args)[[i]] %||% ""
+    value <- args[[i]]
+    ok <- if (key %in% known) {
+      # A run may be a number: `run = 101`.
+      (is.character(value) || key == "run" && is.numeric(value)) &&
+        length(value) == 1 &&
+        !is.na(value)
+    } else {
+      key %in% defaults && isTRUE(value)
+    }
+    if (!ok) {
+      parse_error(
+        file,
+        b$line[[1]],
+        1L,
+        seen = if (nzchar(key)) key else expr_text(value),
+        message = sprintf(
+          "not translated: `%s` in $%s at line %d",
+          if (nzchar(key)) key else expr_text(value),
+          b$name,
+          b$line[[1]]
+        ),
+        call = NULL
+      )
+    }
+  }
   ext <- if (b$name == "NMXML") ".xml" else ".ext"
   path <- if (!is.null(args$path)) {
     args$path
@@ -650,7 +706,19 @@ mrg_nonmem <- function(b, file) {
     path <- file.path(root, path)
   }
   if (!file.exists(path)) {
-    zufapmx_abort(sprintf("No NONMEM output at `%s`.", path), "model")
+    parse_error(
+      file,
+      b$line[[1]],
+      1L,
+      seen = path,
+      message = sprintf(
+        "no NONMEM output at `%s`, named in $%s at line %d",
+        path,
+        b$name,
+        b$line[[1]]
+      ),
+      call = NULL
+    )
   }
   est <- if (b$name == "NMXML") {
     if (!has_zuxml()) {

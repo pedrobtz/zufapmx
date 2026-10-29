@@ -271,3 +271,24 @@ test_that("C++ increment, decrement and compound assignment are refused", {
     )
   }
 })
+
+test_that("names C++ or mrgsolve reserve are refused", {
+  m <- model_onecmt_mm()
+  ind <- c(unclass(m)$individual, list(quote(return <- 1)))
+  err <- expect_error(
+    pmx_write_mrgsolve(model_with(m, individual = ind)),
+    class = "zufapmx_write_error"
+  )
+  expect_equal(err$location, "individual")
+
+  s <- unclass(m)$structure
+  names(s$derivatives)[[2]] <- s$compartments[[2]] <- "exp"
+  s$statements <- list(quote(c2 <- exp / v))
+  obs <- unclass(m)$observations
+  obs[[1]]$prediction <- quote(exp / v)
+  err <- expect_error(
+    pmx_write_mrgsolve(model_with(m, structure = s, observations = obs)),
+    class = "zufapmx_write_error"
+  )
+  expect_equal(err$location, "structure")
+})

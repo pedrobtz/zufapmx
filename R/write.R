@@ -135,7 +135,9 @@ check_writable <- function(m, one_endpoint = TRUE) {
 read_back <- function(expr, format) {
   tryCatch(
     expr,
-    error = function(e) {
+    # Only a refusal is a failed translation; any other error is a bug and
+    # propagates as itself.
+    zufapmx_parse_error = function(e) {
       write_error(
         sprintf(
           "a model whose %s text does not read back (%s)",

@@ -223,3 +223,42 @@ test_that("written text is stable", {
     "onecmt-oral-mm"
   ))))
 })
+
+test_that("$INPUT lists the covariates", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl * (wt / 70)^0.75
+      v <- tv * crcl
+      cp <- linCmt()
+      cp ~ add(sd)
+    })
+  })
+  expect_true(
+    "$INPUT ID TIME EVID AMT RATE CMT DV WT CRCL" %in% pmx_write_nonmem(m)$text
+  )
+})
+
+test_that("bounds on a residual standard deviation are a loss in $SIGMA", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- c(0, 0.1, 1)
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ add(sd)
+    })
+  })
+  for (w in list(pmx_write_nonmem(m), pmx_write_mrgsolve(m))) {
+    expect_equal(pmx_fidelity(w), "lossy")
+    expect_match(pmx_losses(w), "bounds of residual standard deviations: sd")
+  }
+})

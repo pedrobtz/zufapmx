@@ -75,6 +75,20 @@ cpp_parse <- function(block, file, ode = FALSE) {
       # A literal without a point or exponent is an int in C++; it stays
       # integer until cpp_integers() has checked the arithmetic.
       if (grepl("^[0-9]+$", tok$value)) {
+        if (as.numeric(tok$value) > .Machine$integer.max) {
+          parse_error(
+            file,
+            tok$line,
+            tok$column,
+            seen = tok$value,
+            message = sprintf(
+              "not translated: `%s` is wider than an int at line %d",
+              tok$value,
+              tok$line
+            ),
+            call = NULL
+          )
+        }
         return(as.integer(tok$value))
       }
       return(as.numeric(sub("[fF]$", "", tok$value)))
@@ -228,7 +242,8 @@ cpp_parse <- function(block, file, ode = FALSE) {
 }
 
 # Integer arithmetic as C++ does it. Integer literals and +, -, * of them
-# are int; dividing two ints truncates (3/4 is 0), which the representation
+# are int, and so is a comparison or logical result (a bool); dividing two
+# ints truncates (3/4 is 0, `(1 > 0) / 2` too), which the representation
 # cannot hold, so it is refused. Everything else becomes double.
 cpp_integers <- function(x, file) {
   if (is.integer(x)) {
@@ -254,8 +269,9 @@ cpp_integers <- function(x, file) {
       call = NULL
     )
   }
+  bool <- op %in% c("==", "!=", "<", ">", "<=", ">=", "&", "|", "!")
   list(
     expr = x,
-    int = op %in% c("+", "-", "*", "(") && length(ints) > 0 && all(ints)
+    int = bool || op %in% c("+", "-", "*", "(") && length(ints) > 0 && all(ints)
   )
 }

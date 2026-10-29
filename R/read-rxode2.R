@@ -169,7 +169,7 @@ rxode2_read_ini <- function(stmts, reader) {
   for (x in stmts) {
     if (is_call(x, "label")) {
       reader$lose("labels")
-    } else if (is_call(x, "<-") && is.symbol(x[[2]])) {
+    } else if ((is_call(x, "<-") || is_call(x, "=")) && is.symbol(x[[2]])) {
       value <- rxode2_read_value(x[[3]], reader)
       bounds <- read_bounds(value$values)
       if (is.null(bounds)) {
@@ -491,6 +491,14 @@ rxode2_read_residual <- function(x, stmt, reader) {
   }
   if (!is.null(p <- one(x, "pow"))) {
     return(list(type = "power", parameters = p))
+  }
+  # `add() + prop()` adds variances, rxode2's default, which
+  # `combined2()` names; `combined1()` adds standard deviations, which the
+  # representation does not hold.
+  if (
+    is_call(x, "+") && length(x) == 3 && identical(x[[3]], quote(combined2()))
+  ) {
+    x <- x[[2]]
   }
   if (is_call(x, "+") && length(x) == 3) {
     a <- one(x[[2]], "add") %||% one(x[[3]], "add")

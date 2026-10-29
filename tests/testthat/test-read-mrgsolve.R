@@ -343,3 +343,47 @@ test_that("$ODE beside $PKMODEL is refused", {
   )
   expect_equal(err$line, 4)
 })
+
+test_that("$PARAM values written as expressions are evaluated, with a loss", {
+  m <- read_cpp(sub(
+    "TVCL = 4",
+    "TVCL = 4 * log(2)",
+    cpp_onecmt(),
+    fixed = TRUE
+  ))
+  expect_equal(pmx_parameters(m)$init[[1]], 4 * log(2))
+  expect_true(any(grepl("evaluated", unclass(m)$provenance$losses)))
+
+  expect_length(unclass(read_cpp(cpp_onecmt()))$provenance$losses, 0)
+})
+
+test_that("$NMXML and $NMEXT refuse options the reader does not honour", {
+  for (option in c("omega = FALSE", "tname = \"x\"", "path = 1")) {
+    err <- expect_error(
+      read_cpp(c(sprintf("$NMEXT run = 1, %s", option), cpp_onecmt()[-1])),
+      class = "zufapmx_parse_error"
+    )
+    expect_equal(err$line, 1)
+  }
+  err <- expect_error(
+    read_cpp(c("$NMEXT path = \"no-such.ext\"", cpp_onecmt())),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$line, 1)
+})
+
+test_that("C++ comparisons are ints, and wide int literals are refused", {
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double K = TVCL + (1 > 0) / 2;")),
+    class = "zufapmx_parse_error"
+  )
+  expect_s3_class(
+    read_cpp(cpp_onecmt(main = "double K = TVCL + (1 > 0) / 2.0;")),
+    "zufapmx_model"
+  )
+  err <- expect_error(
+    read_cpp(cpp_onecmt(main = "double K = 3000000000;")),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$seen, "3000000000")
+})

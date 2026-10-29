@@ -10,8 +10,9 @@
 #' standard deviations, as rxode2 holds it, is written as `$SIGMA`
 #' variances: the same model, parameterised as NONMEM parameterises it.
 #'
-#' `$INPUT` and `$DATA` are placeholders to point at a dataset, and no
-#' `$ESTIMATION` is written: the representation holds neither.
+#' `$INPUT` and `$DATA` are placeholders to point at a dataset: `$INPUT`
+#' lists the standard data items and the model's covariates. No
+#' `$ESTIMATION` is written: the representation holds none.
 #'
 #' @inheritParams pmx_inspect
 #' @param estimates `"final"` writes final estimates where the model has
@@ -50,12 +51,16 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
     }
   }
 
+  losses <- c(losses, sd_bound_losses(m))
   m <- nm_sigma_from_sd(m)
   spelling <- nm_names(m)
   text <- c(
     sprintf("$PROBLEM %s", nm_title(m$provenance)),
     "; zufapmx: $INPUT and $DATA are placeholders; point them at your dataset.",
-    "$INPUT ID TIME EVID AMT RATE CMT DV",
+    paste(
+      c("$INPUT ID TIME EVID AMT RATE CMT DV", nm_covariates(m, spelling)),
+      collapse = " "
+    ),
     "$DATA data.csv IGNORE=@",
     nm_structure_lines(m),
     "$PK",
@@ -104,6 +109,24 @@ nm_title <- function(provenance) {
     return(basename(provenance$file))
   }
   sprintf("zufapmx model read from %s", provenance$format)
+}
+
+# A variance in $SIGMA has no bounds, so bounds on a standard deviation
+# other than the natural [0, Inf) are lost when it moves there.
+sd_bound_losses <- function(m) {
+  if (length(m$random_effects$sigma) > 0) {
+    return(character())
+  }
+  sds <- unlist(lapply(m$observations, function(o) o$residual$parameters))
+  p <- m$parameters[m$parameters$name %in% sds, ]
+  bounded <- p$name[p$lower > 0 | is.finite(p$upper)]
+  if (length(bounded) == 0) {
+    return(character())
+  }
+  sprintf(
+    "bounds of residual standard deviations: %s",
+    paste(bounded, collapse = ", ")
+  )
 }
 
 # Residual error held as standard deviations (as rxode2 holds it) moves to
@@ -166,6 +189,26 @@ nm_sigma_from_sd <- function(m) {
   }
   rownames(m$parameters) <- NULL
   m
+}
+
+# Covariates are data items: the names statements read but never assign.
+nm_covariates <- function(m, spelling) {
+  stmts <- c(m$individual, m$structure$statements)
+  read <- unique(unlist(lapply(
+    c(stmts, m$structure$derivatives),
+    all.vars
+  )))
+  inputs <- c(
+    m$parameters$name,
+    unlist(lapply(
+      c(m$random_effects$omega, m$random_effects$sigma),
+      `[[`,
+      "names"
+    )),
+    model_compartments(m$structure),
+    "t"
+  )
+  unname(spelling[setdiff(read, c(stmt_targets(stmts), inputs))])
 }
 
 # Every symbol's NM-TRAN text.

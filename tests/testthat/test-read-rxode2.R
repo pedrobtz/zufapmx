@@ -450,3 +450,36 @@ test_that("a linCmt() endpoint that is reassigned or read is refused", {
     class = "zufapmx_parse_error"
   )
 })
+
+test_that("ini() takes = and combined2(), and refuses combined1()", {
+  reads <- function(residual) {
+    f <- function() NULL
+    body(f) <- call(
+      "{",
+      quote(ini({
+        tcl <- 4
+        tv <- 50
+        a <- 0.1
+        b <- 0.2
+      })),
+      call(
+        "model",
+        call(
+          "{",
+          quote(cl <- tcl),
+          quote(v <- tv),
+          quote(cp <- linCmt()),
+          call("~", quote(cp), residual)
+        )
+      )
+    )
+    pmx_read_rxode2(f)
+  }
+  m <- reads(quote(add(a) + prop(b) + combined2()))
+  expect_equal(pmx_parameters(m)$name[[1]], "tcl")
+  expect_equal(unclass(m)$observations$cp$residual$type, "combined")
+  expect_error(
+    reads(quote(add(a) + prop(b) + combined1())),
+    class = "zufapmx_parse_error"
+  )
+})
