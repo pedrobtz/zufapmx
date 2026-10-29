@@ -16,8 +16,9 @@ pmx_ode(model)
 \arguments{
 \item{model}{A model read by one of the \verb{pmx_read_*()} functions.}
 
-\item{values}{For \code{pmx_omega()}: \code{"estimate"} (the default) or
-\code{"init"}.}
+\item{values}{For \code{pmx_omega()}: \code{"estimate"} (the default) returns the
+final estimates where the model was read with them, and \code{"init"} the
+initial values.}
 }
 \value{
 \itemize{
@@ -38,3 +39,14 @@ compartment, or \code{NULL} for a closed-form model.
 between-subject variability matrix, and \code{pmx_ode()} the differential
 equations of an ODE model.
 }
+\examples{
+path <- system.file(
+  "corpus", "onecmt-oral-mm", "model.ctl",
+  package = "zufapmx"
+)
+model <- pmx_read_nonmem(path)
+pmx_parameters(model)
+pmx_omega(model, "init")
+pmx_ode(model)
+}
+\concept{models}

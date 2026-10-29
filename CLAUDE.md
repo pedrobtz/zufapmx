@@ -118,7 +118,7 @@ land; see `.agents/design.md` (§4).
   [R/read-mrgsolve.R](R/read-mrgsolve.R),
   [R/write-mrgsolve.R](R/write-mrgsolve.R)): blocks and a C++ subset
   parser; `$PKMODEL` uses NONMEM's names, so closed forms share
-  `nm_closed`. Expressions print through dialects
+  `closed_forms`. Expressions print through dialects
   ([R/print-expr.R](R/print-expr.R)): NM-TRAN and C++.
 - **Writers** ([R/write-rxode2.R](R/write-rxode2.R),
   [R/write-nonmem.R](R/write-nonmem.R)) convert residual error between
@@ -170,7 +170,7 @@ These come from the design's decisions (§13) and hold from the first stage.
   `equivalent` instead of `exact`.
 - **`linCmt()` has two naming styles.** rxode2's (`cl`, `v`, `q`, `vp`) and
   NONMEM's numbered `TRANS4` names, where `V2` is the central volume when
-  there is a depot. `lincmt_aliases()` tells them apart; reading `V2` as a
+  there is a depot. `rxode2_lincmt_aliases()` tells them apart; reading `V2` as a
   peripheral volume refused every NONMEM-read closed form written back.
 - **Read `run.xml` with an encoding override.** NONMEM declares
   `encoding="ASCII"`, which zuxml (expat) rejects

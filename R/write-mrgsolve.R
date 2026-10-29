@@ -15,9 +15,7 @@
 #' as lost.
 #'
 #' @inheritParams pmx_inspect
-#' @return A `zufapmx_written` object: the text as lines, with its fidelity
-#'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
-#'   give the text.
+#' @inherit pmx_write_rxode2 return
 #' @family writers
 #' @export
 #' @examples
@@ -50,7 +48,7 @@ pmx_write_mrgsolve <- function(model) {
   }
 
   losses <- c(losses, sd_bound_losses(m))
-  m <- nm_sigma_from_sd(m)
+  m <- sigma_from_sd(m)
   spelling <- mrg_names(m)
   ode_spelling <- spelling
   ode_spelling[["t"]] <- "SOLVERTIME"
@@ -58,7 +56,7 @@ pmx_write_mrgsolve <- function(model) {
   compartments <- model_compartments(m$structure)
 
   text <- c(
-    sprintf("$PROB %s", nm_title(m$provenance)),
+    sprintf("$PROB %s", model_title(m$provenance)),
     "",
     "$PARAM @annotated",
     mrg_param_lines(m$parameters, spelling),
@@ -119,7 +117,7 @@ pmx_write_mrgsolve <- function(model) {
   )
 }
 
-mrg_reserved <- c(
+mrg_reserved_names <- c(
   "ID",
   "TIME",
   "SOLVERTIME",
@@ -168,6 +166,8 @@ mrg_reserved <- c(
   names(cpp_functions)
 )
 
+mrg_reserved <- function(x) x %in% mrg_reserved_names
+
 # Every symbol's C++ text.
 mrg_names <- function(m) {
   closed <- identical(m$structure$type, "closed")
@@ -182,8 +182,8 @@ mrg_names <- function(m) {
     gsub(".", "_", compartments, fixed = TRUE)
   }
   map <- c(
-    nm_index_names(m$random_effects$omega, "ETA"),
-    nm_index_names(m$random_effects$sigma, "EPS"),
+    index_names(m$random_effects$omega, "ETA"),
+    index_names(m$random_effects$sigma, "EPS"),
     stats::setNames(cmt_names, compartments),
     # Time (D15): the record's TIME in $MAIN and $TABLE; SOLVERTIME in $ODE.
     t = "TIME"
@@ -201,7 +201,7 @@ mrg_names <- function(m) {
     names(map)
   )
   bad_cmt <- compartments[
-    cmt_names %in% mrg_reserved | !grepl("^[A-Za-z_][A-Za-z0-9_]*$", cmt_names)
+    mrg_reserved(cmt_names) | !grepl("^[A-Za-z_][A-Za-z0-9_]*$", cmt_names)
   ]
   if (length(bad_cmt) > 0) {
     write_error(
@@ -218,7 +218,7 @@ mrg_names <- function(m) {
   out <- closed_free_names(vars, out, m$structure)
   spelled <- c(unname(map), out)
   bad <- vars[
-    (out %in% mrg_reserved) |
+    mrg_reserved(out) |
       duplicated(spelled)[-seq_along(map)] |
       !grepl("^[A-Za-z_][A-Za-z0-9_]*$", out)
   ]
@@ -293,7 +293,7 @@ mrg_prediction <- function(m, spelling) {
     if (
       identical(pred, call("/", quote(central), as.symbol(s$parameters[["v"]])))
     ) {
-      v <- nm_closed[[as.character(s$advan)]]$names[["v"]]
+      v <- closed_forms[[as.character(s$advan)]]$names[["v"]]
       return(sprintf("%s / %s", spelling[["central"]], v))
     }
     if (any(all.vars(pred) %in% closed_compartments(s))) {

@@ -44,6 +44,7 @@ pmx_write_nonmem(pmx_read_rxode2(fun))
 }
 \seealso{
 Other writers:
+\code{\link[=pmx_fidelity]{pmx_fidelity()}},
 \code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}},
 \code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}
 }

@@ -89,17 +89,20 @@ nm_split <- function(lines, file) {
     text[[1]] <- sub("^\\s*\\$[A-Za-z]+", "", text[[1]])
     # Options such as $ERROR (ONLY OBSERVATIONS) say when the record runs,
     # not what it computes.
-    options <- character()
+    record_options <- character()
     if (name %in% c("PK", "DES", "ERROR")) {
-      options <- regmatches(text[[1]], regexpr("^\\s*\\([^)]*\\)", text[[1]]))
+      record_options <- regmatches(
+        text[[1]],
+        regexpr("^\\s*\\([^)]*\\)", text[[1]])
+      )
       text[[1]] <- sub("^\\s*\\([^)]*\\)", "", text[[1]])
     }
-    list(name = name, lines = text, line = at, options = trimws(options))
+    list(name = name, lines = text, line = at, options = trimws(record_options))
   })
   list(records = records, comments = any(comments), lines = length(lines))
 }
 
-# Tokens of one line: a list of list(type, value, column).
+# Tokens of one line: a list of list(type, value, line, column).
 nm_tokenize <- function(text, line, file) {
   tokenize(
     text,
@@ -175,24 +178,7 @@ nm_parser <- function(tokens, line, file, cmt) {
       args[[length(args) + 1]] <- or_expr()
     }
     take(")")
-    index <- function() {
-      if (
-        length(args) != 1 ||
-          !is.numeric(args[[1]]) ||
-          args[[1]] != round(args[[1]]) ||
-          args[[1]] < 1
-      ) {
-        parse_error(
-          file,
-          line,
-          tok$column,
-          seen = name,
-          expected = sprintf("%s(n) with a whole number n", name),
-          call = NULL
-        )
-      }
-      as.integer(args[[1]])
-    }
+    index <- function() whole_index(args, name, file, line, tok$column)
     switch(
       name,
       THETA = as.symbol(paste0("THETA", index())),

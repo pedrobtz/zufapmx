@@ -157,7 +157,7 @@ rxode2_write_lincmt_parameters <- function(m) {
 # rxode2 also reads some stems as prefixes: VPX or VP_ next to V1 "mixes
 # volume styles", and KE or K10 is "ambiguous kel"; a suffix is not enough,
 # while VMAX, CLR or KAPPA are left alone (probed with rxode2 5.1.8).
-lincmt_reserved <- c(
+rxode2_lincmt_reserved <- c(
   "cl",
   "v",
   "vc",
@@ -195,8 +195,7 @@ rxode2_write_free_lincmt <- function(m) {
   }
   vars <- stmt_targets(m$individual)
   lower <- tolower(vars)
-  reads <- lower %in%
-    lincmt_reserved |
+  reads <- (lower %in% rxode2_lincmt_reserved) |
     grepl("^(vp|ke|k10)", lower)
   clash <- vars[reads & !vars %in% m$structure$parameters]
   if (length(clash) == 0) {
@@ -264,12 +263,12 @@ rxode2_write_values <- function(values, fixed) {
 
 rxode2_write_model <- function(m) {
   s <- m$structure
-  lines <- stmt_lines(m$individual)
+  lines <- rxode2_stmt_lines(m$individual)
 
   if (identical(s$type, "ode")) {
     lines <- c(
       lines,
-      stmt_lines(s$statements),
+      rxode2_stmt_lines(s$statements),
       vapply(
         s$compartments,
         function(cmt) {
@@ -282,11 +281,11 @@ rxode2_write_model <- function(m) {
   }
 
   for (cmt in names(m$dosing)) {
-    for (attr in names(m$dosing[[cmt]])) {
-      value <- expr_line(m$dosing[[cmt]][[attr]])
+    for (field in names(m$dosing[[cmt]])) {
+      value <- expr_line(m$dosing[[cmt]][[field]])
       lines <- c(
         lines,
-        if (attr == "initial") {
+        if (field == "initial") {
           sprintf("%s(0) <- %s", cmt, value)
         } else {
           fn <- c(
@@ -294,7 +293,7 @@ rxode2_write_model <- function(m) {
             bioavailability = "f",
             rate = "rate",
             duration = "dur"
-          )[[attr]]
+          )[[field]]
           sprintf("%s(%s) <- %s", fn, cmt, value)
         }
       )
@@ -356,7 +355,7 @@ rxode2_write_residual <- function(residual, endpoint) {
   )
 }
 
-stmt_lines <- function(stmts) {
+rxode2_stmt_lines <- function(stmts) {
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "if")) expr_deparse(x) else expr_line(x)
   }))

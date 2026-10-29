@@ -121,3 +121,27 @@ stmt_body <- function(x) {
 expr_text <- function(x) {
   paste(deparse(x, width.cutoff = 500L), collapse = " ")
 }
+
+rename_symbols <- function(x, map) {
+  if (is.symbol(x)) {
+    name <- as.character(x)
+    return(if (name %in% names(map)) as.symbol(map[[name]]) else x)
+  }
+  if (is.call(x)) {
+    x[] <- lapply(as.list(x), rename_symbols, map = map)
+  }
+  x
+}
+
+# A constant of the function table, such as `log(2)`: no names and nothing
+# outside the table, so evaluating it runs no other code.
+is_constant_expr <- function(x) {
+  length(all.vars(x)) == 0 &&
+    tryCatch(
+      {
+        expr_check(x)
+        TRUE
+      },
+      zufapmx_model_error = function(e) FALSE
+    )
+}

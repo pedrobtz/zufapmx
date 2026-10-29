@@ -44,13 +44,13 @@ corpus_read <- function(root) {
 
 corpus_read_entry <- function(dir) {
   dcf <- read.dcf(file.path(dir, "entry.dcf"))
-  missing <- setdiff(corpus_fields, colnames(dcf))
-  if (length(missing) > 0) {
+  absent <- setdiff(corpus_fields, colnames(dcf))
+  if (length(absent) > 0) {
     zufapmx_abort(
       sprintf(
         "Corpus entry `%s` has no %s field.",
         basename(dir),
-        paste(missing, collapse = ", ")
+        paste(absent, collapse = ", ")
       ),
       "corpus"
     )

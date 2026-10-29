@@ -52,6 +52,8 @@ path <- system.file(
 pmx_read_mrgsolve(path)
 }
 \seealso{
+\link{pmx_inspect} for the model's parts.
+
 Other readers:
 \code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}},
 \code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}}

@@ -25,6 +25,7 @@ new_written <- function(text, format, fidelity, losses) {
 #' @param written The result of a `pmx_write_*()` function.
 #' @return `pmx_fidelity()`: a string. `pmx_losses()`: a character vector,
 #'   empty when nothing was lost.
+#' @family writers
 #' @export
 #' @examples
 #' path <- system.file(
@@ -147,7 +148,7 @@ normalise_model <- function(model) {
   m <- unclass(model)
   # A model whose residual error has no sigma form (an SD parameter used
   # elsewhere) is compared as it stands; both sides then keep their SDs.
-  m <- tryCatch(nm_sigma_from_sd(m), zufapmx_write_error = function(e) m)
+  m <- tryCatch(sigma_from_sd(m), zufapmx_write_error = function(e) m)
   m <- drop_aliases(m)
 
   closed <- identical(m$structure$type, "closed")
@@ -230,18 +231,6 @@ normalise_model <- function(model) {
       observations,
       paste0("Y", seq_along(observations))
     )
-  )
-}
-
-# Every expression of a model: statements, derivatives, dosing, predictions.
-model_expressions <- function(m) {
-  c(
-    m$individual,
-    m$structure$statements,
-    m$structure$derivatives,
-    unlist(m$dosing, recursive = FALSE),
-    lapply(m$observations, `[[`, "prediction"),
-    lapply(m$observations, function(o) o$residual$expression)
   )
 }
 

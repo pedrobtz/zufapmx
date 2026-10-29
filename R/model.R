@@ -57,8 +57,9 @@ new_model <- function(
 #' equations of an ODE model.
 #'
 #' @param model A model read by one of the `pmx_read_*()` functions.
-#' @param values For `pmx_omega()`: `"estimate"` (the default) or
-#'   `"init"`.
+#' @param values For `pmx_omega()`: `"estimate"` (the default) returns the
+#'   final estimates where the model was read with them, and `"init"` the
+#'   initial values.
 #' @return
 #' * `pmx_parameters()`: a data frame with one row per fixed effect and
 #'   columns `name` (the tool's name), `role` (`"clearance"`, `"volume"`,
@@ -70,6 +71,16 @@ new_model <- function(
 #'   and any other block its initial values.
 #' * `pmx_ode()`: a named list of expressions, one derivative per
 #'   compartment, or `NULL` for a closed-form model.
+#' @family models
+#' @examples
+#' path <- system.file(
+#'   "corpus", "onecmt-oral-mm", "model.ctl",
+#'   package = "zufapmx"
+#' )
+#' model <- pmx_read_nonmem(path)
+#' pmx_parameters(model)
+#' pmx_omega(model, "init")
+#' pmx_ode(model)
 #' @name pmx_inspect
 NULL
 
@@ -86,8 +97,8 @@ pmx_omega <- function(model, values = c("estimate", "init")) {
   check_model(model)
   values <- check_choice(values)
   blocks <- model$random_effects$omega
-  names <- unlist(lapply(blocks, `[[`, "names"))
-  out <- matrix(0, length(names), length(names), dimnames = list(names, names))
+  etas <- unlist(lapply(blocks, `[[`, "names"))
+  out <- matrix(0, length(etas), length(etas), dimnames = list(etas, etas))
   at <- 0
   for (block in blocks) {
     i <- at + seq_along(block$names)
@@ -119,7 +130,7 @@ format.zufapmx_model <- function(x, ...) {
   check_model(x)
   p <- x$parameters
   estimated <- sum(!is.na(p$estimate))
-  attach <- x$random_effects$attach
+  attached <- x$random_effects$attach
   obs <- x$observations
 
   c(
@@ -136,15 +147,15 @@ format.zufapmx_model <- function(x, ...) {
     ),
     paste(
       "Random effects:",
-      if (nrow(attach) == 0) {
+      if (nrow(attached) == 0) {
         "none"
       } else {
         paste(
           sprintf(
             "%s on %s (%s)",
-            attach$eta,
-            attach$parameter,
-            attach$transform
+            attached$eta,
+            attached$parameter,
+            attached$transform
           ),
           collapse = ", "
         )
@@ -200,13 +211,13 @@ format_structure <- function(x) {
 }
 
 validate_model <- function(model) {
-  missing <- model_components[vapply(
+  absent <- model_components[vapply(
     model_components,
     function(x) is.null(model[[x]]),
     logical(1)
   )]
-  if (length(missing) > 0) {
-    model_abort("The model has no %s.", paste(missing, collapse = ", "))
+  if (length(absent) > 0) {
+    model_abort("The model has no %s.", paste(absent, collapse = ", "))
   }
 
   validate_parameters(model$parameters)
@@ -231,25 +242,18 @@ validate_model <- function(model) {
 # a value before it, so every evaluation starts from the same one (D14).
 validate_assignments <- function(model, compartments) {
   individual <- model$individual
-  structure <- model$structure$statements
-  inputs <- c(
-    model$parameters$name,
-    unlist(lapply(
-      c(model$random_effects$omega, model$random_effects$sigma),
-      `[[`,
-      "names"
-    )),
-    compartments,
-    "t"
+  ode_code <- model$structure$statements
+  assigned <- intersect(
+    stmt_targets(c(individual, ode_code)),
+    model_inputs(model)
   )
-  assigned <- intersect(stmt_targets(c(individual, structure)), inputs)
   if (length(assigned) > 0) {
     model_abort(
       "`%s` is a parameter, random effect, compartment or time; it cannot be assigned.",
       assigned[[1]]
     )
   }
-  shared <- intersect(stmt_targets(structure), stmt_targets(individual))
+  shared <- intersect(stmt_targets(ode_code), stmt_targets(individual))
   if (length(shared) > 0) {
     model_abort(
       "`%s` is assigned both by individual statements and by the ODE code.",
@@ -264,7 +268,7 @@ validate_assignments <- function(model, compartments) {
     )
   }
   check_zero_start(individual)
-  check_zero_start(structure, stmt_targets(individual))
+  check_zero_start(ode_code, stmt_targets(individual))
 }
 
 check_zero_start <- function(stmts, assigned = character()) {
@@ -504,4 +508,31 @@ check_file <- function(file) {
       call = sys.call(-1)
     )
   }
+}
+
+# Every expression of a model: statements, derivatives, dosing, predictions.
+model_expressions <- function(m) {
+  c(
+    m$individual,
+    m$structure$statements,
+    m$structure$derivatives,
+    unlist(m$dosing, recursive = FALSE),
+    lapply(m$observations, `[[`, "prediction"),
+    lapply(m$observations, function(o) o$residual$expression)
+  )
+}
+
+# The names a model takes as given: parameters, random effects,
+# compartments and time. Statements never assign them.
+model_inputs <- function(m) {
+  c(
+    m$parameters$name,
+    unlist(lapply(
+      c(m$random_effects$omega, m$random_effects$sigma),
+      `[[`,
+      "names"
+    )),
+    model_compartments(m$structure),
+    "t"
+  )
 }

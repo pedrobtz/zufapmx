@@ -118,22 +118,8 @@ cpp_parse <- function(block, file, ode = FALSE) {
     take(")")
     name <- tok$value
     if (name %in% c("ETA", "EPS", "THETA")) {
-      if (
-        length(args) != 1 ||
-          !is.numeric(args[[1]]) ||
-          args[[1]] != round(args[[1]]) ||
-          args[[1]] < 1
-      ) {
-        parse_error(
-          file,
-          tok$line,
-          tok$column,
-          seen = name,
-          expected = sprintf("%s(n) with a whole number n", name),
-          call = NULL
-        )
-      }
-      return(as.symbol(paste0(name, as.integer(args[[1]]))))
+      n <- whole_index(args, name, file, tok$line, tok$column)
+      return(as.symbol(paste0(name, n)))
     }
     if (name == "pow" && length(args) == 2) {
       return(call("^", args[[1]], args[[2]]))
@@ -177,7 +163,7 @@ cpp_parse <- function(block, file, ode = FALSE) {
   and_expr <- binary(equality, "&&", c(`&&` = "&"))
   or_expr <- binary(and_expr, "||", c(`||` = "|"))
 
-  body <- function() {
+  block_body <- function() {
     if (at("{")) {
       take()
       stmts <- list()
@@ -206,10 +192,14 @@ cpp_parse <- function(block, file, ode = FALSE) {
       take("(")
       cond <- or_expr()
       take(")")
-      yes <- as.call(c(as.symbol("{"), body()))
+      yes <- as.call(c(as.symbol("{"), block_body()))
       if (at("else")) {
         take()
-        no <- if (at("if")) statement() else as.call(c(as.symbol("{"), body()))
+        no <- if (at("if")) {
+          statement()
+        } else {
+          as.call(c(as.symbol("{"), block_body()))
+        }
         return(call("if", cond, yes, no))
       }
       return(call("if", cond, yes))

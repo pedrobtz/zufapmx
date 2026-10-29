@@ -33,6 +33,7 @@
 #' @param file Path to the model file.
 #' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_mrgsolve()].
 #' @family readers
+#' @seealso [pmx_inspect] for the model's parts.
 #' @export
 #' @examples
 #' path <- system.file(
@@ -103,12 +104,12 @@ mrg_split <- function(lines, file) {
     at <- starts[[i]]:ends[[i]]
     text <- lines[at]
     text[[1]] <- m[[5]]
-    options <- regmatches(text, gregexpr("@[A-Za-z_]+", text))
+    block_options <- regmatches(text, gregexpr("@[A-Za-z_]+", text))
     list(
       name = name,
       lines = gsub("@[A-Za-z_]+", " ", text),
       line = at,
-      options = unique(unlist(options))
+      options = unique(unlist(block_options))
     )
   })
 }
@@ -231,9 +232,9 @@ mrg_read <- function(file) {
         call = NULL
       )
     }
-    structure <- nm_closed_structure(
+    structure <- closed_structure(
       list(advan = closed$structure$advan, trans = closed$structure$trans),
-      nm_closed[[as.character(closed$structure$advan)]],
+      closed_forms[[as.character(closed$structure$advan)]],
       # mrgsolve's usual idiom is $PKMODEL over $PARAM names directly.
       c(stmt_targets(main$individual), parameters$name),
       file,
@@ -443,15 +444,7 @@ mrg_number <- function(text, file, line) {
     return(if (text == "Inf") Inf else -Inf)
   }
   x <- tryCatch(str2lang(text), error = function(e) NULL)
-  ok <- !is.null(x) &&
-    length(all.vars(x)) == 0 &&
-    tryCatch(
-      {
-        expr_check(x)
-        TRUE
-      },
-      zufapmx_model_error = function(e) FALSE
-    )
+  ok <- !is.null(x) && is_constant_expr(x)
   if (!ok) {
     parse_error(
       file,
@@ -517,7 +510,6 @@ mrg_matrix_blocks <- function(blocks, prefix, file) {
       )
     }
     values <- mrg_values(b, file)
-    taken <- length(unlist(lapply(out, `[[`, "names")))
     if ("@block" %in% b$options) {
       n <- (sqrt(8 * length(values) + 1) - 1) / 2
       if (n != round(n)) {
@@ -530,18 +522,10 @@ mrg_matrix_blocks <- function(blocks, prefix, file) {
           call = NULL
         )
       }
-      names <- paste0(prefix, taken + seq_len(n))
-      m <- lower_to_full(values)
-      dimnames(m) <- list(names, names)
-      out[[length(out) + 1]] <- list(names = names, matrix = m, fixed = FALSE)
+      out[[length(out) + 1]] <- cov_block(next_names(out, prefix, n), values)
     } else {
-      for (i in seq_along(values)) {
-        name <- paste0(prefix, taken + i)
-        out[[length(out) + 1]] <- list(
-          names = name,
-          matrix = matrix(values[[i]], dimnames = list(name, name)),
-          fixed = FALSE
-        )
+      for (v in values) {
+        out[[length(out) + 1]] <- cov_block(next_names(out, prefix, 1), v)
       }
     }
   }
@@ -566,7 +550,8 @@ mrg_init <- function(blocks, file) {
   Filter(function(v) v != 0, out)
 }
 
-mrg_pkmodel <- function(b, file) {
+# A block's `name = value` options, each value one constant.
+mrg_block_options <- function(b, file) {
   text <- paste(b$lines, collapse = " ")
   args <- tryCatch(
     as.list(str2lang(sprintf("list(%s)", text)))[-1],
@@ -574,6 +559,7 @@ mrg_pkmodel <- function(b, file) {
   )
   if (
     is.null(args) ||
+      is.null(names(args)) ||
       any(!nzchar(names(args))) ||
       !all(vapply(args, function(a) is.atomic(a) && length(a) == 1, logical(1)))
   ) {
@@ -586,6 +572,12 @@ mrg_pkmodel <- function(b, file) {
       call = NULL
     )
   }
+  args
+}
+
+mrg_pkmodel <- function(b, file) {
+  text <- paste(b$lines, collapse = " ")
+  args <- mrg_block_options(b, file)
   cmt <- if (is.null(args$cmt)) {
     character()
   } else {
@@ -608,7 +600,7 @@ mrg_pkmodel <- function(b, file) {
     depot <- isTRUE(args$depot)
     advan <- closed_advan(ncmt, depot)
   }
-  closed <- nm_closed[[as.character(advan)]]
+  closed <- closed_forms[[as.character(advan)]]
   if (is.null(closed)) {
     parse_error(
       file,
@@ -660,20 +652,7 @@ mrg_pkmodel <- function(b, file) {
 # $NMXML or $NMEXT: thetas, omega and sigma from a NONMEM run, as
 # parameters (THETA1, ...) and blocks whose values are the estimates.
 mrg_nonmem <- function(b, file) {
-  args <- tryCatch(
-    as.list(str2lang(sprintf("list(%s)", paste(b$lines, collapse = " "))))[-1],
-    error = function(e) NULL
-  )
-  if (is.null(args)) {
-    parse_error(
-      file,
-      b$line[[1]],
-      1L,
-      seen = paste(b$lines, collapse = " "),
-      expected = "options name = value",
-      call = NULL
-    )
-  }
+  args <- mrg_block_options(b, file)
   # Other options (`omega = FALSE`, `tname`, ...) change what is imported
   # and how it is named; the defaults of theta, omega and sigma are TRUE.
   known <- c("path", "run", "project", "root")
@@ -751,15 +730,15 @@ mrg_nonmem <- function(b, file) {
   }
   as_blocks <- function(full, prefix) {
     n <- nrow(full)
-    names <- paste0(prefix, seq_len(n))
-    dimnames(full) <- list(names, names)
+    eta_names <- paste0(prefix, seq_len(n))
+    dimnames(full) <- list(eta_names, eta_names)
     if (all(full[upper.tri(full)] == 0)) {
       return(lapply(seq_len(n), function(i) {
         m <- full[i, i, drop = FALSE]
-        list(names = names[[i]], matrix = m, fixed = FALSE, estimate = m)
+        list(names = eta_names[[i]], matrix = m, fixed = FALSE, estimate = m)
       }))
     }
-    list(list(names = names, matrix = full, fixed = FALSE, estimate = full))
+    list(list(names = eta_names, matrix = full, fixed = FALSE, estimate = full))
   }
   list(
     path = normalizePath(path),

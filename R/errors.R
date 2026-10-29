@@ -13,7 +13,7 @@ zufapmx_abort <- function(message, kind, call = sys.call(-1), ...) {
 }
 
 # The condition classes of design §8. Each carries the fields a caller needs
-# to act on it; tests match on the class, never the message.
+# to act on it. Tests match on the class; snapshots record the wording.
 
 parse_error <- function(
   file,

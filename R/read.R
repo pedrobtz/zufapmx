@@ -1,5 +1,8 @@
 # Helpers every reader shares: walking R syntax, attaching random effects,
-# inferring parameter roles, and the shapes of closed-form models.
+# inferring parameter roles, tokens and a token stream, the split of ODE
+# code, the observation and its residual form, refusals of dosing names and
+# statements with their record's line, bounds, covariates, and building the
+# model (read_model()).
 
 # A full symmetric matrix from lower-triangle values listed row by row.
 lower_to_full <- function(values) {
@@ -102,13 +105,6 @@ model_parameters_empty <- function() {
     fixed = logical(),
     estimate = numeric()
   )
-}
-
-closed_compartments <- function(structure) {
-  peripheral <- if (structure$ncmt > 1) {
-    paste0("peripheral", seq_len(structure$ncmt - 1))
-  }
-  c(if (isTRUE(structure$depot)) "depot", "central", peripheral)
 }
 
 strip_parens <- function(e) {
@@ -236,12 +232,6 @@ model_compartments <- function(structure) {
   }
 }
 
-# The ADVAN of a closed form with `ncmt` compartments, with or without a
-# depot.
-closed_advan <- function(ncmt, depot) {
-  if (depot) c(2L, 4L, 12L)[[ncmt]] else c(1L, 3L, 11L)[[ncmt]]
-}
-
 # Every statement inside an `if`, at any depth.
 nested_statements <- function(x) {
   if (!is_call(x, "if")) {
@@ -291,14 +281,14 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
       derivatives[[cmt]] <- x[[3]]
     }
   }
-  missing <- setdiff(compartments, names(derivatives))
-  if (length(missing) > 0) {
+  absent <- setdiff(compartments, names(derivatives))
+  if (length(absent) > 0) {
     parse_error(
       file,
       record_line(record),
       NA_integer_,
       seen = as.vector(record),
-      expected = sprintf("a derivative of %s", missing[[1]]),
+      expected = sprintf("a derivative of %s", absent[[1]]),
       call = NULL
     )
   }
@@ -620,29 +610,15 @@ explicit_zero <- function(stmts, assigned = character()) {
 # define. Undeclared THETA, ETA and EPS indices are refused; the rest are
 # covariates, recorded in provenance. `t` is time (D15).
 model_covariates <- function(file, parts) {
-  s <- parts$structure
   defined <- c(
-    parts$parameters$name,
-    unlist(lapply(
-      c(parts$random_effects$omega, parts$random_effects$sigma),
-      `[[`,
-      "names"
-    )),
-    model_compartments(s),
-    stmt_targets(parts$individual),
-    stmt_targets(s$statements),
-    "t",
+    model_inputs(parts),
+    stmt_targets(c(parts$individual, parts$structure$statements)),
     "F"
   )
-  exprs <- c(
-    parts$individual,
-    s$statements,
-    s$derivatives,
-    unlist(parts$dosing, recursive = FALSE),
-    lapply(parts$observations, `[[`, "prediction"),
-    lapply(parts$observations, function(o) o$residual$expression)
+  free <- setdiff(
+    unique(unlist(lapply(model_expressions(parts), all.vars))),
+    defined
   )
-  free <- setdiff(unique(unlist(lapply(exprs, all.vars))), defined)
   undeclared <- grep("^(THETA|ETA|EPS)[0-9]+$", free, value = TRUE)
   if (length(undeclared) > 0) {
     parse_error(
@@ -661,13 +637,50 @@ model_covariates <- function(file, parts) {
 renumber_blocks <- function(blocks, prefix) {
   at <- 0
   lapply(blocks, function(b) {
-    names <- paste0(prefix, at + seq_along(b$names))
+    i <- at + seq_along(b$names)
     at <<- at + length(b$names)
-    b$names <- names
-    dimnames(b$matrix) <- list(names, names)
-    if (!is.null(b$estimate)) {
-      dimnames(b$estimate) <- list(names, names)
-    }
-    b
+    name_block(b, paste0(prefix, i))
   })
+}
+
+# A covariance block over `names` from its lower triangle, row by row.
+cov_block <- function(names, values, fixed = FALSE) {
+  m <- lower_to_full(values)
+  dimnames(m) <- list(names, names)
+  list(names = names, matrix = m, fixed = fixed)
+}
+
+# The next `n` names after those of `blocks`: ETA3, ETA4, ...
+next_names <- function(blocks, prefix, n) {
+  paste0(prefix, length(unlist(lapply(blocks, `[[`, "names"))) + seq_len(n))
+}
+
+# A block under new names, its matrices' dimnames included.
+name_block <- function(b, names) {
+  b$names <- names
+  dimnames(b$matrix) <- list(names, names)
+  if (!is.null(b$estimate)) {
+    dimnames(b$estimate) <- list(names, names)
+  }
+  b
+}
+
+# The one argument of `THETA(n)` and its kin, a whole number from 1.
+whole_index <- function(args, name, file, line, column) {
+  if (
+    length(args) != 1 ||
+      !is.numeric(args[[1]]) ||
+      args[[1]] != round(args[[1]]) ||
+      args[[1]] < 1
+  ) {
+    parse_error(
+      file,
+      line,
+      column,
+      seen = name,
+      expected = sprintf("%s(n) with a whole number n", name),
+      call = NULL
+    )
+  }
+  as.integer(args[[1]])
 }

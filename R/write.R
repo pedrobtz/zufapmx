@@ -1,16 +1,6 @@
-# Helpers every writer shares: renaming symbols, printing numbers and
-# statements, and indenting.
-
-rename_symbols <- function(x, map) {
-  if (is.symbol(x)) {
-    name <- as.character(x)
-    return(if (name %in% names(map)) as.symbol(map[[name]]) else x)
-  }
-  if (is.call(x)) {
-    x[] <- lapply(as.list(x), rename_symbols, map = map)
-  }
-  x
-}
+# Helpers every writer shares: renaming symbols, printing expressions and
+# numbers, indenting, closed-form names, the refusals no writer avoids
+# (check_writable()) and their fields, and reading a writer's text back.
 
 expr_line <- function(x) {
   paste(expr_deparse(x), collapse = " ")
@@ -60,39 +50,6 @@ bounded_values <- function(lower, value, upper) {
   } else {
     c(lower, value, upper)
   }
-}
-
-# A closed form's ADVAN names its parameters (CL, V2, ...). `spelled` holds
-# the target's spelling of `vars`; a variable holding one of these names for
-# another purpose (rxode2's q2 is ADVAN11's Q3) gets a `_` suffix, and
-# closed_alias_lines() assigns the name.
-closed_free_names <- function(vars, spelled, structure) {
-  if (!identical(structure$type, "closed")) {
-    return(spelled)
-  }
-  required <- nm_closed[[as.character(structure$advan)]]$names
-  owner <- unname(structure$parameters[names(required)])
-  taken <- (spelled %in% required) & (vars != owner[match(spelled, required)])
-  spelled[taken] <- paste0(spelled[taken], "_")
-  spelled
-}
-
-# `NAME = var` lines, in `format`, for each parameter name the ADVAN needs
-# that the model spells differently (a variable, or a parameter such as
-# THETA(2)).
-closed_alias_lines <- function(structure, spelling, format) {
-  if (!identical(structure$type, "closed")) {
-    return(character())
-  }
-  required <- nm_closed[[as.character(structure$advan)]]$names
-  out <- character()
-  for (canonical in names(required)) {
-    spelled <- spelling[[structure$parameters[[canonical]]]]
-    if (spelled != required[[canonical]]) {
-      out <- c(out, sprintf(format, required[[canonical]], spelled))
-    }
-  }
-  out
 }
 
 # What no writer can hold yet: inter-occasion variability, transformed
@@ -166,4 +123,99 @@ closed_prediction_error <- function(endpoint) {
     formats = character(),
     call = NULL
   )
+}
+
+model_title <- function(provenance) {
+  if (identical(provenance$format, "nonmem")) {
+    return(basename(provenance$file))
+  }
+  sprintf("zufapmx model read from %s", provenance$format)
+}
+
+# A variance in $SIGMA has no bounds, so bounds on a standard deviation
+# other than the natural [0, Inf) are lost when it moves there.
+sd_bound_losses <- function(m) {
+  if (length(m$random_effects$sigma) > 0) {
+    return(character())
+  }
+  sds <- unlist(lapply(m$observations, function(o) o$residual$parameters))
+  p <- m$parameters[m$parameters$name %in% sds, ]
+  bounded <- p$name[p$lower > 0 | is.finite(p$upper)]
+  if (length(bounded) == 0) {
+    return(character())
+  }
+  sprintf(
+    "bounds of residual standard deviations: %s",
+    paste(bounded, collapse = ", ")
+  )
+}
+
+# Residual error held as standard deviations (as rxode2 holds it) moves to
+# $SIGMA as variances: each sd parameter becomes one epsilon whose
+# variance is its square, and leaves $THETA.
+sigma_from_sd <- function(m) {
+  if (length(m$random_effects$sigma) > 0) {
+    return(m)
+  }
+  for (e in names(m$observations)) {
+    r <- m$observations[[e]]$residual
+    if (!r$type %in% c("additive", "proportional", "combined", "exponential")) {
+      write_error(
+        sprintf("the %s residual model", r$type),
+        sprintf("observations$%s$residual", e),
+        formats = residual_formats(r$type),
+        call = NULL
+      )
+    }
+    eps <- character()
+    used <- unlist(lapply(
+      c(m$individual, m$structure$statements, m$structure$derivatives),
+      all.vars
+    ))
+    for (sd_name in r$parameters) {
+      if (sd_name %in% used) {
+        write_error(
+          sprintf(
+            "the residual parameter `%s`, which the model also uses",
+            sd_name
+          ),
+          sprintf("observations$%s$residual", e),
+          formats = "rxode2",
+          call = NULL
+        )
+      }
+      row <- m$parameters[m$parameters$name == sd_name, ]
+      if (nrow(row) != 1) {
+        write_error(
+          sprintf(
+            "the residual parameter `%s`, which is not a fixed effect",
+            sd_name
+          ),
+          sprintf("observations$%s$residual", e),
+          formats = character(),
+          call = NULL
+        )
+      }
+      name <- paste0("EPS", length(m$random_effects$sigma) + 1)
+      block <- list(
+        names = name,
+        matrix = matrix(row$init^2, dimnames = list(name, name)),
+        fixed = row$fixed
+      )
+      if (!is.na(row$estimate)) {
+        block$estimate <- matrix(row$estimate^2, dimnames = list(name, name))
+      }
+      m$random_effects$sigma[[length(m$random_effects$sigma) + 1]] <- block
+      m$parameters <- m$parameters[m$parameters$name != sd_name, ]
+      eps <- c(eps, name)
+    }
+    m$observations[[e]]$residual$parameters <- eps
+  }
+  rownames(m$parameters) <- NULL
+  m
+}
+
+index_names <- function(blocks, prefix) {
+  symbols <- unlist(lapply(blocks, `[[`, "names"))
+  stats::setNames(sprintf("%s(%d)", prefix, seq_along(symbols)), symbols)
 }

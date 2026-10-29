@@ -116,9 +116,9 @@ nm_estimates_ext <- function(path) {
       call = NULL
     )
   }
-  body <- lines[(last + 1):length(lines)]
-  header <- strsplit(trimws(body[[1]]), "\\s+")[[1]]
-  rows <- lapply(strsplit(trimws(body[-1]), "\\s+"), as.numeric)
+  table_lines <- lines[(last + 1):length(lines)]
+  header <- strsplit(trimws(table_lines[[1]]), "\\s+")[[1]]
+  rows <- lapply(strsplit(trimws(table_lines[-1]), "\\s+"), as.numeric)
   final <- Filter(
     function(r) length(r) == length(header) && r[[1]] == -1000000000,
     rows
