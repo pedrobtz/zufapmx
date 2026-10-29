@@ -55,14 +55,14 @@ estimates when NONMEM's output files are next to it.</p>
 
 <dt id="arg-estimates">estimates<a class="anchor" aria-label="anchor" href="#arg-estimates"></a></dt>
 <dd><p>Where final estimates come from. <code>"auto"</code> reads
-<code>run.xml</code> (<code>&lt;file&gt;.xml</code>) through zuxml when both exist, else the
-<code>.ext</code> file, else none. <code>"xml"</code>, <code>"ext"</code> and <code>"lst"</code> read that file and
-fail if it is missing; <code>"none"</code> reads no estimates.</p></dd>
+<code>run.xml</code> (<code>&lt;file&gt;.xml</code>) when it exists and zuxml is installed, else
+the <code>.ext</code> file, else none. <code>"xml"</code>, <code>"ext"</code> and <code>"lst"</code> read that
+file and fail if it is missing; <code>"none"</code> reads no estimates.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>zupkpmx_model</code>.</p>
+    <p>A <code>zupkpmx_model</code>; see <a href="pmx_inspect.html">pmx_inspect</a> and <code><a href="pmx_write_nonmem.html">pmx_write_nonmem()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -73,19 +73,37 @@ to <code>ADVAN4</code>, <code>ADVAN11</code> and <code>ADVAN12</code> with <code
 ODE models are <code>ADVAN6</code>, <code>ADVAN8</code>, <code>ADVAN9</code> and <code>ADVAN13</code>. Abbreviated
 code may use assignments, <code>IF</code> in one line or in blocks, arithmetic,
 comparisons, <code>EXP</code>, <code>LOG</code>, <code>LOG10</code>, <code>SQRT</code> and <code>ABS</code>.</p>
-<p>Verbatim Fortran, <code>$INFN</code>, <code>$PRED</code>, <code>$MIX</code>, <code>$PRIOR</code>, user subroutines
-and anything else outside that subset are refused with an error of
-class <code>zupkpmx_parse_error</code> naming the file, line and column. The title,
-data records, estimation settings, tables, comments and the ODE solver
-are recorded as losses of the read.</p>
-<p>NONMEM's names are kept: <code>THETA(1)</code> reads as <code>THETA1</code>, <code>ETA(1)</code> as
-<code>ETA1</code> and <code>EPS(1)</code> as <code>EPS1</code>. The observation is the endpoint <code>Y</code>.</p>
+<p>Verbatim Fortran, <code>$INFN</code>, <code>$PRED</code>, <code>$MIX</code>, <code>$PRIOR</code>, user subroutines,
+dosing or scale assignments inside <code>IF</code>, undeclared <code>THETA</code>/<code>ETA</code>/<code>EPS</code>
+indices and anything else outside that subset are refused with an error
+of class <code>zupkpmx_parse_error</code> naming the file and, where it can, the
+line and column.</p>
+<p>Recorded as losses of the read: the title, <code>$SIZES</code>, data records,
+estimation settings, <code>$SIMULATION</code>, <code>$ABBREVIATED</code>, tables
+(<code>$TABLE</code>, <code>$SCATTERPLOT</code>), record options such as
+<code>$ERROR (ONLY OBSERVATIONS)</code>, comments, the ODE solver, <code>$ERROR</code>
+outputs <code>Y</code> does not use, and values that NM-TRAN keeps from earlier
+records for variables assigned only inside <code>IF</code> (the representation
+starts them at 0).</p>
+<p>NONMEM's names are kept, upper case: <code>THETA(1)</code> reads as <code>THETA1</code>,
+<code>ETA(1)</code> as <code>ETA1</code> and <code>EPS(1)</code> as <code>EPS1</code>. <code>T</code> and <code>TIME</code> read as the
+representation's time, <code>t</code>. Free names such as <code>WT</code> are recorded as
+covariates. The observation is the endpoint <code>Y</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p>Other readers:
+<code><a href="pmx_read_mrgsolve.html">pmx_read_mrgsolve()</a></code>,
+<code><a href="pmx_read_rxode2.html">pmx_read_rxode2()</a></code></p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">corpus</span> <span class="op">&lt;-</span> <span class="fu"><a href="zupkpmx_corpus.html">zupkpmx_corpus</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">pmx_read_nonmem</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">path</span><span class="op">[[</span><span class="fl">4</span><span class="op">]</span><span class="op">]</span>, <span class="st">"model.ctl"</span><span class="op">)</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"corpus"</span>, <span class="st">"twocmt-bolus"</span>, <span class="st">"model.ctl"</span>,</span></span>
+<span class="r-in"><span>  package <span class="op">=</span> <span class="st">"zupkpmx"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">pmx_read_nonmem</span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zupkpmx_model&gt; read from nonmem</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Structure: two-compartment closed form, direct input (ADVAN3 TRANS4)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Parameters: 4, initial values only</span>

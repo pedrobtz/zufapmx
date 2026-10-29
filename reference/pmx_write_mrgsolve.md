@@ -18,7 +18,11 @@ pmx_write_mrgsolve(model)
 
 ## Value
 
-A written model: the text as lines, its fidelity and its losses.
+A `zupkpmx_written` object: the text as lines, with its fidelity and
+losses (see
+[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`format()`](https://rdrr.io/r/base/format.html) and
+[`as.character()`](https://rdrr.io/r/base/character.html) give the text.
 
 ## Details
 
@@ -34,11 +38,20 @@ rxode2 holds it, is written as variances. `$PARAM` holds one value per
 parameter, so a model with estimates is written with them and its
 initial values are recorded as lost.
 
+## See also
+
+Other writers:
+[`pmx_write_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_nonmem.md),
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_rxode2.md)
+
 ## Examples
 
 ``` r
-corpus <- zupkpmx_corpus()
-fun <- eval(parse(file.path(corpus$path[[1]], "model-rxode2.R")))
+path <- system.file(
+  "corpus", "onecmt-oral", "model-rxode2.R",
+  package = "zupkpmx"
+)
+fun <- eval(parse(path))
 pmx_write_mrgsolve(pmx_read_rxode2(fun))
 #> $PROB zupkpmx model read from rxode2
 #> 

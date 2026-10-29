@@ -23,7 +23,11 @@ pmx_write_nonmem(model, estimates = c("final", "initial"))
 
 ## Value
 
-A written model: the text as lines, its fidelity and its losses.
+A `zupkpmx_written` object: the text as lines, with its fidelity and
+losses (see
+[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`format()`](https://rdrr.io/r/base/format.html) and
+[`as.character()`](https://rdrr.io/r/base/character.html) give the text.
 
 ## Details
 
@@ -37,11 +41,20 @@ variances: the same model, parameterised as NONMEM parameterises it.
 `$INPUT` and `$DATA` are placeholders to point at a dataset, and no
 `$ESTIMATION` is written: the representation holds neither.
 
+## See also
+
+Other writers:
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_mrgsolve.md),
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_rxode2.md)
+
 ## Examples
 
 ``` r
-corpus <- zupkpmx_corpus()
-fun <- eval(parse(file.path(corpus$path[[1]], "model-rxode2.R")))
+path <- system.file(
+  "corpus", "onecmt-oral", "model-rxode2.R",
+  package = "zupkpmx"
+)
+fun <- eval(parse(path))
 pmx_write_nonmem(pmx_read_rxode2(fun))
 #> $PROBLEM zupkpmx model read from rxode2
 #> ; zupkpmx: $INPUT and $DATA are placeholders; point them at your dataset.

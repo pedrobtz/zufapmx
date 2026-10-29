@@ -53,8 +53,9 @@ corpus <- zupkpmx_corpus()
 corpus[, c("id", "structure", "formats")]
 #>                  id      structure                formats
 #> 1       onecmt-oral  ADVAN2 TRANS2 nonmem,rxode2,mrgsolve
-#> 2    onecmt-oral-mm        ADVAN13 nonmem,rxode2,mrgsolve
-#> 3 threecmt-infusion ADVAN11 TRANS4 nonmem,rxode2,mrgsolve
-#> 4      twocmt-bolus  ADVAN3 TRANS4 nonmem,rxode2,mrgsolve
-#> 5       twocmt-oral  ADVAN4 TRANS4 nonmem,rxode2,mrgsolve
+#> 2   onecmt-oral-lag  ADVAN2 TRANS2 nonmem,rxode2,mrgsolve
+#> 3    onecmt-oral-mm        ADVAN13 nonmem,rxode2,mrgsolve
+#> 4 threecmt-infusion ADVAN11 TRANS4 nonmem,rxode2,mrgsolve
+#> 5      twocmt-bolus  ADVAN3 TRANS4 nonmem,rxode2,mrgsolve
+#> 6       twocmt-oral  ADVAN4 TRANS4 nonmem,rxode2,mrgsolve
 ```

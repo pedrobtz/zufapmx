@@ -52,7 +52,7 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>zupkpmx_model</code>.</p>
+    <p>A <code>zupkpmx_model</code>; see <a href="pmx_inspect.html">pmx_inspect</a> and <code><a href="pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -63,21 +63,37 @@
 written <code>[ NAME ]</code>. Code is the C++ subset mrgsolve documents for models:
 declarations and assignments, <code>if</code>/<code>else</code>, arithmetic, comparisons,
 <code><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp()</a></code>, <code><a href="https://rdrr.io/r/base/Log.html" class="external-link">log()</a></code>, <code><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10()</a></code>, <code><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt()</a></code>, <code>fabs()</code>, <code>pow()</code>, <code>fmin()</code>,
-<code>fmax()</code>, <code>ETA(n)</code>, <code>EPS(n)</code>, and the macros <code>dxdt_CMT</code>, <code>F_CMT</code>,
-<code>ALAG_CMT</code>, <code>R_CMT</code>, <code>D_CMT</code> and <code>CMT_0</code>. Anything else, including
-<code>$GLOBAL</code>, <code>$PREAMBLE</code> and the <code>nm-vars</code> plugin, is refused with an error
-of class <code>zupkpmx_parse_error</code>.</p>
+<code>fmax()</code>, <code>ETA(n)</code>, <code>EPS(n)</code>, <code>THETA(n)</code>, and the macros <code>dxdt_CMT</code>,
+<code>F_CMT</code>, <code>ALAG_CMT</code>, <code>R_CMT</code>, <code>D_CMT</code> and <code>CMT_0</code>. Anything else,
+including <code>$GLOBAL</code>, <code>$PREAMBLE</code>, the <code>nm-vars</code> plugin, <code>int</code>
+declarations and integer division (<code>3/4</code>), is refused with an error of
+class <code>zupkpmx_parse_error</code>. <code>$PKMODEL</code> may take its parameters from
+<code>$PARAM</code> directly or from <code>$MAIN</code>.</p>
+<p>Recorded as losses of the read: the title, <code>$PLUGIN</code>, <code>$SET</code>, <code>$PARAM</code>
+descriptions, and <code>$TABLE</code> outputs <code>Y</code> does not use. <code>TIME</code> and
+<code>SOLVERTIME</code> read as the representation's time, <code>t</code>. <code>$NMXML</code> and
+<code>$NMEXT</code> resolve a relative path against the working directory, or the
+model file's with <code>root = "cppfile"</code>, as mrgsolve does.</p>
 <p>The observation is <code>Y</code> in <code>$TABLE</code>, written over a prediction such as
 <code>IPRED</code>; its residual model is recognised as for NONMEM. An <code>@annotated</code>
 <code>$PARAM</code> description of the form <code>[lower, upper]</code>, optionally followed
 by <code>fixed</code>, gives a parameter's bounds, as <code><a href="pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code> writes
 them.</p>
     </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p>Other readers:
+<code><a href="pmx_read_nonmem.html">pmx_read_nonmem()</a></code>,
+<code><a href="pmx_read_rxode2.html">pmx_read_rxode2()</a></code></p></div>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">corpus</span> <span class="op">&lt;-</span> <span class="fu"><a href="zupkpmx_corpus.html">zupkpmx_corpus</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">pmx_read_mrgsolve</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">path</span><span class="op">[[</span><span class="fl">4</span><span class="op">]</span><span class="op">]</span>, <span class="st">"model.cpp"</span><span class="op">)</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"corpus"</span>, <span class="st">"twocmt-bolus"</span>, <span class="st">"model.cpp"</span>,</span></span>
+<span class="r-in"><span>  package <span class="op">=</span> <span class="st">"zupkpmx"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">pmx_read_mrgsolve</span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zupkpmx_model&gt; read from mrgsolve</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Structure: two-compartment closed form, direct input (ADVAN3 TRANS4)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Parameters: 4, initial values only</span>

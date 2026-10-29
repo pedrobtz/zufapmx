@@ -38,8 +38,11 @@ stops with an error of class `zupkpmx_write_error` instead.
 ## Examples
 
 ``` r
-corpus <- zupkpmx_corpus()
-fun <- eval(parse(file.path(corpus$path[[1]], "model-rxode2.R")))
+path <- system.file(
+  "corpus", "onecmt-oral", "model-rxode2.R",
+  package = "zupkpmx"
+)
+fun <- eval(parse(path))
 written <- pmx_write_rxode2(pmx_read_rxode2(fun))
 pmx_fidelity(written)
 #> [1] "exact"

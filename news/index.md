@@ -2,6 +2,20 @@
 
 ## zupkpmx 0.0.0.9000
 
+- Fidelity is stricter: a write is `"equivalent"` only through the
+  reparameterisations writers are known to make, and a translation that
+  reads back as a different model is a `zupkpmx_write_error`.
+
+- Time is one symbol, `t`, read from and written to each format’s own
+  spelling (NONMEM `TIME`/`T`, mrgsolve `TIME`/`SOLVERTIME`, rxode2
+  `t`/`time`). Free names are recorded as covariates in a model’s
+  provenance.
+
+- Readers refuse more of what they cannot translate faithfully (dosing
+  assignments inside `IF`, undeclared `THETA`/`ETA`/`EPS`, C++ integer
+  division) and accept more of what they can (`$PKMODEL` over `$PARAM`,
+  `$SIZES`, record options, statement-defined residual parameters).
+
 - [`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_mrgsolve.md)
   reads an mrgsolve model file and
   [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_mrgsolve.md)

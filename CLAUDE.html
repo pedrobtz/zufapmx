@@ -150,7 +150,7 @@
 <li>
 <strong>Assert on condition classes, never message text.</strong> Use <code>expect_error(..., class = "&lt;pkg&gt;_&lt;kind&gt;_error")</code>. Wording belongs in snapshot tests.</li>
 <li>
-<strong>Order independence.</strong> <code>devtools::test(shuffle = TRUE)</code> is part of the definition of done.</li>
+<strong>Order independence.</strong> <code>devtools::test(shuffle = TRUE)</code> is part of the definition of done. testthat writes snapshot files in run order, so a shuffled run reorders <code>tests/testthat/_snaps/</code> without changing them; discard that with <code>git checkout tests/testthat/_snaps</code> before committing.</li>
 <li>
 <strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. Here the corpus is <code>inst/corpus/</code>, one directory per model in every format that holds it, with <code>expected.csv</code> of typical-subject predictions. The oracles are <code>nonmem2rx</code> (every entry) and <code>amp.sim</code> (general ODE entries only); <a href=".agents/oracle-agreement.html"><code>.agents/oracle-agreement.md</code></a> records where each agrees and why it fails elsewhere.</li>
 <li>

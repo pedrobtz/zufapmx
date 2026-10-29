@@ -58,17 +58,29 @@ rxode2 nor nlmixr2 needs to be installed.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>zupkpmx_model</code>.</p>
+    <p>A <code>zupkpmx_model</code>; see <a href="pmx_inspect.html">pmx_inspect</a> and <code><a href="pmx_write_rxode2.html">pmx_write_rxode2()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Supported: fixed effects with bounds and <code><a href="https://rdrr.io/r/utils/fix.html" class="external-link">fix()</a></code>; random effects,
 alone or in blocks; statements built from the function table;
 <code>linCmt()</code>; <code>d/dt()</code>; <code>alag()</code>, <code><a href="https://rdrr.io/r/stats/lag.html" class="external-link">lag()</a></code>, <code>f()</code>, <code>rate()</code>, <code>dur()</code> and
-initial amounts (<code>depot(0) &lt;-</code>); and residual models <code>add()</code>, <code>prop()</code>,
-<code>add() + prop()</code>, <code>lnorm()</code> and <code>pow()</code>. Anything else is refused with
-an error of class <code>zupkpmx_parse_error</code>. Labels, <code>description</code> and
-comments are dropped and recorded as losses.</p>
+initial amounts (<code>depot(0) &lt;-</code>); time as <code>t</code> or <code>time</code>; and residual
+models <code>add()</code>, <code>prop()</code>, <code>add() + prop()</code>, <code>lnorm()</code> and <code>pow()</code> whose
+parameters are <code>ini()</code> parameters or <code>model()</code> variables. Anything else
+is refused with an error of class <code>zupkpmx_parse_error</code>.</p>
+<p>Recorded as losses of the read: <code>label()</code>s, <code>description</code> and other
+top-level metadata such as <code>reference</code> or <code>units</code>, and <code>ini()</code> values
+written as constant expressions (<code>log(90)</code>), which are evaluated.
+Comments are not part of a function's code and never reach the reader.
+Statements that read time belong to the ODE structure, since rxode2's
+time is continuous; a <code>linCmt()</code> model refuses them.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p>Other readers:
+<code><a href="pmx_read_mrgsolve.html">pmx_read_mrgsolve()</a></code>,
+<code><a href="pmx_read_nonmem.html">pmx_read_nonmem()</a></code></p></div>
     </div>
 
     <div class="section level2">

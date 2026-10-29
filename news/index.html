@@ -34,7 +34,10 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="zupkpmx-0009000">zupkpmx 0.0.0.9000<a class="anchor" aria-label="anchor" href="#zupkpmx-0009000"></a></h2>
-<ul><li><p><code><a href="../reference/pmx_read_mrgsolve.html">pmx_read_mrgsolve()</a></code> reads an mrgsolve model file and <code><a href="../reference/pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code> writes one.</p></li>
+<ul><li><p>Fidelity is stricter: a write is <code>"equivalent"</code> only through the reparameterisations writers are known to make, and a translation that reads back as a different model is a <code>zupkpmx_write_error</code>.</p></li>
+<li><p>Time is one symbol, <code>t</code>, read from and written to each format’s own spelling (NONMEM <code>TIME</code>/<code>T</code>, mrgsolve <code>TIME</code>/<code>SOLVERTIME</code>, rxode2 <code>t</code>/<code>time</code>). Free names are recorded as covariates in a model’s provenance.</p></li>
+<li><p>Readers refuse more of what they cannot translate faithfully (dosing assignments inside <code>IF</code>, undeclared <code>THETA</code>/<code>ETA</code>/<code>EPS</code>, C++ integer division) and accept more of what they can (<code>$PKMODEL</code> over <code>$PARAM</code>, <code>$SIZES</code>, record options, statement-defined residual parameters).</p></li>
+<li><p><code><a href="../reference/pmx_read_mrgsolve.html">pmx_read_mrgsolve()</a></code> reads an mrgsolve model file and <code><a href="../reference/pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code> writes one.</p></li>
 <li><p><code><a href="../reference/pmx_write_nonmem.html">pmx_write_nonmem()</a></code> writes a NONMEM control stream.</p></li>
 <li><p><code><a href="../reference/pmx_read_nonmem.html">pmx_read_nonmem()</a></code> reads a NONMEM control stream, with final estimates from <code>run.xml</code>, the <code>.ext</code> file or the <code>.lst</code> report.</p></li>
 <li><p><code><a href="../reference/pmx_read_rxode2.html">pmx_read_rxode2()</a></code> reads an rxode2 or nlmixr2 model function and <code><a href="../reference/pmx_write_rxode2.html">pmx_write_rxode2()</a></code> writes one. <code><a href="../reference/pmx_fidelity.html">pmx_fidelity()</a></code> and <code><a href="../reference/pmx_fidelity.html">pmx_losses()</a></code> say how faithful a written model is.</p></li>

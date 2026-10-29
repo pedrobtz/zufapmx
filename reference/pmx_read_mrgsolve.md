@@ -16,7 +16,10 @@ pmx_read_mrgsolve(file)
 
 ## Value
 
-A `zupkpmx_model`.
+A `zupkpmx_model`; see
+[pmx_inspect](https://pedrobtz.github.io/zupkpmx/reference/pmx_inspect.md)
+and
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_mrgsolve.md).
 
 ## Details
 
@@ -30,10 +33,18 @@ comparisons, [`exp()`](https://rdrr.io/r/base/Log.html),
 [`log()`](https://rdrr.io/r/base/Log.html),
 [`log10()`](https://rdrr.io/r/base/Log.html),
 [`sqrt()`](https://rdrr.io/r/base/MathFun.html), `fabs()`, `pow()`,
-`fmin()`, `fmax()`, `ETA(n)`, `EPS(n)`, and the macros `dxdt_CMT`,
-`F_CMT`, `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything else,
-including `$GLOBAL`, `$PREAMBLE` and the `nm-vars` plugin, is refused
-with an error of class `zupkpmx_parse_error`.
+`fmin()`, `fmax()`, `ETA(n)`, `EPS(n)`, `THETA(n)`, and the macros
+`dxdt_CMT`, `F_CMT`, `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything
+else, including `$GLOBAL`, `$PREAMBLE`, the `nm-vars` plugin, `int`
+declarations and integer division (`3/4`), is refused with an error of
+class `zupkpmx_parse_error`. `$PKMODEL` may take its parameters from
+`$PARAM` directly or from `$MAIN`.
+
+Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
+descriptions, and `$TABLE` outputs `Y` does not use. `TIME` and
+`SOLVERTIME` read as the representation's time, `t`. `$NMXML` and
+`$NMEXT` resolve a relative path against the working directory, or the
+model file's with `root = "cppfile"`, as mrgsolve does.
 
 The observation is `Y` in `$TABLE`, written over a prediction such as
 `IPRED`; its residual model is recognised as for NONMEM. An `@annotated`
@@ -42,11 +53,20 @@ by `fixed`, gives a parameter's bounds, as
 [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_mrgsolve.md)
 writes them.
 
+## See also
+
+Other readers:
+[`pmx_read_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_nonmem.md),
+[`pmx_read_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_rxode2.md)
+
 ## Examples
 
 ``` r
-corpus <- zupkpmx_corpus()
-pmx_read_mrgsolve(file.path(corpus$path[[4]], "model.cpp"))
+path <- system.file(
+  "corpus", "twocmt-bolus", "model.cpp",
+  package = "zupkpmx"
+)
+pmx_read_mrgsolve(path)
 #> <zupkpmx_model> read from mrgsolve
 #> Structure: two-compartment closed form, direct input (ADVAN3 TRANS4)
 #> Parameters: 4, initial values only
