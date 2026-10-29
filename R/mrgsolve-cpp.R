@@ -23,7 +23,9 @@ cpp_tokenize <- function(lines, line_numbers, file) {
       space = "^\\s+",
       number = "^([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?[fF]?",
       name = "^[A-Za-z_][A-Za-z0-9_]*",
-      op = "^(&&|\\|\\||==|!=|<=|>=|[-+*/()=<>!,;{}])"
+      # Increment, decrement and compound assignment are tokens of their own
+      # so that the parser can refuse them: `--x` is not `-(-x)`.
+      op = "^(&&|\\|\\||==|!=|<=|>=|--|\\+\\+|[-+*/]=|[-+*/()=<>!,;{}])"
     ),
     file,
     "C++ of mrgsolve's model code"
@@ -127,6 +129,9 @@ cpp_parse <- function(block, file) {
     )
   }
   unary <- function() {
+    if (at(c("--", "++", "+=", "-=", "*=", "/="))) {
+      fail("C++ without increment, decrement or compound assignment")
+    }
     if (at(c("-", "+", "!"))) {
       return(call(take()$value, unary()))
     }

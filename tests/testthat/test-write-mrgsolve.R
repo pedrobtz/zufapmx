@@ -223,3 +223,51 @@ test_that("a lossy write is still checked against its source", {
     class = "zufapmx_write_error"
   )
 })
+
+test_that("no output holds two operators in a row, and ! binds its call", {
+  spelling <- c(cl = "cl", v = "v", wt = "WT")
+  expect_equal(cpp_expr(quote(-(-cl) / v), spelling), "-(-cl) / v")
+  expect_equal(cpp_expr(quote(cl * -2), spelling), "cl * (-2.0)")
+  expect_equal(cpp_expr(quote(!wt == 70), spelling), "!(WT == 70.0)")
+  expect_equal(nm_expr(quote(cl * -2), c(cl = "CL")), "CL * (-2.0)")
+  expect_equal(nm_expr(quote(--cl), c(cl = "CL")), "-(-CL)")
+
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- c(0, 0.1)
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      k <- --cl / v
+      wtf <- 0
+      if (!WT == 70) {
+        wtf <- 1
+      }
+      d / dt(central) <- -k * central * (1 + wtf)
+      cp <- central / v
+      cp ~ prop(sd)
+    })
+  })
+  w <- pmx_write_mrgsolve(m)
+  expect_true("double k = -(-cl) / v;" %in% w$text)
+  expect_true("if (!(WT == 70.0)) {" %in% w$text)
+  expect_true(pmx_fidelity(w) %in% c("exact", "equivalent"))
+})
+
+test_that("C++ increment, decrement and compound assignment are refused", {
+  for (main in c(
+    "double K = --CL / V;",
+    "CL--;",
+    "CL += 1;",
+    "double K = CL++;"
+  )) {
+    expect_error(
+      read_cpp(cpp_onecmt(main = main)),
+      class = "zufapmx_parse_error",
+      label = main
+    )
+  }
+})
