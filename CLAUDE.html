@@ -38,7 +38,7 @@
 <p>This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.</p>
 <div class="section level2">
 <h2 id="what-this-is">What this is<a class="anchor" aria-label="anchor" href="#what-this-is"></a></h2>
-<p><code>zufapmx</code> holds a population PK/PD model as one R object, reads it from NONMEM, rxode2/nlmixr2 and mrgsolve, writes it back to any of the three, and proves two models are the same model. <code>pmx_compare()</code> simulates both on a canonical design, each through its own engine, and reports the worst deviation against a tolerance. That proof is the product; the converters exist to feed it. Pure R with no <code>Imports</code>: engines, oracles and the siblings <code>zuxml</code>, <code>zucsv</code>, <code>zujson</code> and <code>daffiz</code> are all <code>Suggests</code>. It is not a modelling language, an estimator or a runner, and it does not translate verbatim Fortran, user subroutines or C++ outside mrgsolve’s documented blocks.</p>
+<p><code>zufapmx</code> holds a population PK/PD model as one R object, reads it from NONMEM, rxode2/nlmixr2 and mrgsolve, writes it back to any of the three, and proves two models are the same model. <code>pmx_compare()</code> simulates both on a canonical design, each through its own engine, and reports the worst deviation against a tolerance. That proof is the product; the converters exist to feed it. Pure R with no <code>Imports</code>: engines, oracles and the siblings <code>zuxml</code>, <code>zucsv</code> and <code>zujson</code> are all <code>Suggests</code>. It is not a modelling language, an estimator or a runner, and it does not translate verbatim Fortran, user subroutines or C++ outside mrgsolve’s documented blocks.</p>
 <p>The specification is <a href=".agents/design.html"><code>.agents/design.md</code></a>, adopted from <a href="https://github.com/pedrobtz/packages/blob/main/rfcs/started/0046-zufapmx-pharmacometric-model-interchange.md" class="external-link">RFC 0046</a>. It outranks this file: <code>CLAUDE.md</code> orients, the design doc decides. Its decisions marked (C) and its open questions (§15) are still the maintainer’s to confirm.</p>
 </div>
 <div class="section level2">
@@ -107,7 +107,7 @@
 <ul><li>
 <strong>No <code>Imports</code> (D8).</strong> Every reader must still work without its <code>Suggests</code>: estimates fall back from <code>run.xml</code> to <code>.ext</code>, tables to base R. Adding an <code>Imports</code> entry breaks a family rule and a v0.1.0 acceptance criterion.</li>
 <li>
-<strong>Every <code>Suggests</code> entry must be on CRAN at submission.</strong> <code>daffiz</code> is not yet; it goes to CRAN before the harness stage (D11), and <code>pmx_compare()</code> relies on it rather than carrying its own alignment code.</li>
+<strong>Every <code>Suggests</code> entry must be on CRAN at submission.</strong> A CRAN package may not suggest an unpublished one. This is why <code>pmx_compare()</code> carries its own alignment and tolerance check instead of relying on <code>daffiz</code> (D17).</li>
 <li>
 <strong>Writers never fabricate values and never silently drop a construct that changes predictions (D9).</strong> Such a loss is <code>refused</code>, never <code>lossy</code>. A model without estimates is written with initial values and records the loss.</li>
 <li>

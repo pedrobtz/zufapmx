@@ -11,10 +11,10 @@ and proves two models are the same model. `pmx_compare()` simulates both
 on a canonical design, each through its own engine, and reports the
 worst deviation against a tolerance. That proof is the product; the
 converters exist to feed it. Pure R with no `Imports`: engines, oracles
-and the siblings `zuxml`, `zucsv`, `zujson` and `daffiz` are all
-`Suggests`. It is not a modelling language, an estimator or a runner,
-and it does not translate verbatim Fortran, user subroutines or C++
-outside mrgsolve’s documented blocks.
+and the siblings `zuxml`, `zucsv` and `zujson` are all `Suggests`. It is
+not a modelling language, an estimator or a runner, and it does not
+translate verbatim Fortran, user subroutines or C++ outside mrgsolve’s
+documented blocks.
 
 The specification is
 [`.agents/design.md`](https://pedrobtz.github.io/zufapmx/.agents/design.md),
@@ -157,10 +157,10 @@ stage.
   `Suggests`: estimates fall back from `run.xml` to `.ext`, tables to
   base R. Adding an `Imports` entry breaks a family rule and a v0.1.0
   acceptance criterion.
-- **Every `Suggests` entry must be on CRAN at submission.** `daffiz` is
-  not yet; it goes to CRAN before the harness stage (D11), and
-  `pmx_compare()` relies on it rather than carrying its own alignment
-  code.
+- **Every `Suggests` entry must be on CRAN at submission.** A CRAN
+  package may not suggest an unpublished one. This is why
+  `pmx_compare()` carries its own alignment and tolerance check instead
+  of relying on `daffiz` (D17).
 - **Writers never fabricate values and never silently drop a construct
   that changes predictions (D9).** Such a loss is `refused`, never
   `lossy`. A model without estimates is written with initial values and
