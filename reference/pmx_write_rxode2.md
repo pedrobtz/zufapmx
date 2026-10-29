@@ -2,7 +2,7 @@
 
 Prints a model as the text of an rxode2/nlmixr2 model function, with its
 fidelity (see
-[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)).
 Evaluate the text to get the function.
 
 ## Usage
@@ -19,9 +19,9 @@ pmx_write_rxode2(model)
 
 ## Value
 
-A `zupkpmx_written` object: the text as lines, with its fidelity and
+A `zufapmx_written` object: the text as lines, with its fidelity and
 losses (see
-[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)).
 [`format()`](https://rdrr.io/r/base/format.html) and
 [`as.character()`](https://rdrr.io/r/base/character.html) give the text.
 
@@ -34,20 +34,20 @@ written as standard-deviation parameters named after the epsilons.
 Variables `linCmt()` would read as parameters are renamed with an `x_`
 prefix. Constructs rxode2 cannot hold, such as residual error written as
 an expression over epsilons, or an individual parameter that reads the
-record's time, stop with an error of class `zupkpmx_write_error`.
+record's time, stop with an error of class `zufapmx_write_error`.
 
 ## See also
 
 Other writers:
-[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_mrgsolve.md),
-[`pmx_write_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_nonmem.md)
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md),
+[`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "onecmt-oral-mm", "model-rxode2.R",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 fun <- eval(parse(path))
 pmx_write_rxode2(pmx_read_rxode2(fun))

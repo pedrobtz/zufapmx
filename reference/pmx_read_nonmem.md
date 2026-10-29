@@ -24,10 +24,10 @@ pmx_read_nonmem(file, estimates = c("auto", "xml", "ext", "lst", "none"))
 
 ## Value
 
-A `zupkpmx_model`; see
-[pmx_inspect](https://pedrobtz.github.io/zupkpmx/reference/pmx_inspect.md)
+A `zufapmx_model`; see
+[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
 and
-[`pmx_write_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_nonmem.md).
+[`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md).
 
 ## Details
 
@@ -42,7 +42,7 @@ comparisons, `EXP`, `LOG`, `LOG10`, `SQRT` and `ABS`.
 Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines,
 dosing or scale assignments inside `IF`, undeclared `THETA`/`ETA`/`EPS`
 indices and anything else outside that subset are refused with an error
-of class `zupkpmx_parse_error` naming the file and, where it can, the
+of class `zufapmx_parse_error` naming the file and, where it can, the
 line and column.
 
 Recorded as losses of the read: the title, `$SIZES`, data records,
@@ -60,18 +60,18 @@ covariates. The observation is the endpoint `Y`.
 ## See also
 
 Other readers:
-[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_mrgsolve.md),
-[`pmx_read_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_rxode2.md)
+[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),
+[`pmx_read_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_rxode2.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "twocmt-bolus", "model.ctl",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 pmx_read_nonmem(path)
-#> <zupkpmx_model> read from nonmem
+#> <zufapmx_model> read from nonmem
 #> Structure: two-compartment closed form, direct input (ADVAN3 TRANS4)
 #> Parameters: 4, initial values only
 #> Random effects: ETA1 on CL (exp), ETA2 on V1 (exp)

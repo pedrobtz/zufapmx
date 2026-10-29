@@ -1,7 +1,7 @@
 # Write a model as a NONMEM control stream
 
 Prints a model as an NM-TRAN control stream with its fidelity (see
-[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)).
 
 ## Usage
 
@@ -23,9 +23,9 @@ pmx_write_nonmem(model, estimates = c("final", "initial"))
 
 ## Value
 
-A `zupkpmx_written` object: the text as lines, with its fidelity and
+A `zufapmx_written` object: the text as lines, with its fidelity and
 losses (see
-[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)).
 [`format()`](https://rdrr.io/r/base/format.html) and
 [`as.character()`](https://rdrr.io/r/base/character.html) give the text.
 
@@ -44,20 +44,20 @@ variances: the same model, parameterised as NONMEM parameterises it.
 ## See also
 
 Other writers:
-[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_mrgsolve.md),
-[`pmx_write_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_rxode2.md)
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md),
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_rxode2.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "onecmt-oral", "model-rxode2.R",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 fun <- eval(parse(path))
 pmx_write_nonmem(pmx_read_rxode2(fun))
-#> $PROBLEM zupkpmx model read from rxode2
-#> ; zupkpmx: $INPUT and $DATA are placeholders; point them at your dataset.
+#> $PROBLEM zufapmx model read from rxode2
+#> ; zufapmx: $INPUT and $DATA are placeholders; point them at your dataset.
 #> $INPUT ID TIME EVID AMT RATE CMT DV
 #> $DATA data.csv IGNORE=@
 #> $SUBROUTINES ADVAN2 TRANS2

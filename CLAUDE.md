@@ -5,7 +5,7 @@ with code in this repository.
 
 ## What this is
 
-`zupkpmx` holds a population PK/PD model as one R object, reads it from
+`zufapmx` holds a population PK/PD model as one R object, reads it from
 NONMEM, rxode2/nlmixr2 and mrgsolve, writes it back to any of the three,
 and proves two models are the same model. `pmx_compare()` simulates both
 on a canonical design, each through its own engine, and reports the
@@ -17,9 +17,9 @@ and it does not translate verbatim Fortran, user subroutines or C++
 outside mrgsolve’s documented blocks.
 
 The specification is
-[`.agents/design.md`](https://pedrobtz.github.io/zupkpmx/.agents/design.md),
+[`.agents/design.md`](https://pedrobtz.github.io/zufapmx/.agents/design.md),
 adopted from [RFC
-0046](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0046-zupkpmx-pharmacometric-model-interchange.md).
+0046](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0046-zufapmx-pharmacometric-model-interchange.md).
 It outranks this file: `CLAUDE.md` orients, the design doc decides. Its
 decisions marked (C) and its open questions (§15) are still the
 maintainer’s to confirm.
@@ -36,7 +36,7 @@ parent issue shows a progress bar such as “6 of 7”.
 
 - **One parent issue per target version**, titled with the bare version,
   for example `v0.1.0`. This package’s is
-  [\#1](https://github.com/pedrobtz/zupkpmx/issues/1).
+  [\#1](https://github.com/pedrobtz/zufapmx/issues/1).
 - **One sub-issue per roadmap stage**, titled as the roadmap titles it,
   for example `Stage 3 — R interface`, and linking to that section. The
   number of stages is whatever the roadmap has; there is no fixed scale.
@@ -66,7 +66,7 @@ CRAN accepts it, never before: a `.9000` version above an unreleased
 
 Until the first release the R API may change freely. Sibling packages
 can still depend on this one before CRAN does, through `Remotes:` or
-`LinkingTo:`. None does yet; `zupkode` (RFC 0047) plans to use this
+`LinkingTo:`. None does yet; `zufaode` (RFC 0047) plans to use this
 package’s corpus as its conformance suite, so a change to the corpus
 layout affects it. A package that others wait on should reach CRAN
 first.
@@ -97,55 +97,55 @@ Pure R: there is no `src/` and no native layer. The rest grows as stages
 land; see `.agents/design.md` (§4).
 
 - **Expressions**
-  ([R/expr.R](https://pedrobtz.github.io/zupkpmx/R/expr.R)) are R
+  ([R/expr.R](https://pedrobtz.github.io/zufapmx/R/expr.R)) are R
   language objects: numbers, names and calls, restricted by
   `expr_check()` to the operators and function table of design §4.5.
   Statements are `name <- expr` or `if`/`else` (`stmt_check()`). Every
   reader builds these and every writer prints them; a construct outside
   the table is refused, not guessed.
 - **The model**
-  ([R/model.R](https://pedrobtz.github.io/zupkpmx/R/model.R)) is a
+  ([R/model.R](https://pedrobtz.github.io/zufapmx/R/model.R)) is a
   classed list of the seven components of §4.1. `new_model()` is the
   only constructor and validates every component; it is internal,
   because readers are the public way to get a model (§5). The test
   helper `helper-model.R` builds models directly.
 - **NONMEM**
-  ([R/nmtran.R](https://pedrobtz.github.io/zupkpmx/R/nmtran.R),
-  [R/read-nonmem.R](https://pedrobtz.github.io/zupkpmx/R/read-nonmem.R),
-  [R/nonmem-estimates.R](https://pedrobtz.github.io/zupkpmx/R/nonmem-estimates.R)):
+  ([R/nmtran.R](https://pedrobtz.github.io/zufapmx/R/nmtran.R),
+  [R/read-nonmem.R](https://pedrobtz.github.io/zufapmx/R/read-nonmem.R),
+  [R/nonmem-estimates.R](https://pedrobtz.github.io/zufapmx/R/nonmem-estimates.R)):
   records, a tokenizer and a recursive-descent parser for abbreviated
   code, then the same representation. NONMEM names stay as symbols
   (`THETA1`, `ETA1`, `EPS1`); the endpoint is `Y`, and `$ERROR` is
   reduced to a residual model of `Y` over `F`.
 - **Readers and writers**
-  ([R/read-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/read-rxode2.R),
-  [R/write-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/write-rxode2.R)):
-  a reader raises `zupkpmx_parse_error` for anything it does not
+  ([R/read-rxode2.R](https://pedrobtz.github.io/zufapmx/R/read-rxode2.R),
+  [R/write-rxode2.R](https://pedrobtz.github.io/zufapmx/R/write-rxode2.R)):
+  a reader raises `zufapmx_parse_error` for anything it does not
   support, never a model error; a writer reads its own output back and
   sets the fidelity
-  ([R/written.R](https://pedrobtz.github.io/zupkpmx/R/written.R)) from
+  ([R/written.R](https://pedrobtz.github.io/zufapmx/R/written.R)) from
   whether the representation came back identical.
 - **mrgsolve**
-  ([R/mrgsolve-cpp.R](https://pedrobtz.github.io/zupkpmx/R/mrgsolve-cpp.R),
-  [R/read-mrgsolve.R](https://pedrobtz.github.io/zupkpmx/R/read-mrgsolve.R),
-  [R/write-mrgsolve.R](https://pedrobtz.github.io/zupkpmx/R/write-mrgsolve.R)):
+  ([R/mrgsolve-cpp.R](https://pedrobtz.github.io/zufapmx/R/mrgsolve-cpp.R),
+  [R/read-mrgsolve.R](https://pedrobtz.github.io/zufapmx/R/read-mrgsolve.R),
+  [R/write-mrgsolve.R](https://pedrobtz.github.io/zufapmx/R/write-mrgsolve.R)):
   blocks and a C++ subset parser; `$PKMODEL` uses NONMEM’s names, so
   closed forms share `nm_closed`. Expressions print through dialects
-  ([R/print-expr.R](https://pedrobtz.github.io/zupkpmx/R/print-expr.R)):
+  ([R/print-expr.R](https://pedrobtz.github.io/zufapmx/R/print-expr.R)):
   NM-TRAN and C++.
 - **Writers**
-  ([R/write-rxode2.R](https://pedrobtz.github.io/zupkpmx/R/write-rxode2.R),
-  [R/write-nonmem.R](https://pedrobtz.github.io/zupkpmx/R/write-nonmem.R))
+  ([R/write-rxode2.R](https://pedrobtz.github.io/zufapmx/R/write-rxode2.R),
+  [R/write-nonmem.R](https://pedrobtz.github.io/zufapmx/R/write-nonmem.R))
   convert residual error between NONMEM’s sigma variances and rxode2’s
   standard-deviation parameters; that conversion is why cross-format
   writes are `equivalent`, not `exact`.
 - **Conditions**
-  ([R/errors.R](https://pedrobtz.github.io/zupkpmx/R/errors.R)):
-  `zupkpmx_abort()` and the §8 constructors `parse_error()`,
+  ([R/errors.R](https://pedrobtz.github.io/zufapmx/R/errors.R)):
+  `zufapmx_abort()` and the §8 constructors `parse_error()`,
   `write_error()` and `engine_error()`, each carrying the fields a
   caller acts on.
 - **The corpus**
-  ([R/corpus.R](https://pedrobtz.github.io/zupkpmx/R/corpus.R),
+  ([R/corpus.R](https://pedrobtz.github.io/zufapmx/R/corpus.R),
   `inst/corpus/`): see Testing conventions.
 
 ## Invariants that are easy to break
@@ -171,7 +171,7 @@ stage.
 - **Residual error is off in comparisons (D5).** Predictions are
   compared, not noise.
 - **`pmx_compare()` never raises on a failed comparison.** Failure is a
-  value; only missing or failing engines raise `zupkpmx_engine_error`.
+  value; only missing or failing engines raise `zufapmx_engine_error`.
 - **Unsupported code is refused with a position, never guessed (D6).**
   The NM-TRAN subset is what `nonmem2rx` and `nonmem2mrgsolve` translate
   today.
@@ -208,10 +208,10 @@ stage.
 - **C++ literals carry a decimal point.** `1/2` is integer division in
   C++; the mrgsolve dialect writes `1.0 / 2.0`.
 - **`$PARAM @annotated` descriptions hold bounds.** `[lower, upper]` and
-  `fixed` are zupkpmx’s convention; without it every mrgsolve write of a
+  `fixed` are zufapmx’s convention; without it every mrgsolve write of a
   bounded model would be `lossy`.
 - **Exported functions are `pmx_*` (D10),** with
-  [`zupkpmx_corpus()`](https://pedrobtz.github.io/zupkpmx/reference/zupkpmx_corpus.md)
+  [`zufapmx_corpus()`](https://pedrobtz.github.io/zufapmx/reference/zufapmx_corpus.md)
   the one package-level exception.
 
 ## Testing conventions
@@ -238,7 +238,7 @@ stage.
   that holds it, with `expected.csv` of typical-subject predictions. The
   oracles are `nonmem2rx` (every entry) and `amp.sim` (general ODE
   entries only);
-  [`.agents/oracle-agreement.md`](https://pedrobtz.github.io/zupkpmx/.agents/oracle-agreement.md)
+  [`.agents/oracle-agreement.md`](https://pedrobtz.github.io/zufapmx/.agents/oracle-agreement.md)
   records where each agrees and why it fails elsewhere.
 - **Helpers live in `tests/testthat/helper-*.R`.** `helper-corpus.R`
   simulates the typical subject of a corpus entry through rxode2,

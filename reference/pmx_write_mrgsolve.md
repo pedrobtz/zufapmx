@@ -2,7 +2,7 @@
 
 Prints a model as the text of an mrgsolve model file (`.cpp`) with its
 fidelity (see
-[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)).
 
 ## Usage
 
@@ -18,9 +18,9 @@ pmx_write_mrgsolve(model)
 
 ## Value
 
-A `zupkpmx_written` object: the text as lines, with its fidelity and
+A `zufapmx_written` object: the text as lines, with its fidelity and
 losses (see
-[`pmx_fidelity()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_fidelity.md)).
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)).
 [`format()`](https://rdrr.io/r/base/format.html) and
 [`as.character()`](https://rdrr.io/r/base/character.html) give the text.
 
@@ -29,7 +29,7 @@ losses (see
 Fixed effects go to `$PARAM @annotated`, whose description records each
 one's bounds and whether it is fixed (`[0, Inf] fixed`), so nothing an
 estimation needs is lost;
-[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_mrgsolve.md)
+[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md)
 reads them back. A closed form is written as `$PKMODEL` with its `advan`
 and `trans`, an ODE model as `$CMT` and `$ODE`. The prediction is
 captured as `IPRED` and the observation as `Y`, with residual error over
@@ -41,19 +41,19 @@ initial values are recorded as lost.
 ## See also
 
 Other writers:
-[`pmx_write_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_nonmem.md),
-[`pmx_write_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_rxode2.md)
+[`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md),
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_rxode2.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "onecmt-oral", "model-rxode2.R",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 fun <- eval(parse(path))
 pmx_write_mrgsolve(pmx_read_rxode2(fun))
-#> $PROB zupkpmx model read from rxode2
+#> $PROB zufapmx model read from rxode2
 #> 
 #> $PARAM @annotated
 #> tka : 1 : [0, Inf]

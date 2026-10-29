@@ -1,16 +1,16 @@
-# zupkpmx
+# zufapmx
 
-The goal of zupkpmx is to …
+The goal of zufapmx is to …
 
 ## Installation
 
-You can install the development version of zupkpmx from
+You can install the development version of zufapmx from
 [GitHub](https://github.com/) with:
 
 ``` r
 
 # install.packages("pak")
-pak::pak("pedrobtz/zupkpmx")
+pak::pak("pedrobtz/zufapmx")
 ```
 
 ## Example
@@ -19,6 +19,6 @@ This is a basic example which shows you how to solve a common problem:
 
 ``` r
 
-library(zupkpmx)
+library(zufapmx)
 ## basic example code
 ```

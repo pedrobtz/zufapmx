@@ -18,10 +18,10 @@ pmx_read_rxode2(model)
 
 ## Value
 
-A `zupkpmx_model`; see
-[pmx_inspect](https://pedrobtz.github.io/zupkpmx/reference/pmx_inspect.md)
+A `zufapmx_model`; see
+[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
 and
-[`pmx_write_rxode2()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_write_rxode2.md).
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_rxode2.md).
 
 ## Details
 
@@ -32,7 +32,7 @@ blocks; statements built from the function table; `linCmt()`; `d/dt()`;
 `dur()` and initial amounts (`depot(0) <-`); time as `t` or `time`; and
 residual models `add()`, `prop()`, `add() + prop()`, `lnorm()` and
 `pow()` whose parameters are `ini()` parameters or `model()` variables.
-Anything else is refused with an error of class `zupkpmx_parse_error`.
+Anything else is refused with an error of class `zufapmx_parse_error`.
 
 Recorded as losses of the read: `label()`s, `description` and other
 top-level metadata such as `reference` or `units`, and `ini()` values
@@ -44,8 +44,8 @@ time is continuous; a `linCmt()` model refuses them.
 ## See also
 
 Other readers:
-[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_mrgsolve.md),
-[`pmx_read_nonmem()`](https://pedrobtz.github.io/zupkpmx/reference/pmx_read_nonmem.md)
+[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),
+[`pmx_read_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_nonmem.md)
 
 ## Examples
 
@@ -67,7 +67,7 @@ one_cmt <- function() {
   })
 }
 pmx_read_rxode2(one_cmt)
-#> <zupkpmx_model> read from rxode2
+#> <zufapmx_model> read from rxode2
 #> Structure: one-compartment closed form, first-order input (ADVAN2 TRANS2)
 #> Parameters: 4, initial values only
 #> Random effects: eta.cl on cl (exp)
