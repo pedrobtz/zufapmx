@@ -33,8 +33,11 @@ A construct that would change predictions is never dropped: the writer
 stops with an error of class \code{zupkpmx_write_error} instead.
 }
 \examples{
-corpus <- zupkpmx_corpus()
-fun <- eval(parse(file.path(corpus$path[[1]], "model-rxode2.R")))
+path <- system.file(
+  "corpus", "onecmt-oral", "model-rxode2.R",
+  package = "zupkpmx"
+)
+fun <- eval(parse(path))
 written <- pmx_write_rxode2(pmx_read_rxode2(fun))
 pmx_fidelity(written)
 pmx_losses(written)

@@ -9,10 +9,18 @@
 #' written `[ NAME ]`. Code is the C++ subset mrgsolve documents for models:
 #' declarations and assignments, `if`/`else`, arithmetic, comparisons,
 #' `exp()`, `log()`, `log10()`, `sqrt()`, `fabs()`, `pow()`, `fmin()`,
-#' `fmax()`, `ETA(n)`, `EPS(n)`, and the macros `dxdt_CMT`, `F_CMT`,
-#' `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything else, including
-#' `$GLOBAL`, `$PREAMBLE` and the `nm-vars` plugin, is refused with an error
-#' of class `zupkpmx_parse_error`.
+#' `fmax()`, `ETA(n)`, `EPS(n)`, `THETA(n)`, and the macros `dxdt_CMT`,
+#' `F_CMT`, `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything else,
+#' including `$GLOBAL`, `$PREAMBLE`, the `nm-vars` plugin, `int`
+#' declarations and integer division (`3/4`), is refused with an error of
+#' class `zupkpmx_parse_error`. `$PKMODEL` may take its parameters from
+#' `$PARAM` directly or from `$MAIN`.
+#'
+#' Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
+#' descriptions, and `$TABLE` outputs `Y` does not use. `TIME` and
+#' `SOLVERTIME` read as the representation's time, `t`. `$NMXML` and
+#' `$NMEXT` resolve a relative path against the working directory, or the
+#' model file's with `root = "cppfile"`, as mrgsolve does.
 #'
 #' The observation is `Y` in `$TABLE`, written over a prediction such as
 #' `IPRED`; its residual model is recognised as for NONMEM. An `@annotated`
@@ -21,13 +29,22 @@
 #' them.
 #'
 #' @param file Path to the model file.
-#' @return A `zupkpmx_model`.
+#' @return A `zupkpmx_model`; see [pmx_inspect] and [pmx_write_mrgsolve()].
+#' @family readers
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
-#' pmx_read_mrgsolve(file.path(corpus$path[[4]], "model.cpp"))
+#' path <- system.file(
+#'   "corpus", "twocmt-bolus", "model.cpp",
+#'   package = "zupkpmx"
+#' )
+#' pmx_read_mrgsolve(path)
 pmx_read_mrgsolve <- function(file) {
-  if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
+  if (
+    !is.character(file) ||
+      length(file) != 1 ||
+      !file.exists(file) ||
+      dir.exists(file)
+  ) {
     zupkpmx_abort("`file` must be the path of an existing file.", "model")
   }
   mrg_read(file)
@@ -66,7 +83,7 @@ mrg_split <- function(lines, file) {
       file,
       1L,
       1L,
-      seen = trimws(lines[[1]]),
+      seen = if (length(lines) > 0) trimws(lines[[1]]) else "an empty file",
       expected = "a $BLOCK",
       call = NULL
     )
@@ -104,21 +121,26 @@ mrg_split <- function(lines, file) {
 # Remove // and /* */ comments, keeping line numbers.
 mrg_strip_comments <- function(lines) {
   text <- paste(lines, collapse = "\n")
-  text <- gsub("/\\*.*?\\*/", "", text, perl = TRUE)
+  # A /* */ comment keeps its new lines, so later lines keep their numbers.
+  comments <- gregexpr("/\\*.*?\\*/", text, perl = TRUE)
+  regmatches(text, comments) <- lapply(regmatches(text, comments), function(m) {
+    gsub("[^\n]", "", m)
+  })
   out <- strsplit(text, "\n", fixed = TRUE)[[1]]
   out <- c(out, rep("", length(lines) - length(out)))
-  sub("//.*$", "", out)
+  # A // comment starts outside a string: a path such as "a//b" is kept.
+  sub('^((?:[^"/]|"[^"]*"|/(?!/))*)//.*$', "\\1", out, perl = TRUE)
 }
 
 mrg_read <- function(file) {
   blocks <- mrg_split(readLines(file, warn = FALSE), file)
-  names <- vapply(blocks, `[[`, character(1), "name")
-  block <- function(...) blocks[names %in% c(...)]
+  block_names <- vapply(blocks, `[[`, character(1), "name")
+  block <- function(...) blocks[block_names %in% c(...)]
   losses <- character()
-  if ("PROB" %in% names) {
+  if ("PROB" %in% block_names) {
     losses <- c(losses, "title ($PROB)")
   }
-  if ("SET" %in% names) {
+  if ("SET" %in% block_names) {
     losses <- c(losses, "simulation settings ($SET)")
   }
   for (b in block("PLUGIN")) {
@@ -144,61 +166,32 @@ mrg_read <- function(file) {
 
   params <- mrg_params(block("PARAM"), file)
   thetas <- mrg_thetas(block("THETA"), file)
-  omega <- mrg_matrix_blocks(block("OMEGA"), "ETA", file)
-  sigma <- mrg_matrix_blocks(block("SIGMA"), "EPS", file)
-  nm <- mrg_nonmem(block("NMXML", "NMEXT"), file)
-  if (!is.null(nm)) {
-    thetas <- rbind(thetas, nm$thetas)
-    omega <- c(omega, nm$omega)
-    sigma <- c(sigma, nm$sigma)
-  }
+  random <- mrg_random_effects(
+    block("OMEGA", "SIGMA", "NMXML", "NMEXT"),
+    thetas,
+    file
+  )
+  omega <- random$omega
+  sigma <- random$sigma
+  thetas <- random$thetas
+  estimates <- random$estimates
   parameters <- rbind(params$parameters, thetas)
   losses <- c(losses, params$losses)
 
-  pkmodel <- block("PKMODEL")
-  cmt_names <- unlist(lapply(block("CMT"), mrg_cmt_names))
-  closed <- NULL
-  if (length(pkmodel) > 0) {
-    closed <- mrg_pkmodel(pkmodel[[1]], file)
-    if (length(closed$cmt) == 0) {
-      closed$cmt <- cmt_names
-    }
-    canonical <- closed_compartments(closed$structure)
-    if (length(closed$cmt) != length(canonical)) {
-      parse_error(
-        file,
-        pkmodel[[1]]$line[[1]],
-        1L,
-        seen = paste(closed$cmt, collapse = " "),
-        expected = sprintf("%d compartments", length(canonical)),
-        call = NULL
-      )
-    }
-    rename <- stats::setNames(canonical, closed$cmt)
-    compartments <- canonical
-  } else {
-    if (length(cmt_names) == 0) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = "end of file",
-        expected = "$CMT or $PKMODEL",
-        call = NULL
-      )
-    }
-    rename <- character()
-    compartments <- cmt_names
-  }
+  layout <- mrg_compartments(block("PKMODEL"), block("CMT"), file)
+  closed <- layout$closed
+  rename <- layout$rename
+  compartments <- layout$compartments
   code <- function(...) {
     stmts <- unlist(
-      lapply(block(...), mrg_code, file = file),
+      lapply(block(...), cpp_parse, file = file),
       recursive = FALSE
     )
-    lapply(stmts, rename_symbols, map = rename)
+    # TIME and SOLVERTIME are the representation's time, t (D15).
+    lapply(stmts, rename_symbols, map = c(rename, TIME = "t", SOLVERTIME = "t"))
   }
 
-  main <- mrg_main(code("MAIN", "PK"), compartments, file)
+  main <- mrg_main(code("MAIN", "PK"), compartments, rename, file)
   init <- mrg_init(block("INIT"), file)
   for (cmt in names(init)) {
     target <- rename[cmt] %|NA|% cmt
@@ -211,17 +204,33 @@ mrg_read <- function(file) {
     structure <- nm_closed_structure(
       list(advan = closed$structure$advan, trans = closed$structure$trans),
       nm_closed[[as.character(closed$structure$advan)]],
-      main$individual,
+      # mrgsolve's usual idiom is $PKMODEL over $PARAM names directly.
+      c(stmt_targets(main$individual), parameters$name),
       file
     )
   } else {
-    structure <- mrg_ode(code("ODE", "DES"), compartments, file)
+    structure <- split_ode(
+      code("ODE", "DES"),
+      compartments,
+      mrg_derivative(compartments, file),
+      file,
+      "$ODE"
+    )
   }
-  table <- mrg_table(code("TABLE", "ERROR"), block("CAPTURE"), file)
+  captured <- unlist(lapply(block("CAPTURE"), function(b) {
+    strsplit(trimws(paste(b$lines, collapse = " ")), "[[:space:],]+")[[1]]
+  }))
+  table <- read_observation(
+    code("TABLE", "ERROR"),
+    file,
+    "$TABLE",
+    outputs = captured
+  )
   losses <- c(losses, table$losses)
 
   parameters$role <- infer_roles(parameters$name, main$individual, structure)
-  new_model(
+  read_model(
+    file,
     parameters = parameters,
     random_effects = list(
       omega = omega,
@@ -245,7 +254,7 @@ mrg_read <- function(file) {
     provenance = list(
       format = "mrgsolve",
       file = normalizePath(file),
-      estimates = if (is.null(nm)) NA_character_ else nm$path,
+      estimates = estimates,
       hash = unname(tools::md5sum(file)),
       fidelity = if (length(losses) == 0) "exact" else "lossy",
       losses = unique(losses)
@@ -283,20 +292,43 @@ mrg_params <- function(blocks, file) {
         if (nzchar(text) && length(bounds) == 0 && !grepl("^fixed$", text)) {
           losses <- c(losses, "parameter descriptions")
         }
+        if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", parts[[1]])) {
+          parse_error(
+            file,
+            b$line[[k]],
+            1L,
+            seen = parts[[1]],
+            expected = "a parameter name",
+            call = NULL
+          )
+        }
+        init <- mrg_number(parts[[2]], file, b$line[[k]])
+        values <- if (length(bounds) == 3) {
+          c(
+            mrg_number(bounds[[2]], file, b$line[[k]]),
+            init,
+            mrg_number(bounds[[3]], file, b$line[[k]])
+          )
+        } else {
+          init
+        }
+        checked <- read_bounds(values)
+        if (is.null(checked)) {
+          parse_error(
+            file,
+            b$line[[k]],
+            1L,
+            seen = line,
+            expected = "lower <= value <= upper",
+            call = NULL
+          )
+        }
         rows[[length(rows) + 1]] <- data.frame(
           name = parts[[1]],
           role = "other",
-          init = mrg_number(parts[[2]], file, b$line[[k]]),
-          lower = if (length(bounds) == 3) {
-            mrg_number(bounds[[2]], file, b$line[[k]])
-          } else {
-            -Inf
-          },
-          upper = if (length(bounds) == 3) {
-            mrg_number(bounds[[3]], file, b$line[[k]])
-          } else {
-            Inf
-          },
+          init = checked$init,
+          lower = checked$lower,
+          upper = checked$upper,
           fixed = grepl("\\bfixed\\b", text),
           estimate = NA_real_
         )
@@ -508,8 +540,18 @@ mrg_pkmodel <- function(b, file) {
     advan <- as.integer(args$advan)
   } else {
     ncmt <- as.integer(args$ncmt %||% 1L)
+    if (is.na(ncmt) || !ncmt %in% 1:3) {
+      parse_error(
+        file,
+        b$line[[1]],
+        1L,
+        seen = sprintf("ncmt = %s", args$ncmt),
+        expected = "ncmt 1, 2 or 3",
+        call = NULL
+      )
+    }
     depot <- isTRUE(args$depot)
-    advan <- if (depot) c(2L, 4L, 12L)[[ncmt]] else c(1L, 3L, 11L)[[ncmt]]
+    advan <- closed_advan(ncmt, depot)
   }
   closed <- nm_closed[[as.character(advan)]]
   if (is.null(closed)) {
@@ -560,155 +602,9 @@ mrg_pkmodel <- function(b, file) {
   )
 }
 
-# $MAIN: individual statements and the dosing macros.
-mrg_main <- function(stmts, compartments, file) {
-  dosing <- list()
-  individual <- list()
-  macros <- c(F = "bioavailability", ALAG = "lag", R = "rate", D = "duration")
-  for (x in stmts) {
-    target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
-    m <- regmatches(target, regexec("^(F|ALAG|R|D)_(.+)$", target))[[1]]
-    init <- regmatches(target, regexec("^(.+)_0$", target))[[1]]
-    if (length(m) == 3 && m[[3]] %in% compartments) {
-      dosing[[m[[3]]]] <- c(
-        dosing[[m[[3]]]],
-        stats::setNames(list(x[[3]]), macros[[m[[2]]]])
-      )
-    } else if (length(init) == 2 && init[[2]] %in% compartments) {
-      dosing[[init[[2]]]] <- c(dosing[[init[[2]]]], list(initial = x[[3]]))
-    } else {
-      individual[[length(individual) + 1]] <- x
-    }
-  }
-  list(individual = individual, dosing = dosing)
-}
-
-mrg_ode <- function(stmts, compartments, file) {
-  derivatives <- list()
-  statements <- list()
-  for (x in stmts) {
-    target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
-    if (startsWith(target, "dxdt_")) {
-      cmt <- sub("^dxdt_", "", target)
-      if (!cmt %in% compartments) {
-        parse_error(
-          file,
-          NA_integer_,
-          NA_integer_,
-          seen = target,
-          expected = "dxdt_ of a compartment",
-          call = NULL
-        )
-      }
-      derivatives[[cmt]] <- x[[3]]
-    } else {
-      statements[[length(statements) + 1]] <- x
-    }
-  }
-  missing <- setdiff(compartments, names(derivatives))
-  if (length(missing) > 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$ODE",
-      expected = sprintf("dxdt_%s", missing[[1]]),
-      call = NULL
-    )
-  }
-  list(
-    type = "ode",
-    compartments = compartments,
-    statements = statements,
-    derivatives = derivatives[compartments]
-  )
-}
-
-# $TABLE: Y over a prediction. The prediction is the variable Y reads that
-# $TABLE defines without an epsilon.
-mrg_table <- function(stmts, capture, file) {
-  defs <- list()
-  for (x in stmts) {
-    if (!is_call(x, "<-")) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = expr_text(x),
-        expected = "assignments in $TABLE",
-        call = NULL
-      )
-    }
-    defs[[as.character(x[[2]])]] <- x[[3]]
-  }
-  if (is.null(defs$Y)) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$TABLE",
-      expected = "Y = ... with EPS(n)",
-      call = NULL
-    )
-  }
-  has_eps <- function(e) any(grepl("^EPS[0-9]+$", all.vars(e)))
-  pred <- Filter(
-    function(v) v %in% names(defs) && !has_eps(defs[[v]]),
-    all.vars(defs$Y)
-  )
-  if (length(pred) == 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = expr_text(defs$Y),
-      expected = "Y over a prediction defined in $TABLE",
-      call = NULL
-    )
-  }
-  pred <- pred[[1]]
-  used <- c("Y", pred)
-  subst <- function(e) {
-    if (is.symbol(e)) {
-      name <- as.character(e)
-      if (name == pred) {
-        return(quote(F))
-      }
-      if (name %in% names(defs)) {
-        used <<- union(used, name)
-        return(call("(", subst(defs[[name]])))
-      }
-      return(e)
-    }
-    if (is.call(e)) {
-      e[-1] <- lapply(as.list(e)[-1], subst)
-    }
-    e
-  }
-  expr <- subst(defs$Y)
-  captured <- unlist(lapply(capture, function(b) {
-    strsplit(trimws(paste(b$lines, collapse = " ")), "[[:space:],]+")[[1]]
-  }))
-  outputs <- setdiff(c(names(defs), captured), used)
-  list(
-    prediction = defs[[pred]],
-    residual = nm_residual(strip_parens(expr), expr),
-    losses = if (length(outputs) > 0) {
-      sprintf(
-        "$TABLE outputs not used by Y: %s",
-        paste(unique(outputs), collapse = ", ")
-      )
-    }
-  )
-}
-
 # $NMXML or $NMEXT: thetas, omega and sigma from a NONMEM run, as
 # parameters (THETA1, ...) and blocks whose values are the estimates.
-mrg_nonmem <- function(blocks, file) {
-  if (length(blocks) == 0) {
-    return(NULL)
-  }
-  b <- blocks[[1]]
+mrg_nonmem <- function(b, file) {
   args <- tryCatch(
     as.list(str2lang(sprintf("list(%s)", paste(b$lines, collapse = " "))))[-1],
     error = function(e) NULL
@@ -738,8 +634,11 @@ mrg_nonmem <- function(blocks, file) {
       call = NULL
     )
   }
-  if (!grepl("^/", path)) {
-    path <- file.path(dirname(file), path)
+  # mrgsolve resolves a relative path against the working directory, or
+  # against the model file's directory with root = "cppfile".
+  if (!grepl("^(/|~|[A-Za-z]:[/\\\\])", path)) {
+    root <- if (identical(args$root, "cppfile")) dirname(file) else getwd()
+    path <- file.path(root, path)
   }
   if (!file.exists(path)) {
     zupkpmx_abort(sprintf("No NONMEM output at `%s`.", path), "model")
@@ -752,7 +651,7 @@ mrg_nonmem <- function(blocks, file) {
   } else {
     nm_estimates_ext(path)
   }
-  split <- function(full, prefix) {
+  as_blocks <- function(full, prefix) {
     n <- nrow(full)
     names <- paste0(prefix, seq_len(n))
     dimnames(full) <- list(names, names)
@@ -775,7 +674,147 @@ mrg_nonmem <- function(blocks, file) {
       fixed = FALSE,
       estimate = unname(est$theta)
     ),
-    omega = split(est$omega, "ETA"),
-    sigma = split(est$sigma, "EPS")
+    omega = as_blocks(est$omega, "ETA"),
+    sigma = as_blocks(est$sigma, "EPS")
   )
+}
+
+# $MAIN: individual statements and the dosing macros. Macros name
+# compartments as the file does (`F_GUT`); `rename` maps those names to the
+# representation's (a closed form's `depot`).
+mrg_main <- function(stmts, compartments, rename, file) {
+  dosing <- list()
+  individual <- list()
+  macros <- c(F = "bioavailability", ALAG = "lag", R = "rate", D = "duration")
+  file_names <- c(names(rename), setdiff(compartments, rename))
+  to_model <- function(cmt) rename[cmt] %|NA|% cmt
+  for (x in stmts) {
+    target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
+    m <- regmatches(target, regexec("^(F|ALAG|R|D)_(.+)$", target))[[1]]
+    init <- regmatches(target, regexec("^(.+)_0$", target))[[1]]
+    if (length(m) == 3 && m[[3]] %in% file_names) {
+      cmt <- to_model(m[[3]])
+      dosing[[cmt]] <- c(
+        dosing[[cmt]],
+        stats::setNames(list(x[[3]]), macros[[m[[2]]]])
+      )
+    } else if (length(init) == 2 && init[[2]] %in% file_names) {
+      cmt <- to_model(init[[2]])
+      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
+    } else {
+      individual[[length(individual) + 1]] <- x
+    }
+  }
+  pattern <- sprintf(
+    "^(F|ALAG|R|D)_(%s)$|^(%s)_0$",
+    paste(file_names, collapse = "|"),
+    paste(file_names, collapse = "|")
+  )
+  check_dosing_names(individual, function(n) grepl(pattern, n), file, "$MAIN")
+  list(individual = individual, dosing = dosing)
+}
+
+# $ODE's dxdt_CMT names compartment CMT.
+mrg_derivative <- function(compartments, file) {
+  function(x) {
+    target <- as.character(x[[2]])
+    if (!startsWith(target, "dxdt_")) {
+      return(NULL)
+    }
+    cmt <- sub("^dxdt_", "", target)
+    if (!cmt %in% compartments) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = target,
+        expected = "dxdt_ of a compartment",
+        call = NULL
+      )
+    }
+    cmt
+  }
+}
+
+# Random effects in file order: $OMEGA and $SIGMA blocks, and the matrices
+# a $NMXML or $NMEXT imports where it stands; its thetas replace $THETA's.
+# ETA(n) and EPS(n) count positions, so names are given once all are in.
+mrg_random_effects <- function(blocks, thetas, file) {
+  omega <- list()
+  sigma <- list()
+  nm <- NULL
+  for (b in blocks) {
+    if (b$name == "OMEGA") {
+      omega <- c(omega, mrg_matrix_blocks(list(b), "ETA", file))
+    } else if (b$name == "SIGMA") {
+      sigma <- c(sigma, mrg_matrix_blocks(list(b), "EPS", file))
+    } else {
+      if (!is.null(nm) || nrow(thetas) > 0) {
+        parse_error(
+          file,
+          b$line[[1]],
+          1L,
+          seen = paste0("$", b$name),
+          expected = "one source of THETA1, ...: $THETA or one $NMXML/$NMEXT",
+          call = NULL
+        )
+      }
+      nm <- mrg_nonmem(b, file)
+      omega <- c(omega, nm$omega)
+      sigma <- c(sigma, nm$sigma)
+    }
+  }
+  list(
+    omega = renumber_blocks(omega, "ETA"),
+    sigma = renumber_blocks(sigma, "EPS"),
+    thetas = if (is.null(nm)) thetas else nm$thetas,
+    estimates = if (is.null(nm)) NA_character_ else nm$path
+  )
+}
+
+# The compartments: a $PKMODEL's canonical ones, with `rename` from the
+# file's names (DEPOT CENT) to them, or an ODE model's $CMT.
+mrg_compartments <- function(pkmodel, cmt, file) {
+  cmt_names <- unlist(lapply(cmt, mrg_cmt_names))
+  closed <- NULL
+  if (length(pkmodel) > 0) {
+    closed <- mrg_pkmodel(pkmodel[[1]], file)
+    if (length(closed$cmt) == 0) {
+      closed$cmt <- cmt_names
+    }
+    canonical <- closed_compartments(closed$structure)
+    if (length(closed$cmt) != length(canonical)) {
+      parse_error(
+        file,
+        pkmodel[[1]]$line[[1]],
+        1L,
+        seen = if (length(closed$cmt) == 0) {
+          "no compartment names"
+        } else {
+          paste(closed$cmt, collapse = " ")
+        },
+        expected = sprintf(
+          "%d compartment names, in `cmt =` or $CMT",
+          length(canonical)
+        ),
+        call = NULL
+      )
+    }
+    rename <- stats::setNames(canonical, closed$cmt)
+    compartments <- canonical
+  } else {
+    if (length(cmt_names) == 0) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = "end of file",
+        expected = "$CMT or $PKMODEL",
+        call = NULL
+      )
+    }
+    rename <- character()
+    compartments <- cmt_names
+  }
+  list(closed = closed, rename = rename, compartments = compartments)
 }

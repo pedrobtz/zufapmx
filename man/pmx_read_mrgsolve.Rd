@@ -10,7 +10,7 @@ pmx_read_mrgsolve(file)
 \item{file}{Path to the model file.}
 }
 \value{
-A \code{zupkpmx_model}.
+A \code{zupkpmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}}.
 }
 \description{
 Reads an mrgsolve model file (\code{.cpp}) into the package's representation.
@@ -23,10 +23,18 @@ The reader covers \verb{$PROB}, \verb{$PARAM} (plain or \verb{@annotated}), \ver
 written \verb{[ NAME ]}. Code is the C++ subset mrgsolve documents for models:
 declarations and assignments, \code{if}/\verb{else}, arithmetic, comparisons,
 \code{exp()}, \code{log()}, \code{log10()}, \code{sqrt()}, \code{fabs()}, \code{pow()}, \code{fmin()},
-\code{fmax()}, \code{ETA(n)}, \code{EPS(n)}, and the macros \code{dxdt_CMT}, \code{F_CMT},
-\code{ALAG_CMT}, \code{R_CMT}, \code{D_CMT} and \code{CMT_0}. Anything else, including
-\verb{$GLOBAL}, \verb{$PREAMBLE} and the \code{nm-vars} plugin, is refused with an error
-of class \code{zupkpmx_parse_error}.
+\code{fmax()}, \code{ETA(n)}, \code{EPS(n)}, \code{THETA(n)}, and the macros \code{dxdt_CMT},
+\code{F_CMT}, \code{ALAG_CMT}, \code{R_CMT}, \code{D_CMT} and \code{CMT_0}. Anything else,
+including \verb{$GLOBAL}, \verb{$PREAMBLE}, the \code{nm-vars} plugin, \code{int}
+declarations and integer division (\code{3/4}), is refused with an error of
+class \code{zupkpmx_parse_error}. \verb{$PKMODEL} may take its parameters from
+\verb{$PARAM} directly or from \verb{$MAIN}.
+
+Recorded as losses of the read: the title, \verb{$PLUGIN}, \verb{$SET}, \verb{$PARAM}
+descriptions, and \verb{$TABLE} outputs \code{Y} does not use. \code{TIME} and
+\code{SOLVERTIME} read as the representation's time, \code{t}. \verb{$NMXML} and
+\verb{$NMEXT} resolve a relative path against the working directory, or the
+model file's with \code{root = "cppfile"}, as mrgsolve does.
 
 The observation is \code{Y} in \verb{$TABLE}, written over a prediction such as
 \code{IPRED}; its residual model is recognised as for NONMEM. An \verb{@annotated}
@@ -35,6 +43,15 @@ by \code{fixed}, gives a parameter's bounds, as \code{\link[=pmx_write_mrgsolve]
 them.
 }
 \examples{
-corpus <- zupkpmx_corpus()
-pmx_read_mrgsolve(file.path(corpus$path[[4]], "model.cpp"))
+path <- system.file(
+  "corpus", "twocmt-bolus", "model.cpp",
+  package = "zupkpmx"
+)
+pmx_read_mrgsolve(path)
 }
+\seealso{
+Other readers:
+\code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}},
+\code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}}
+}
+\concept{readers}

@@ -93,9 +93,8 @@ corpus_read_entry <- function(dir) {
   )
 }
 
-# The Stage 1 standard design: one 100-unit dose at time 0 by the entry's
-# regimen, and typical-subject predictions at fixed times. pmx_design()
-# grows from this.
+# The design of the corpus's expected predictions: one 100-unit dose at
+# time 0 by the entry's regimen, observed at fixed times.
 corpus_design <- function(regimen) {
   regimens <- c("bolus", "oral", "infusion")
   if (!regimen %in% regimens) {

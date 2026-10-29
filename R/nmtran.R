@@ -4,6 +4,7 @@
 # symbols, `THETA(1)` as `THETA1`, `ETA(1)` as `ETA1`, `EPS(1)` as `EPS1`.
 
 nm_records <- c(
+  "SIZES",
   "PROBLEM",
   "INPUT",
   "DATA",
@@ -48,7 +49,7 @@ nm_split <- function(lines, file) {
       file,
       1L,
       1L,
-      seen = trimws(lines[[1]]),
+      seen = if (length(lines) > 0) trimws(lines[[1]]) else "an empty file",
       expected = "$PROBLEM",
       call = NULL
     )
@@ -58,11 +59,14 @@ nm_split <- function(lines, file) {
     at <- starts[[i]]:ends[[i]]
     first <- sub("^\\s*\\$", "", code[[starts[[i]]]])
     word <- toupper(regmatches(first, regexpr("^[A-Za-z]+", first)))
-    name <- nm_records[
-      startsWith(nm_records, word) & nchar(word) >= min(3, nchar(word))
-    ]
-    if (word %in% c("PK", "DES")) {
-      name <- word
+    # NM-TRAN accepts a record name abbreviated to three letters or more;
+    # $PK and $DES are whole names.
+    name <- if (word %in% c("PK", "DES")) {
+      word
+    } else if (nchar(word) >= 3) {
+      nm_records[startsWith(nm_records, word)]
+    } else {
+      character()
     }
     if (length(name) != 1) {
       parse_error(
@@ -70,109 +74,62 @@ nm_split <- function(lines, file) {
         starts[[i]],
         1L,
         seen = paste0("$", word),
-        expected = "a supported record",
+        expected = if (length(name) > 1) {
+          sprintf(
+            "one of %s, not an ambiguous abbreviation",
+            paste0("$", name, collapse = ", ")
+          )
+        } else {
+          "a supported record"
+        },
         call = NULL
       )
     }
     text <- code[at]
     text[[1]] <- sub("^\\s*\\$[A-Za-z]+", "", text[[1]])
-    list(name = name, lines = text, line = at)
+    # Options such as $ERROR (ONLY OBSERVATIONS) say when the record runs,
+    # not what it computes.
+    options <- character()
+    if (name %in% c("PK", "DES", "ERROR")) {
+      options <- regmatches(text[[1]], regexpr("^\\s*\\([^)]*\\)", text[[1]]))
+      text[[1]] <- sub("^\\s*\\([^)]*\\)", "", text[[1]])
+    }
+    list(name = name, lines = text, line = at, options = trimws(options))
   })
   list(records = records, comments = any(comments))
 }
 
 # Tokens of one line: a list of list(type, value, column).
 nm_tokenize <- function(text, line, file) {
-  tokens <- list()
-  pos <- 1L
-  n <- nchar(text)
-  patterns <- c(
-    space = "^\\s+",
-    dotop = "^\\.(EQ|NE|LT|LE|GT|GE|AND|OR|NOT)\\.",
-    number = "^([0-9]+(\\.(?![A-Za-z]{2,3}\\.)[0-9]*)?|\\.[0-9]+)([EeDd][+-]?[0-9]+)?",
-    name = "^[A-Za-z_][A-Za-z0-9_]*",
-    op = "^(\\*\\*|==|/=|<=|>=|[-+*/()=<>,])"
+  tokenize(
+    text,
+    line,
+    c(
+      space = "^\\s+",
+      dotop = "(?i)^\\.(EQ|NE|LT|LE|GT|GE|AND|OR|NOT)\\.",
+      number = "^([0-9]+(\\.(?![A-Za-z]{2,3}\\.)[0-9]*)?|\\.[0-9]+)([EeDd][+-]?[0-9]+)?",
+      name = "^[A-Za-z_][A-Za-z0-9_]*",
+      op = "^(\\*\\*|==|/=|<=|>=|[-+*/()=<>,])"
+    ),
+    file,
+    "an operator, a name or a number",
+    upper = c("dotop", "name")
   )
-  while (pos <= n) {
-    rest <- substr(text, pos, n)
-    matched <- FALSE
-    for (type in names(patterns)) {
-      m <- regmatches(
-        rest,
-        regexpr(
-          patterns[[type]],
-          rest,
-          perl = TRUE,
-          ignore.case = type == "dotop"
-        )
-      )
-      if (length(m) == 1 && nzchar(m)) {
-        if (type != "space") {
-          value <- if (type == "dotop") toupper(m) else m
-          tokens[[length(tokens) + 1]] <- list(
-            type = type,
-            value = value,
-            column = pos
-          )
-        }
-        pos <- pos + nchar(m)
-        matched <- TRUE
-        break
-      }
-    }
-    if (!matched) {
-      parse_error(
-        file,
-        line,
-        pos,
-        seen = substr(rest, 1, 1),
-        expected = "an operator, a name or a number",
-        call = NULL
-      )
-    }
-  }
-  tokens
 }
 
 # A parser over one line's tokens. `cmt` maps a compartment number to its
 # name, for `A(n)`.
 nm_parser <- function(tokens, line, file, cmt) {
-  i <- 1L
-  peek <- function(k = 0L) if (i + k <= length(tokens)) tokens[[i + k]]
-  is <- function(value, k = 0L) {
-    t <- peek(k)
-    !is.null(t) && toupper(t$value) %in% value
-  }
-  fail <- function(expected) {
-    t <- peek()
-    parse_error(
-      file,
-      line,
-      if (is.null(t)) NA_integer_ else t$column,
-      seen = if (is.null(t)) "end of line" else t$value,
-      expected = expected,
-      call = NULL
-    )
-  }
-  take <- function(value = NULL) {
-    t <- peek()
-    if (is.null(t) || (!is.null(value) && !toupper(t$value) %in% value)) {
-      fail(if (is.null(value)) "more input" else value)
-    }
-    i <<- i + 1L
-    t
-  }
-  binary <- function(next_level, ops, map = NULL) {
-    function() {
-      left <- next_level()
-      while (is(ops)) {
-        op <- toupper(take()$value)
-        r_op <- if (is.null(map)) op else map[[op]]
-        left <- call(r_op, left, next_level())
-      }
-      left
-    }
-  }
+  s <- token_stream(
+    tokens,
+    file,
+    end = list(value = "end of line", line = line)
+  )
+  peek <- s$peek
+  at <- s$at
+  take <- s$take
+  fail <- s$fail
+  binary <- s$binary
 
   compare_map <- c(
     `.EQ.` = "==",
@@ -190,42 +147,47 @@ nm_parser <- function(tokens, line, file, cmt) {
   )
 
   primary <- function() {
-    t <- peek()
-    if (is.null(t)) {
+    tok <- peek()
+    if (is.null(tok)) {
       fail("an expression")
     }
-    if (t$type == "number") {
+    if (tok$type == "number") {
       take()
-      return(as.numeric(sub("[Dd]", "E", t$value)))
+      return(as.numeric(sub("[Dd]", "E", tok$value)))
     }
-    if (t$value == "(") {
+    if (tok$value == "(") {
       take()
       inner <- or_expr()
       take(")")
       return(call("(", inner))
     }
-    if (t$type != "name") {
+    if (tok$type != "name") {
       fail("an expression")
     }
-    name <- toupper(take()$value)
-    if (!is("(")) {
-      return(as.symbol(t$value))
+    name <- take()$value
+    if (!at("(")) {
+      return(as.symbol(tok$value))
     }
     take("(")
     args <- list(or_expr())
-    while (is(",")) {
+    while (at(",")) {
       take()
       args[[length(args) + 1]] <- or_expr()
     }
     take(")")
     index <- function() {
-      if (length(args) != 1 || !is.numeric(args[[1]])) {
+      if (
+        length(args) != 1 ||
+          !is.numeric(args[[1]]) ||
+          args[[1]] != round(args[[1]]) ||
+          args[[1]] < 1
+      ) {
         parse_error(
           file,
           line,
-          t$column,
+          tok$column,
           seen = name,
-          expected = sprintf("%s(n)", name),
+          expected = sprintf("%s(n) with a whole number n", name),
           call = NULL
         )
       }
@@ -237,14 +199,14 @@ nm_parser <- function(tokens, line, file, cmt) {
       ETA = as.symbol(paste0("ETA", index())),
       EPS = ,
       ERR = as.symbol(paste0("EPS", index())),
-      A = as.symbol(cmt(index(), t$column)),
+      A = as.symbol(cmt(index(), line, tok$column)),
       if (name %in% names(nm_functions) && length(args) == 1) {
         as.call(c(as.symbol(nm_functions[[name]]), args))
       } else {
         parse_error(
           file,
           line,
-          t$column,
+          tok$column,
           seen = name,
           expected = "a function of the table",
           call = NULL
@@ -253,14 +215,14 @@ nm_parser <- function(tokens, line, file, cmt) {
     )
   }
   unary <- function() {
-    if (is(c("-", "+"))) {
+    if (at(c("-", "+"))) {
       return(call(take()$value, unary()))
     }
     power()
   }
   power <- function() {
     base <- primary()
-    if (is("**")) {
+    if (at("**")) {
       take()
       return(call("^", base, unary()))
     }
@@ -270,14 +232,14 @@ nm_parser <- function(tokens, line, file, cmt) {
   additive <- binary(multiplicative, c("+", "-"))
   comparison <- function() {
     left <- additive()
-    if (is(names(compare_map))) {
-      op <- compare_map[[toupper(take()$value)]]
+    if (at(names(compare_map))) {
+      op <- compare_map[[take()$value]]
       left <- call(op, left, additive())
     }
     left
   }
   not_expr <- function() {
-    if (is(".NOT.")) {
+    if (at(".NOT.")) {
       take()
       return(call("!", not_expr()))
     }
@@ -288,12 +250,12 @@ nm_parser <- function(tokens, line, file, cmt) {
 
   list(
     peek = peek,
-    is = is,
+    at = at,
     take = take,
     fail = fail,
     expr = or_expr,
-    done = function() i > length(tokens),
-    expect_end = function() if (i <= length(tokens)) fail("end of line")
+    done = s$done,
+    expect_end = s$expect_end
   )
 }
 
@@ -333,9 +295,9 @@ nm_code <- function(record, file, cmt) {
     }
     p <- nm_parser(nm_tokenize(text, line, file), line, file, cmt)
 
-    if (p$is(c("ENDIF", "END"))) {
+    if (p$at(c("ENDIF", "END"))) {
       p$take()
-      if (p$is("IF")) {
+      if (p$at("IF")) {
         p$take()
       }
       p$expect_end()
@@ -347,13 +309,13 @@ nm_code <- function(record, file, cmt) {
       push(nm_if_chain(frame))
       next
     }
-    if (p$is("ELSE")) {
+    if (p$at("ELSE")) {
       p$take()
       if (length(stack) == 0) {
         p$fail("a statement")
       }
       top <- length(stack)
-      if (p$is("IF")) {
+      if (p$at("IF")) {
         p$take()
         p$take("(")
         cond <- p$expr()
@@ -366,12 +328,12 @@ nm_code <- function(record, file, cmt) {
       stack[[top]]$bodies[[stack[[top]]$branch]] <- list()
       next
     }
-    if (p$is("IF") && p$is("(", 1L)) {
+    if (p$at("IF") && p$at("(", 1L)) {
       p$take()
       p$take("(")
       cond <- p$expr()
       p$take(")")
-      if (p$is("THEN")) {
+      if (p$at("THEN")) {
         p$take()
         p$expect_end()
         stack[[length(stack) + 1]] <- list(
@@ -397,20 +359,21 @@ nm_code <- function(record, file, cmt) {
       call = NULL
     )
   }
-  out
+  # T ($DES) and TIME (data) are the representation's time, t (D15).
+  lapply(out, rename_symbols, map = c(T = "t", TIME = "t"))
 }
 
 nm_assignment <- function(p, file, line) {
-  t <- p$peek()
-  if (is.null(t) || t$type != "name") {
+  tok <- p$peek()
+  if (is.null(tok) || tok$type != "name") {
     p$fail("a statement")
   }
-  name <- toupper(t$value)
+  name <- toupper(tok$value)
   if (name %in% c("CALL", "EXIT", "RETURN")) {
     p$fail("a statement of abbreviated code")
   }
   p$take()
-  target <- if (p$is("(")) {
+  target <- if (p$at("(")) {
     p$take("(")
     n <- p$take()
     p$take(")")
@@ -418,7 +381,7 @@ nm_assignment <- function(p, file, line) {
       parse_error(
         file,
         line,
-        t$column,
+        tok$column,
         seen = name,
         expected = "DADT(n) or A_0(n)",
         call = NULL
@@ -426,7 +389,7 @@ nm_assignment <- function(p, file, line) {
     }
     call(name, as.integer(n$value))
   } else {
-    as.symbol(t$value)
+    as.symbol(tok$value)
   }
   p$take("=")
   value <- p$expr()

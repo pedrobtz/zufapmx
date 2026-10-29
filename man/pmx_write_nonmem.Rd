@@ -14,7 +14,9 @@ them, and its initial values elsewhere; \code{"initial"} writes initial
 values. Whichever of the two is not written is recorded as lost.}
 }
 \value{
-A written model: the text as lines, its fidelity and its losses.
+A \code{zupkpmx_written} object: the text as lines, with its fidelity
+and losses (see \code{\link[=pmx_fidelity]{pmx_fidelity()}}). \code{format()} and \code{as.character()}
+give the text.
 }
 \description{
 Prints a model as an NM-TRAN control stream with its fidelity (see
@@ -32,7 +34,16 @@ variances: the same model, parameterised as NONMEM parameterises it.
 \verb{$ESTIMATION} is written: the representation holds neither.
 }
 \examples{
-corpus <- zupkpmx_corpus()
-fun <- eval(parse(file.path(corpus$path[[1]], "model-rxode2.R")))
+path <- system.file(
+  "corpus", "onecmt-oral", "model-rxode2.R",
+  package = "zupkpmx"
+)
+fun <- eval(parse(path))
 pmx_write_nonmem(pmx_read_rxode2(fun))
 }
+\seealso{
+Other writers:
+\code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}},
+\code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}
+}
+\concept{writers}

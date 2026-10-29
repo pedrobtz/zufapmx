@@ -125,7 +125,9 @@ test_that("dosing attributes and IF blocks in $PK read", {
     unclass(m)$dosing$depot,
     list(lag = quote(THETA1 / 10), bioavailability = 0.8)
   )
-  expect_true(is_call(unclass(m)$individual[[4]], "if"))
+  expect_equal(unclass(m)$individual[[4]], quote(WTF <- 0))
+  expect_true(is_call(unclass(m)$individual[[5]], "if"))
+  expect_true(any(grepl("D14", unclass(m)$provenance$losses)))
 })
 
 test_that("unsupported control streams are refused with a position", {
@@ -150,7 +152,7 @@ test_that("unsupported control streams are refused with a position", {
 })
 
 test_that("an ODE model needs a derivative for every compartment", {
-  lines <- readLines(file.path(zupkpmx_corpus()$path[[2]], "model.ctl"))
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   expect_error(
     read_ctl(lines[!grepl("DADT\\(2\\)", lines)]),
     class = "zupkpmx_parse_error"
@@ -192,11 +194,82 @@ test_that("auto falls back to .ext without zuxml", {
 })
 
 test_that("auto reads no estimates when there are no output files", {
-  m <- pmx_read_nonmem(file.path(zupkpmx_corpus()$path[[1]], "model.ctl"))
+  m <- pmx_read_nonmem(corpus_file("onecmt-oral", "model.ctl"))
 
   expect_true(all(is.na(pmx_parameters(m)$estimate)))
   expect_error(
-    pmx_read_nonmem(file.path(zupkpmx_corpus()$path[[1]], "model.ctl"), "ext"),
+    pmx_read_nonmem(corpus_file("onecmt-oral", "model.ctl"), "ext"),
     class = "zupkpmx_model_error"
   )
+})
+
+test_that("dosing and scale assignments inside IF, or read as variables, are refused", {
+  refused <- function(pk) {
+    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zupkpmx_parse_error")
+  }
+
+  refused("IF (KA.GT.0) F1 = 0.5")
+  refused(c("IF (V.GT.0) THEN", "S2 = V", "ENDIF"))
+  refused(c("F1 = THETA(1)", "X = F1 * 2"))
+  refused("A_0(5) = 1")
+})
+
+test_that("$ERROR uses the definitions in force where Y is assigned", {
+  m <- read_ctl(ctl_onecmt(
+    error = c("IPRED = F", "Y = IPRED * (1 + EPS(1))", "IPRED = 0")
+  ))
+
+  expect_equal(
+    unclass(m)$observations$Y$residual,
+    list(type = "proportional", parameters = "EPS1")
+  )
+})
+
+test_that("$SIZES and $ERROR (ONLY OBSERVATIONS) are read as losses", {
+  lines <- ctl_onecmt()
+  lines <- c(
+    "$SIZES PD=50",
+    sub("^\\$ERROR$", "$ERROR (ONLY OBSERVATIONS)", lines)
+  )
+  m <- read_ctl(lines)
+  losses <- unclass(m)$provenance$losses
+
+  expect_true("array sizes ($SIZES)" %in% losses)
+  expect_true("record options ($ERROR (ONLY OBSERVATIONS))" %in% losses)
+})
+
+test_that("estimate matrices keep their orientation from every source", {
+  omega <- matrix(
+    c(0.11, 0.012, 0.023, 0.012, 0.21, 0.034, 0.023, 0.034, 0.31),
+    3,
+    dimnames = list(paste0("ETA", 1:3), paste0("ETA", 1:3))
+  )
+  sigma <- matrix(c(0.031, 0, 0, 0.41), 2)
+  sources <- c(
+    "ext",
+    "lst",
+    if (requireNamespace("zuxml", quietly = TRUE)) "xml"
+  )
+
+  for (source in sources) {
+    m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run2.ctl"), source)
+    re <- unclass(m)$random_effects
+
+    expect_equal(
+      pmx_parameters(m)$estimate,
+      c(1.21, 4.31, 51.1),
+      label = source
+    )
+    expect_equal(pmx_omega(m), omega, label = source)
+    expect_equal(
+      diag(pmx_omega(m, "init")),
+      c(ETA1 = 0.1, ETA2 = 0.2, ETA3 = 0.3),
+      label = source
+    )
+    expect_equal(
+      c(re$sigma[[1]]$estimate[[1]], re$sigma[[2]]$estimate[[1]]),
+      diag(sigma),
+      label = source
+    )
+  }
 })

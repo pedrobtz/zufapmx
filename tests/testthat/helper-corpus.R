@@ -30,7 +30,13 @@ corpus_solve_rxode2 <- function(model, regimen, output, cmt = 1) {
   events <- rxode2::et(events, corpus_times(regimen))
 
   # Predictions are read, not simulated observations: only etas matter.
-  model <- suppressMessages(rxode2::zeroRe(model, which = "omega"))
+  # A model without etas has nothing to zero; rxode2 warns about that.
+  model <- withCallingHandlers(
+    suppressMessages(rxode2::zeroRe(model, which = "omega")),
+    warning = function(w) {
+      if (grepl("No omega", conditionMessage(w))) invokeRestart("muffleWarning")
+    }
+  )
   sim <- suppressMessages(rxode2::rxSolve(
     model,
     events,
@@ -52,8 +58,7 @@ corpus_solve_entry_rxode2 <- function(path, regimen) {
 corpus_solve_mrgsolve <- function(cpp, regimen) {
   # A unique model name per compile: mrgsolve names the shared library after
   # the model, and two models of one name in one session collide.
-  dir <- tempfile("mrg")
-  dir.create(dir)
+  dir <- withr::local_tempdir("mrg")
   name <- basename(dir)
   file.copy(cpp, file.path(dir, paste0(name, ".cpp")))
   mod <- suppressMessages(mrgsolve::mread(name, project = dir, quiet = TRUE))
@@ -85,7 +90,7 @@ corpus_oracle_nonmem2rx <- function(path, regimen) {
 }
 
 corpus_oracle_amp_sim <- function(path, regimen) {
-  out <- tempfile("amp")
+  out <- withr::local_tempfile(pattern = "amp")
   suppressMessages(amp.sim::convert_nonmem(
     file.path(path, "model.ctl"),
     out,
@@ -97,7 +102,13 @@ corpus_oracle_amp_sim <- function(path, regimen) {
   corpus_solve_mrgsolve(paste0(out, ".cpp"), regimen)
 }
 
+# The largest relative deviation of `got` from `expected`. A missing output
+# (NULL), a wrong length or a non-finite value is Inf, never a pass:
+# max(numeric(0)) is -Inf, and recycling hides a short result.
 corpus_max_rel_dev <- function(got, expected) {
+  if (length(got) != length(expected) || !all(is.finite(got))) {
+    return(Inf)
+  }
   max(abs(got - expected) / abs(expected))
 }
 
@@ -181,4 +192,9 @@ corpus_models <- function(path, id) {
     nonmem = pmx_read_nonmem(file.path(path, "model.ctl")),
     rxode2 = corpus_rxode2_model(id)
   )
+}
+
+# A file of a corpus entry, by id rather than by position.
+corpus_file <- function(id, file) {
+  system.file("corpus", id, file, package = "zupkpmx", mustWork = TRUE)
 }

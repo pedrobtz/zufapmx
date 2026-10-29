@@ -74,10 +74,6 @@ expr_check <- function(x) {
   invisible(x)
 }
 
-expr_names <- function(x) {
-  unique(all.vars(x))
-}
-
 stmt_check <- function(x) {
   if (is.call(x) && identical(x[[1]], as.symbol("<-"))) {
     if (!is.symbol(x[[2]])) {

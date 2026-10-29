@@ -10,7 +10,7 @@ pmx_read_rxode2(model)
 \item{model}{A model function, as written for rxode2 or nlmixr2.}
 }
 \value{
-A \code{zupkpmx_model}.
+A \code{zupkpmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}.
 }
 \description{
 Reads the \code{ini({})} and \code{model({})} blocks of a model function into the
@@ -21,10 +21,17 @@ rxode2 nor nlmixr2 needs to be installed.
 Supported: fixed effects with bounds and \code{fix()}; random effects,
 alone or in blocks; statements built from the function table;
 \code{linCmt()}; \code{d/dt()}; \code{alag()}, \code{lag()}, \code{f()}, \code{rate()}, \code{dur()} and
-initial amounts (\verb{depot(0) <-}); and residual models \code{add()}, \code{prop()},
-\code{add() + prop()}, \code{lnorm()} and \code{pow()}. Anything else is refused with
-an error of class \code{zupkpmx_parse_error}. Labels, \code{description} and
-comments are dropped and recorded as losses.
+initial amounts (\verb{depot(0) <-}); time as \code{t} or \code{time}; and residual
+models \code{add()}, \code{prop()}, \code{add() + prop()}, \code{lnorm()} and \code{pow()} whose
+parameters are \code{ini()} parameters or \code{model()} variables. Anything else
+is refused with an error of class \code{zupkpmx_parse_error}.
+
+Recorded as losses of the read: \code{label()}s, \code{description} and other
+top-level metadata such as \code{reference} or \code{units}, and \code{ini()} values
+written as constant expressions (\code{log(90)}), which are evaluated.
+Comments are not part of a function's code and never reach the reader.
+Statements that read time belong to the ODE structure, since rxode2's
+time is continuous; a \code{linCmt()} model refuses them.
 }
 \examples{
 one_cmt <- function() {
@@ -45,3 +52,9 @@ one_cmt <- function() {
 }
 pmx_read_rxode2(one_cmt)
 }
+\seealso{
+Other readers:
+\code{\link[=pmx_read_mrgsolve]{pmx_read_mrgsolve()}},
+\code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}}
+}
+\concept{readers}

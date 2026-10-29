@@ -202,7 +202,9 @@ These come from the design's decisions (§13) and hold from the first stage.
   `expect_error(..., class = "<pkg>_<kind>_error")`. Wording belongs in
   snapshot tests.
 - **Order independence.** `devtools::test(shuffle = TRUE)` is part of the
-  definition of done.
+  definition of done. testthat writes snapshot files in run order, so a
+  shuffled run reorders `tests/testthat/_snaps/` without changing them;
+  discard that with `git checkout tests/testthat/_snaps` before committing.
 - **Borrow a conformance suite before writing one.** Mainstream
   implementations in Python, Java, Go or Node usually ship a test corpus.
   Use it as an oracle rather than inventing cases by hand. Here the

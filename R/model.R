@@ -50,172 +50,6 @@ new_model <- function(
   validate_model(model)
 }
 
-validate_model <- function(model) {
-  missing <- model_components[vapply(
-    model_components,
-    function(x) is.null(model[[x]]),
-    logical(1)
-  )]
-  if (length(missing) > 0) {
-    model_abort("The model has no %s.", paste(missing, collapse = ", "))
-  }
-
-  validate_parameters(model$parameters)
-  lapply(model$individual, stmt_check)
-  targets <- stmt_targets(model$individual)
-  validate_random_effects(model$random_effects, targets)
-  compartments <- validate_structure(model$structure, targets)
-  validate_dosing(model$dosing, compartments)
-  validate_observations(model$observations)
-  model
-}
-
-validate_parameters <- function(x) {
-  columns <- c("name", "role", "init", "lower", "upper", "fixed", "estimate")
-  if (!is.data.frame(x) || !identical(names(x), columns)) {
-    model_abort(
-      "Parameters must be a data frame with columns %s.",
-      paste(columns, collapse = ", ")
-    )
-  }
-  if (anyDuplicated(x$name)) {
-    model_abort(
-      "Parameter `%s` is defined twice.",
-      x$name[duplicated(x$name)][[1]]
-    )
-  }
-  bad <- setdiff(x$role, parameter_roles)
-  if (length(bad) > 0) {
-    model_abort("`%s` is not a parameter role.", bad[[1]])
-  }
-}
-
-validate_random_effects <- function(x, targets) {
-  blocks <- c(x$omega, x$sigma)
-  lapply(blocks, validate_block)
-
-  etas <- unlist(lapply(x$omega, `[[`, "names"))
-  unknown_eta <- setdiff(x$attach$eta, etas)
-  if (length(unknown_eta) > 0) {
-    model_abort("`%s` is attached but not in omega.", unknown_eta[[1]])
-  }
-  unknown_param <- setdiff(x$attach$parameter, targets)
-  if (length(unknown_param) > 0) {
-    model_abort(
-      "A random effect is attached to `%s`, which no statement assigns.",
-      unknown_param[[1]]
-    )
-  }
-  bad <- setdiff(x$attach$transform, eta_transforms)
-  if (length(bad) > 0) {
-    model_abort("`%s` is not a random-effect transformation.", bad[[1]])
-  }
-}
-
-validate_block <- function(block) {
-  m <- block$matrix
-  n <- length(block$names)
-  if (!is.matrix(m) || !is.numeric(m) || nrow(m) != n || ncol(m) != n) {
-    model_abort(
-      "The block for %s must be a %d by %d numeric matrix.",
-      paste(block$names, collapse = ", "),
-      n,
-      n
-    )
-  }
-  if (!isSymmetric(unname(m))) {
-    model_abort(
-      "The block for %s is not symmetric.",
-      paste(block$names, collapse = ", ")
-    )
-  }
-  est <- block$estimate
-  if (
-    !is.null(est) && (!identical(dim(est), dim(m)) || !isSymmetric(unname(est)))
-  ) {
-    model_abort(
-      "The estimate for %s must be a symmetric matrix like its block.",
-      paste(block$names, collapse = ", ")
-    )
-  }
-}
-
-# Returns the structure's compartment names.
-validate_structure <- function(x, targets) {
-  if (identical(x$type, "closed")) {
-    if (!x$ncmt %in% 1:3) {
-      model_abort(
-        "A closed-form model has 1 to 3 compartments, not %s.",
-        x$ncmt
-      )
-    }
-    unknown <- setdiff(names(x$parameters), closed_parameters)
-    if (length(unknown) > 0) {
-      model_abort("`%s` is not a closed-form parameter.", unknown[[1]])
-    }
-    unassigned <- setdiff(x$parameters, targets)
-    if (length(unassigned) > 0) {
-      model_abort(
-        "The closed form uses `%s`, which no statement assigns.",
-        unassigned[[1]]
-      )
-    }
-    peripheral <- if (x$ncmt > 1) paste0("peripheral", seq_len(x$ncmt - 1))
-    return(c(if (isTRUE(x$depot)) "depot", "central", peripheral))
-  }
-
-  if (identical(x$type, "ode")) {
-    lapply(x$statements, stmt_check)
-    if (!setequal(names(x$derivatives), x$compartments)) {
-      model_abort(
-        "An ODE model needs one derivative for each of %s.",
-        paste(x$compartments, collapse = ", ")
-      )
-    }
-    lapply(x$derivatives, expr_check)
-    return(x$compartments)
-  }
-
-  model_abort("The structure type must be \"closed\" or \"ode\".")
-}
-
-validate_dosing <- function(x, compartments) {
-  unknown <- setdiff(names(x), compartments)
-  if (length(unknown) > 0) {
-    model_abort("Dosing names `%s`, which is not a compartment.", unknown[[1]])
-  }
-  for (cmt in names(x)) {
-    bad <- setdiff(names(x[[cmt]]), dosing_attributes)
-    if (length(bad) > 0) {
-      model_abort("`%s` is not a dosing attribute.", bad[[1]])
-    }
-    lapply(Filter(Negate(is.null), x[[cmt]]), expr_check)
-  }
-}
-
-validate_observations <- function(x) {
-  for (endpoint in names(x)) {
-    obs <- x[[endpoint]]
-    expr_check(obs$prediction)
-    if (!obs$residual$type %in% residual_types) {
-      model_abort("`%s` is not a residual model.", obs$residual$type)
-    }
-    if (!obs$transform %in% observation_transforms) {
-      model_abort("`%s` is not an observation transform.", obs$transform)
-    }
-  }
-}
-
-model_abort <- function(fmt, ...) {
-  zupkpmx_abort(sprintf(fmt, ...), "model", call = sys.call(-1))
-}
-
-check_model <- function(x) {
-  if (!inherits(x, "zupkpmx_model")) {
-    model_abort("Expected a zupkpmx model, not %s.", class(x)[[1]])
-  }
-}
-
 #' Inspect a model
 #'
 #' `pmx_parameters()` returns the fixed effects, `pmx_omega()` the
@@ -362,4 +196,172 @@ format_structure <- function(x) {
       ""
     }
   )
+}
+
+validate_model <- function(model) {
+  missing <- model_components[vapply(
+    model_components,
+    function(x) is.null(model[[x]]),
+    logical(1)
+  )]
+  if (length(missing) > 0) {
+    model_abort("The model has no %s.", paste(missing, collapse = ", "))
+  }
+
+  validate_parameters(model$parameters)
+  lapply(model$individual, stmt_check)
+  targets <- stmt_targets(model$individual)
+  validate_random_effects(model$random_effects, targets)
+  compartments <- validate_structure(
+    model$structure,
+    c(targets, model$parameters$name)
+  )
+  validate_dosing(model$dosing, compartments)
+  validate_observations(model$observations)
+  model
+}
+
+validate_parameters <- function(x) {
+  columns <- c("name", "role", "init", "lower", "upper", "fixed", "estimate")
+  if (!is.data.frame(x) || !identical(names(x), columns)) {
+    model_abort(
+      "Parameters must be a data frame with columns %s.",
+      paste(columns, collapse = ", ")
+    )
+  }
+  if (anyDuplicated(x$name)) {
+    model_abort(
+      "Parameter `%s` is defined twice.",
+      x$name[duplicated(x$name)][[1]]
+    )
+  }
+  bad <- setdiff(x$role, parameter_roles)
+  if (length(bad) > 0) {
+    model_abort("`%s` is not a parameter role.", bad[[1]])
+  }
+}
+
+validate_random_effects <- function(x, targets) {
+  blocks <- c(x$omega, x$sigma)
+  lapply(blocks, validate_block)
+
+  etas <- unlist(lapply(x$omega, `[[`, "names"))
+  unknown_eta <- setdiff(x$attach$eta, etas)
+  if (length(unknown_eta) > 0) {
+    model_abort("`%s` is attached but not in omega.", unknown_eta[[1]])
+  }
+  unknown_param <- setdiff(x$attach$parameter, targets)
+  if (length(unknown_param) > 0) {
+    model_abort(
+      "A random effect is attached to `%s`, which no statement assigns.",
+      unknown_param[[1]]
+    )
+  }
+  bad <- setdiff(x$attach$transform, eta_transforms)
+  if (length(bad) > 0) {
+    model_abort("`%s` is not a random-effect transformation.", bad[[1]])
+  }
+}
+
+validate_block <- function(block) {
+  m <- block$matrix
+  n <- length(block$names)
+  if (!is.matrix(m) || !is.numeric(m) || nrow(m) != n || ncol(m) != n) {
+    model_abort(
+      "The block for %s must be a %d by %d numeric matrix.",
+      paste(block$names, collapse = ", "),
+      n,
+      n
+    )
+  }
+  if (!isSymmetric(unname(m))) {
+    model_abort(
+      "The block for %s is not symmetric.",
+      paste(block$names, collapse = ", ")
+    )
+  }
+  est <- block$estimate
+  if (
+    !is.null(est) && (!identical(dim(est), dim(m)) || !isSymmetric(unname(est)))
+  ) {
+    model_abort(
+      "The estimate for %s must be a symmetric matrix like its block.",
+      paste(block$names, collapse = ", ")
+    )
+  }
+}
+
+# Returns the structure's compartment names.
+validate_structure <- function(x, targets) {
+  if (identical(x$type, "closed")) {
+    if (!x$ncmt %in% 1:3) {
+      model_abort(
+        "A closed-form model has 1 to 3 compartments, not %s.",
+        x$ncmt
+      )
+    }
+    unknown <- setdiff(names(x$parameters), closed_parameters)
+    if (length(unknown) > 0) {
+      model_abort("`%s` is not a closed-form parameter.", unknown[[1]])
+    }
+    unassigned <- setdiff(x$parameters, targets)
+    if (length(unassigned) > 0) {
+      model_abort(
+        "The closed form uses `%s`, which is neither a parameter nor assigned.",
+        unassigned[[1]]
+      )
+    }
+    return(closed_compartments(x))
+  }
+
+  if (identical(x$type, "ode")) {
+    lapply(x$statements, stmt_check)
+    if (!setequal(names(x$derivatives), x$compartments)) {
+      model_abort(
+        "An ODE model needs one derivative for each of %s.",
+        paste(x$compartments, collapse = ", ")
+      )
+    }
+    lapply(x$derivatives, expr_check)
+    return(x$compartments)
+  }
+
+  model_abort("The structure type must be \"closed\" or \"ode\".")
+}
+
+validate_dosing <- function(x, compartments) {
+  unknown <- setdiff(names(x), compartments)
+  if (length(unknown) > 0) {
+    model_abort("Dosing names `%s`, which is not a compartment.", unknown[[1]])
+  }
+  for (cmt in names(x)) {
+    bad <- setdiff(names(x[[cmt]]), dosing_attributes)
+    if (length(bad) > 0) {
+      model_abort("`%s` is not a dosing attribute.", bad[[1]])
+    }
+    lapply(Filter(Negate(is.null), x[[cmt]]), expr_check)
+  }
+}
+
+validate_observations <- function(x) {
+  for (endpoint in names(x)) {
+    obs <- x[[endpoint]]
+    expr_check(obs$prediction)
+    if (!obs$residual$type %in% residual_types) {
+      model_abort("`%s` is not a residual model.", obs$residual$type)
+    }
+    if (!obs$transform %in% observation_transforms) {
+      model_abort("`%s` is not an observation transform.", obs$transform)
+    }
+  }
+}
+
+model_abort <- function(fmt, ...) {
+  zupkpmx_abort(sprintf(fmt, ...), "model", call = sys.call(-1))
+}
+
+check_model <- function(x) {
+  if (!inherits(x, "zupkpmx_model")) {
+    model_abort("Expected a zupkpmx model, not %s.", class(x)[[1]])
+  }
 }

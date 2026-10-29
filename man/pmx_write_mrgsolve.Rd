@@ -10,7 +10,9 @@ pmx_write_mrgsolve(model)
 \item{model}{A model read by one of the \verb{pmx_read_*()} functions.}
 }
 \value{
-A written model: the text as lines, its fidelity and its losses.
+A \code{zupkpmx_written} object: the text as lines, with its fidelity
+and losses (see \code{\link[=pmx_fidelity]{pmx_fidelity()}}). \code{format()} and \code{as.character()}
+give the text.
 }
 \description{
 Prints a model as the text of an mrgsolve model file (\code{.cpp}) with its
@@ -29,7 +31,16 @@ with estimates is written with them and its initial values are recorded
 as lost.
 }
 \examples{
-corpus <- zupkpmx_corpus()
-fun <- eval(parse(file.path(corpus$path[[1]], "model-rxode2.R")))
+path <- system.file(
+  "corpus", "onecmt-oral", "model-rxode2.R",
+  package = "zupkpmx"
+)
+fun <- eval(parse(path))
 pmx_write_mrgsolve(pmx_read_rxode2(fun))
 }
+\seealso{
+Other writers:
+\code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}},
+\code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}
+}
+\concept{writers}

@@ -11,31 +11,53 @@
 #' code may use assignments, `IF` in one line or in blocks, arithmetic,
 #' comparisons, `EXP`, `LOG`, `LOG10`, `SQRT` and `ABS`.
 #'
-#' Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines
-#' and anything else outside that subset are refused with an error of
-#' class `zupkpmx_parse_error` naming the file, line and column. The title,
-#' data records, estimation settings, tables, comments and the ODE solver
-#' are recorded as losses of the read.
+#' Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines,
+#' dosing or scale assignments inside `IF`, undeclared `THETA`/`ETA`/`EPS`
+#' indices and anything else outside that subset are refused with an error
+#' of class `zupkpmx_parse_error` naming the file and, where it can, the
+#' line and column.
 #'
-#' NONMEM's names are kept: `THETA(1)` reads as `THETA1`, `ETA(1)` as
-#' `ETA1` and `EPS(1)` as `EPS1`. The observation is the endpoint `Y`.
+#' Recorded as losses of the read: the title, `$SIZES`, data records,
+#' estimation settings, `$SIMULATION`, `$ABBREVIATED`, tables
+#' (`$TABLE`, `$SCATTERPLOT`), record options such as
+#' `$ERROR (ONLY OBSERVATIONS)`, comments, the ODE solver, `$ERROR`
+#' outputs `Y` does not use, and values that NM-TRAN keeps from earlier
+#' records for variables assigned only inside `IF` (the representation
+#' starts them at 0).
+#'
+#' NONMEM's names are kept, upper case: `THETA(1)` reads as `THETA1`,
+#' `ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. `T` and `TIME` read as the
+#' representation's time, `t`. Free names such as `WT` are recorded as
+#' covariates. The observation is the endpoint `Y`.
 #'
 #' @param file Path to the control stream.
 #' @param estimates Where final estimates come from. `"auto"` reads
-#'   `run.xml` (`<file>.xml`) through zuxml when both exist, else the
-#'   `.ext` file, else none. `"xml"`, `"ext"` and `"lst"` read that file and
-#'   fail if it is missing; `"none"` reads no estimates.
-#' @return A `zupkpmx_model`.
+#'   `run.xml` (`<file>.xml`) when it exists and zuxml is installed, else
+#'   the `.ext` file, else none. `"xml"`, `"ext"` and `"lst"` read that
+#'   file and fail if it is missing; `"none"` reads no estimates.
+#' @return A `zupkpmx_model`; see [pmx_inspect] and [pmx_write_nonmem()].
+#' @family readers
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
-#' pmx_read_nonmem(file.path(corpus$path[[4]], "model.ctl"))
+#' path <- system.file(
+#'   "corpus", "twocmt-bolus", "model.ctl",
+#'   package = "zupkpmx"
+#' )
+#' pmx_read_nonmem(path)
 pmx_read_nonmem <- function(
   file,
   estimates = c("auto", "xml", "ext", "lst", "none")
 ) {
+  if (!is.character(estimates) || anyNA(estimates)) {
+    zupkpmx_abort("`estimates` must be one of the documented strings.", "model")
+  }
   estimates <- match.arg(estimates)
-  if (!is.character(file) || length(file) != 1 || !file.exists(file)) {
+  if (
+    !is.character(file) ||
+      length(file) != 1 ||
+      !file.exists(file) ||
+      dir.exists(file)
+  ) {
     zupkpmx_abort("`file` must be the path of an existing file.", "model")
   }
   model <- nm_read(file)
@@ -91,6 +113,7 @@ nm_closed <- list(
 nm_ode_advans <- c(6L, 8L, 9L, 13L)
 
 nm_lost_records <- c(
+  SIZES = "array sizes ($SIZES)",
   PROBLEM = "title ($PROBLEM)",
   INPUT = "data records ($INPUT, $DATA)",
   DATA = "data records ($INPUT, $DATA)",
@@ -103,31 +126,12 @@ nm_lost_records <- c(
 )
 
 nm_read <- function(file) {
-  split <- nm_split(readLines(file, warn = FALSE), file)
-  records <- split$records
+  stream <- nm_split(readLines(file, warn = FALSE), file)
+  records <- stream$records
   names <- vapply(records, `[[`, character(1), "name")
-  losses <- if (split$comments) "comments" else character()
+  losses <- if (stream$comments) "comments" else character()
 
-  for (r in records) {
-    if (r$name %in% c("PRED", "INFN", "MIX", "PRIOR")) {
-      parse_error(
-        file,
-        r$line[[1]],
-        1L,
-        seen = paste0("$", r$name),
-        message = sprintf(
-          "not translated: $%s at line %d",
-          r$name,
-          r$line[[1]]
-        ),
-        call = NULL
-      )
-    }
-  }
-  losses <- union(
-    losses,
-    unique(unname(nm_lost_records[intersect(names, names(nm_lost_records))]))
-  )
+  losses <- c(losses, nm_record_losses(records, file))
   record <- function(name) records[names == name]
   one <- function(name) {
     found <- record(name)
@@ -154,9 +158,9 @@ nm_read <- function(file) {
     found[[1]]
   }
 
-  sub <- nm_subroutines(one("SUBROUTINES"), file)
-  losses <- union(losses, sub$losses)
-  closed <- nm_closed[[as.character(sub$advan)]]
+  subroutines <- nm_subroutines(one("SUBROUTINES"), file)
+  losses <- union(losses, subroutines$losses)
+  closed <- nm_closed[[as.character(subroutines$advan)]]
   if (!is.null(closed)) {
     if (length(record("DES")) > 0 || length(record("MODEL")) > 0) {
       r <- c(record("DES"), record("MODEL"))[[1]]
@@ -165,7 +169,7 @@ nm_read <- function(file) {
         r$line[[1]],
         1L,
         seen = paste0("$", r$name),
-        expected = sprintf("no $%s with ADVAN%d", r$name, sub$advan),
+        expected = sprintf("no $%s with ADVAN%d", r$name, subroutines$advan),
         call = NULL
       )
     }
@@ -176,11 +180,11 @@ nm_read <- function(file) {
     compartments <- comp$names
     defobs <- comp$defobs
   }
-  cmt <- function(n, column) {
+  cmt <- function(n, line, column) {
     if (n < 1 || n > length(compartments)) {
       parse_error(
         file,
-        NA_integer_,
+        line,
         column,
         seen = sprintf("A(%d)", n),
         expected = sprintf("a compartment from 1 to %d", length(compartments)),
@@ -196,46 +200,42 @@ nm_read <- function(file) {
 
   pk <- nm_pk(nm_code(one("PK"), file, cmt), compartments, file)
   if (!is.null(closed)) {
-    structure <- nm_closed_structure(sub, closed, pk$individual, file)
-    defobs <- closed$central
-  } else {
-    structure <- nm_ode_structure(
-      nm_code(one("DES"), file, cmt),
-      compartments,
+    structure <- nm_closed_structure(
+      subroutines,
+      closed,
+      stmt_targets(pk$individual),
       file
     )
-  }
-
-  scaled <- names(pk$scale)
-  if (
-    length(scaled) > 1 ||
-      (length(scaled) == 1 && as.integer(scaled) != defobs && !is.null(closed))
-  ) {
-    parse_error(
+  } else {
+    structure <- split_ode(
+      nm_code(one("DES"), file, cmt),
+      compartments,
+      nm_derivative(compartments, file),
       file,
-      NA_integer_,
-      NA_integer_,
-      seen = paste0("S", scaled[[length(scaled)]]),
-      expected = sprintf("one scale, S%d", defobs),
-      call = NULL
+      "$DES"
     )
   }
-  if (length(scaled) == 1) {
-    defobs <- as.integer(scaled)
-  }
-  observed <- as.symbol(compartments[[defobs]])
-  prediction <- if (length(scaled) == 1) {
-    call("/", observed, pk$scale[[1]])
-  } else {
-    observed
-  }
 
-  error <- nm_error(nm_code(one("ERROR"), file, cmt), file)
+  prediction <- nm_prediction(
+    pk$scale,
+    compartments,
+    defobs,
+    !is.null(closed),
+    file
+  )
+
+  error <- read_observation(
+    nm_code(one("ERROR"), file, cmt),
+    file,
+    "$ERROR",
+    prediction = quote(F)
+  )
   losses <- union(losses, error$losses)
 
   parameters <- thetas
   parameters$role <- infer_roles(parameters$name, pk$individual, structure)
-  model <- new_model(
+  read_model(
+    file,
     parameters = parameters,
     random_effects = list(
       omega = omega,
@@ -262,7 +262,6 @@ nm_read <- function(file) {
       losses = losses
     )
   )
-  model
 }
 
 nm_subroutines <- function(r, file) {
@@ -362,55 +361,10 @@ nm_compartments <- function(r, file) {
   list(names = names, defobs = if (length(defobs) == 1) defobs else 1L)
 }
 
-# $PK: individual statements, scale factors and dosing attributes.
-nm_pk <- function(stmts, compartments, file) {
-  dosing <- list()
-  scale <- list()
-  individual <- list()
-  attrs <- c(ALAG = "lag", F = "bioavailability", R = "rate", D = "duration")
-  for (x in stmts) {
-    target <- if (is_call(x, "<-")) x[[2]]
-    name <- if (is.symbol(target)) toupper(as.character(target)) else ""
-    m <- regmatches(name, regexec("^(S|ALAG|F|R|D)([0-9]+)$", name))[[1]]
-    if (length(m) == 3) {
-      n <- as.integer(m[[3]])
-      if (m[[2]] == "S") {
-        scale[[as.character(n)]] <- x[[3]]
-        next
-      }
-      if (n < 1 || n > length(compartments)) {
-        parse_error(
-          file,
-          NA_integer_,
-          NA_integer_,
-          seen = name,
-          expected = "a compartment of the model",
-          call = NULL
-        )
-      }
-      cmt <- compartments[[n]]
-      dosing[[cmt]] <- c(
-        dosing[[cmt]],
-        stats::setNames(list(x[[3]]), attrs[[m[[2]]]])
-      )
-      next
-    }
-    if (is_call(target, "A_0")) {
-      cmt <- compartments[[target[[2]]]]
-      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
-      next
-    }
-    individual[[length(individual) + 1]] <- x
-  }
-  list(
-    individual = individual,
-    scale = scale,
-    dosing = dosing[intersect(compartments, names(dosing))]
-  )
-}
-
-nm_closed_structure <- function(sub, closed, individual, file) {
-  targets <- stmt_targets(individual)
+# The variables a closed form's ADVAN parameters are. `names` are the
+# candidates: $PK targets, and for mrgsolve also $PARAM names.
+nm_closed_structure <- function(subroutines, closed, names, file) {
+  targets <- names
   found <- vapply(
     closed$names,
     function(name) {
@@ -426,8 +380,8 @@ nm_closed_structure <- function(sub, closed, individual, file) {
           expected = sprintf(
             "%s for ADVAN%d TRANS%d",
             name,
-            sub$advan,
-            sub$trans
+            subroutines$advan,
+            subroutines$trans
           ),
           call = NULL
         )
@@ -441,188 +395,32 @@ nm_closed_structure <- function(sub, closed, individual, file) {
     ncmt = sum(c("v", "vp", "vp2") %in% names(found)),
     depot = "ka" %in% names(found),
     parameters = found,
-    advan = sub$advan,
-    trans = sub$trans
+    advan = subroutines$advan,
+    trans = subroutines$trans
   )
-}
-
-nm_ode_structure <- function(stmts, compartments, file) {
-  derivatives <- list()
-  statements <- list()
-  for (x in stmts) {
-    if (is_call(x, "<-") && is_call(x[[2]], "DADT")) {
-      derivatives[[compartments[[x[[2]][[2]]]]]] <- x[[3]]
-    } else {
-      statements[[length(statements) + 1]] <- x
-    }
-  }
-  missing <- setdiff(compartments, names(derivatives))
-  if (length(missing) > 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$DES",
-      expected = sprintf("DADT for %s", missing[[1]]),
-      call = NULL
-    )
-  }
-  list(
-    type = "ode",
-    compartments = compartments,
-    statements = statements,
-    derivatives = derivatives[compartments]
-  )
-}
-
-# $ERROR: the residual model of Y over the prediction F. Statements Y does
-# not use are outputs, recorded as losses.
-nm_error <- function(stmts, file) {
-  defs <- list()
-  conditional <- character()
-  for (x in stmts) {
-    if (is_call(x, "<-") && is.symbol(x[[2]])) {
-      defs[[as.character(x[[2]])]] <- x[[3]]
-    } else {
-      conditional <- c(conditional, stmt_targets(list(x)))
-    }
-  }
-  y <- names(defs)[toupper(names(defs)) == "Y"]
-  if (length(y) == 0) {
-    parse_error(
-      file,
-      NA_integer_,
-      NA_integer_,
-      seen = "$ERROR",
-      expected = "Y = ...",
-      call = NULL
-    )
-  }
-
-  used <- character()
-  subst <- function(e) {
-    if (is.symbol(e)) {
-      name <- as.character(e)
-      if (name %in% conditional) {
-        parse_error(
-          file,
-          NA_integer_,
-          NA_integer_,
-          seen = name,
-          expected = "Y to depend on unconditional statements",
-          call = NULL
-        )
-      }
-      if (name %in% names(defs) && name != "F") {
-        used <<- union(used, name)
-        return(call("(", subst(defs[[name]])))
-      }
-      return(e)
-    }
-    if (is.call(e)) {
-      e[-1] <- lapply(as.list(e)[-1], subst)
-    }
-    e
-  }
-  expr <- subst(defs[[y]])
-  outputs <- setdiff(c(names(defs), conditional), c(y, used))
-  list(
-    residual = nm_residual(strip_parens(expr), expr),
-    losses = if (length(outputs) > 0) {
-      sprintf(
-        "$ERROR outputs not used by Y: %s",
-        paste(unique(outputs), collapse = ", ")
-      )
-    } else {
-      character()
-    }
-  )
-}
-
-nm_residual <- function(e, original) {
-  f <- quote(F)
-  is_eps <- function(x) is.symbol(x) && grepl("^EPS[0-9]+$", as.character(x))
-  # F * (1 + EPS) or F + F * EPS
-  prop <- function(x) {
-    if (
-      is_call(x, "*") &&
-        identical(x[[2]], f) &&
-        is_call(x[[3]], "+") &&
-        identical(x[[3]][[2]], 1) &&
-        is_eps(x[[3]][[3]])
-    ) {
-      return(as.character(x[[3]][[3]]))
-    }
-    if (
-      is_call(x, "+") &&
-        identical(x[[2]], f) &&
-        is_call(x[[3]], "*") &&
-        identical(x[[3]][[2]], f) &&
-        is_eps(x[[3]][[3]])
-    ) {
-      return(as.character(x[[3]][[3]]))
-    }
-    NULL
-  }
-  if (!is.null(p <- prop(e))) {
-    return(list(type = "proportional", parameters = p))
-  }
-  if (is_call(e, "+") && identical(e[[2]], f) && is_eps(e[[3]])) {
-    return(list(type = "additive", parameters = as.character(e[[3]])))
-  }
-  if (
-    is_call(e, "*") &&
-      identical(e[[2]], f) &&
-      is_call(e[[3]], "exp") &&
-      is_eps(e[[3]][[2]])
-  ) {
-    return(list(type = "exponential", parameters = as.character(e[[3]][[2]])))
-  }
-  if (is_call(e, "+") && is_eps(e[[3]]) && !is.null(p <- prop(e[[2]]))) {
-    return(list(type = "combined", parameters = c(as.character(e[[3]]), p)))
-  }
-  if (
-    is_call(e, "+") &&
-      is_call(e[[2]], "+") &&
-      identical(e[[2]][[2]], f) &&
-      is_call(e[[2]][[3]], "*") &&
-      identical(e[[2]][[3]][[2]], f) &&
-      is_eps(e[[2]][[3]][[3]]) &&
-      is_eps(e[[3]])
-  ) {
-    return(list(
-      type = "combined",
-      parameters = c(as.character(e[[3]]), as.character(e[[2]][[3]][[3]]))
-    ))
-  }
-  list(
-    type = "expression",
-    parameters = grep("^EPS[0-9]+$", all.vars(original), value = TRUE),
-    expression = original
-  )
-}
-
-strip_parens <- function(e) {
-  if (is_call(e, "(")) {
-    return(strip_parens(e[[2]]))
-  }
-  if (is.call(e)) {
-    e[-1] <- lapply(as.list(e)[-1], strip_parens)
-  }
-  e
 }
 
 # $THETA: one row per theta, in order across records.
 nm_inits <- function(records, kind, file) {
   items <- nm_init_items(records, file)
   rows <- lapply(seq_along(items), function(i) {
-    v <- items[[i]]$values
+    bounds <- read_bounds(items[[i]]$values)
+    if (is.null(bounds)) {
+      parse_error(
+        file,
+        items[[i]]$line,
+        NA_integer_,
+        seen = paste(items[[i]]$values, collapse = ", "),
+        expected = "one to three values, lower <= initial <= upper",
+        call = NULL
+      )
+    }
     data.frame(
       name = paste0(kind, i),
       role = "other",
-      init = if (length(v) == 1) v[[1]] else v[[2]],
-      lower = if (length(v) > 1) v[[1]] else -Inf,
-      upper = if (length(v) > 2) v[[3]] else Inf,
+      init = bounds$init,
+      lower = bounds$lower,
+      upper = bounds$upper,
       fixed = items[[i]]$fixed
     )
   })
@@ -690,9 +488,8 @@ nm_blocks <- function(records, prefix, file) {
         prefix,
         length(unlist(lapply(blocks, `[[`, "names"))) + seq_len(n)
       )
-      m <- matrix(0, n, n, dimnames = list(names, names))
-      m[upper.tri(m, diag = TRUE)] <- values
-      m[lower.tri(m)] <- t(m)[lower.tri(m)]
+      m <- lower_to_full(values)
+      dimnames(m) <- list(names, names)
       blocks[[length(blocks) + 1]] <- list(
         names = names,
         matrix = m,
@@ -722,28 +519,28 @@ nm_init_items <- function(records, file) {
   tokens <- list()
   for (r in records) {
     for (k in seq_along(r$lines)) {
-      for (t in nm_tokenize(r$lines[[k]], r$line[[k]], file)) {
-        t$line <- r$line[[k]]
-        tokens[[length(tokens) + 1]] <- t
+      for (tok in nm_tokenize(r$lines[[k]], r$line[[k]], file)) {
+        tok$line <- r$line[[k]]
+        tokens[[length(tokens) + 1]] <- tok
       }
     }
   }
   i <- 1L
   peek <- function() if (i <= length(tokens)) tokens[[i]]
   fail <- function(expected) {
-    t <- peek()
+    tok <- peek()
     parse_error(
       file,
-      if (is.null(t)) NA_integer_ else t$line,
-      if (is.null(t)) NA_integer_ else t$column,
-      seen = if (is.null(t)) "end of record" else t$value,
+      if (is.null(tok)) NA_integer_ else tok$line,
+      if (is.null(tok)) NA_integer_ else tok$column,
+      seen = if (is.null(tok)) "end of record" else tok$value,
       expected = expected,
       call = NULL
     )
   }
   is_fix <- function() {
-    t <- peek()
-    !is.null(t) && toupper(t$value) %in% c("FIX", "FIXED")
+    tok <- peek()
+    !is.null(tok) && toupper(tok$value) %in% c("FIX", "FIXED")
   }
   number <- function() {
     sign <- 1
@@ -751,15 +548,15 @@ nm_init_items <- function(records, file) {
       sign <- if (peek()$value == "-") -1 else 1
       i <<- i + 1L
     }
-    t <- peek()
-    if (is.null(t)) {
+    tok <- peek()
+    if (is.null(tok)) {
       fail("a number")
     }
     i <<- i + 1L
-    if (t$type == "number") {
-      return(sign * as.numeric(sub("[Dd]", "E", t$value)))
+    if (tok$type == "number") {
+      return(sign * as.numeric(sub("[Dd]", "E", tok$value)))
     }
-    if (toupper(t$value) == "INF") {
+    if (toupper(tok$value) == "INF") {
       return(sign * Inf)
     }
     i <<- i - 1L
@@ -767,6 +564,7 @@ nm_init_items <- function(records, file) {
   }
   items <- list()
   while (i <= length(tokens)) {
+    line <- peek()$line
     fixed <- FALSE
     if (peek()$value == "(") {
       i <- i + 1L
@@ -793,7 +591,174 @@ nm_init_items <- function(records, file) {
       fixed <- TRUE
       i <- i + 1L
     }
-    items[[length(items) + 1]] <- list(values = values, fixed = fixed)
+    items[[length(items) + 1]] <- list(
+      values = values,
+      fixed = fixed,
+      line = line
+    )
   }
   items
+}
+
+# $PK: individual statements, scale factors and dosing attributes.
+nm_pk <- function(stmts, compartments, file) {
+  dosing <- list()
+  scale <- list()
+  individual <- list()
+  attrs <- c(ALAG = "lag", F = "bioavailability", R = "rate", D = "duration")
+  check_cmt <- function(n, name) {
+    if (n < 1 || n > length(compartments)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = name,
+        expected = sprintf("a compartment from 1 to %d", length(compartments)),
+        call = NULL
+      )
+    }
+    compartments[[n]]
+  }
+  for (x in stmts) {
+    target <- if (is_call(x, "<-")) x[[2]]
+    name <- if (is.symbol(target)) as.character(target) else ""
+    m <- regmatches(name, regexec("^(S|ALAG|F|R|D)([0-9]+)$", name))[[1]]
+    if (length(m) == 3) {
+      n <- as.integer(m[[3]])
+      if (m[[2]] == "S") {
+        check_cmt(n, name)
+        scale[[as.character(n)]] <- x[[3]]
+      } else {
+        cmt <- check_cmt(n, name)
+        dosing[[cmt]] <- c(
+          dosing[[cmt]],
+          stats::setNames(list(x[[3]]), attrs[[m[[2]]]])
+        )
+      }
+    } else if (is_call(target, "A_0")) {
+      cmt <- check_cmt(target[[2]], expr_text(target))
+      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
+    } else if (is_call(target, "DADT")) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = expr_text(target),
+        expected = "DADT(n) in $DES",
+        call = NULL
+      )
+    } else {
+      individual[[length(individual) + 1]] <- x
+    }
+  }
+  check_dosing_names(
+    individual,
+    function(n) grepl("^(S|ALAG|F|R|D)[0-9]+$|^A_0\\(", n),
+    file,
+    "$PK"
+  )
+  list(
+    individual = individual,
+    scale = scale,
+    dosing = dosing[intersect(compartments, names(dosing))]
+  )
+}
+
+# $DES's DADT(n) names compartment n.
+nm_derivative <- function(compartments, file) {
+  function(x) {
+    if (!is_call(x[[2]], "DADT")) {
+      return(NULL)
+    }
+    n <- x[[2]][[2]]
+    if (n < 1 || n > length(compartments)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = expr_text(x[[2]]),
+        expected = sprintf(
+          "DADT of a compartment from 1 to %d",
+          length(compartments)
+        ),
+        call = NULL
+      )
+    }
+    compartments[[n]]
+  }
+}
+
+# Refuse the records the reader does not translate, and name what the
+# others lose: the title, data records, settings, tables, record options.
+nm_record_losses <- function(records, file) {
+  names <- vapply(records, `[[`, character(1), "name")
+  losses <- character()
+  for (r in records) {
+    if (r$name %in% c("PRED", "INFN", "MIX", "PRIOR")) {
+      parse_error(
+        file,
+        r$line[[1]],
+        1L,
+        seen = paste0("$", r$name),
+        message = sprintf(
+          "not translated: $%s at line %d",
+          r$name,
+          r$line[[1]]
+        ),
+        call = NULL
+      )
+    }
+  }
+  losses <- union(
+    losses,
+    unique(unname(nm_lost_records[intersect(names, names(nm_lost_records))]))
+  )
+  for (r in records) {
+    if (length(r$options) == 1 && r$name %in% c("PK", "DES", "ERROR")) {
+      losses <- union(
+        losses,
+        sprintf("record options ($%s %s)", r$name, r$options)
+      )
+    }
+  }
+  losses
+}
+
+# The prediction F: the observed compartment over its scale. A closed form
+# scales its central compartment; an ODE model the one its S<n> names, or
+# its DEFOBS compartment unscaled.
+nm_prediction <- function(scale, compartments, defobs, closed, file) {
+  scaled <- names(scale)
+  if (
+    length(scaled) > 1 ||
+      (length(scaled) == 1 && as.integer(scaled) != defobs && closed)
+  ) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = paste0("S", scaled[[length(scaled)]]),
+      expected = sprintf("one scale, S%d", defobs),
+      call = NULL
+    )
+  }
+  if (length(scaled) == 1) {
+    defobs <- as.integer(scaled)
+    if (defobs < 1 || defobs > length(compartments)) {
+      parse_error(
+        file,
+        NA_integer_,
+        NA_integer_,
+        seen = paste0("S", scaled),
+        expected = "a scale of a compartment",
+        call = NULL
+      )
+    }
+  }
+  observed <- as.symbol(compartments[[defobs]])
+  if (length(scaled) == 1) {
+    call("/", observed, scale[[1]])
+  } else {
+    observed
+  }
 }

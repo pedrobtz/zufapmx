@@ -20,6 +20,7 @@ Versions:
 | Entry | nonmem2rx | amp.sim | nonmem2mrgsolve | model.cpp |
 | --- | --- | --- | --- | --- |
 | onecmt-oral | agrees 4e-10 | error [1] | absent | agrees 4e-10 |
+| onecmt-oral-lag | agrees 2e-10 | error [1] | absent | agrees 2e-10 |
 | onecmt-oral-mm | agrees 4e-10 | agrees 4e-10 | absent | agrees 4e-10 |
 | threecmt-infusion | agrees 3e-10 | error [1] | absent | agrees 3e-10 |
 | twocmt-bolus | agrees 2e-10 | error [1] | absent | agrees 2e-10 |

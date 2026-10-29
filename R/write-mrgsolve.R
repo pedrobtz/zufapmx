@@ -14,34 +14,25 @@
 #' with estimates is written with them and its initial values are recorded
 #' as lost.
 #'
-#' @param model A model read by one of the `pmx_read_*()` functions.
-#' @return A written model: the text as lines, its fidelity and its losses.
+#' @inheritParams pmx_inspect
+#' @return A `zupkpmx_written` object: the text as lines, with its fidelity
+#'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
+#'   give the text.
+#' @family writers
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
-#' fun <- eval(parse(file.path(corpus$path[[1]], "model-rxode2.R")))
+#' path <- system.file(
+#'   "corpus", "onecmt-oral", "model-rxode2.R",
+#'   package = "zupkpmx"
+#' )
+#' fun <- eval(parse(path))
 #' pmx_write_mrgsolve(pmx_read_rxode2(fun))
 pmx_write_mrgsolve <- function(model) {
   check_model(model)
   m <- unclass(model)
   losses <- character()
 
-  if (isTRUE(m$random_effects$iov$present)) {
-    write_error(
-      "inter-occasion variability",
-      "random_effects$iov",
-      formats = character(),
-      call = NULL
-    )
-  }
-  if (length(m$observations) != 1) {
-    write_error(
-      "more than one endpoint",
-      "observations",
-      formats = "rxode2",
-      call = NULL
-    )
-  }
+  check_writable(m)
   if (any(!is.na(m$parameters$estimate))) {
     losses <- c(
       losses,
@@ -59,46 +50,45 @@ pmx_write_mrgsolve <- function(model) {
   }
 
   m <- nm_sigma_from_sd(m)
-  names <- mrg_names(m)
+  spelling <- mrg_names(m)
+  ode_spelling <- spelling
+  ode_spelling[["t"]] <- "SOLVERTIME"
   closed <- identical(m$structure$type, "closed")
-  compartments <- if (closed) {
-    closed_compartments(m$structure)
-  } else {
-    m$structure$compartments
-  }
+  compartments <- model_compartments(m$structure)
 
   text <- c(
     sprintf("$PROB %s", nm_title(m$provenance)),
     "",
     "$PARAM @annotated",
-    mrg_param_lines(m$parameters, names),
+    mrg_param_lines(m$parameters, spelling),
     "",
     if (closed) {
       sprintf(
         "$PKMODEL advan = %d, trans = %d, cmt = \"%s\"",
         m$structure$advan,
         m$structure$trans,
-        paste(names[compartments], collapse = " ")
+        paste(spelling[compartments], collapse = " ")
       )
     } else {
-      sprintf("$CMT %s", paste(names[compartments], collapse = " "))
+      sprintf("$CMT %s", paste(spelling[compartments], collapse = " "))
     },
     "",
     "$MAIN",
-    mrg_stmt_lines(c(m$individual, mrg_closed_aliases(m, names)), names),
-    mrg_dosing_lines(m, names, compartments),
+    mrg_stmt_lines(m$individual, spelling),
+    closed_alias_lines(m$structure, spelling, "double %s = %s;"),
+    mrg_dosing_lines(m, spelling),
     if (!closed) {
       c(
         "",
         "$ODE",
-        mrg_stmt_lines(m$structure$statements, names),
+        mrg_stmt_lines(m$structure$statements, ode_spelling),
         vapply(
           compartments,
           function(cmt) {
             sprintf(
               "dxdt_%s = %s;",
-              names[[cmt]],
-              cpp_expr(m$structure$derivatives[[cmt]], names)
+              spelling[[cmt]],
+              cpp_expr(m$structure$derivatives[[cmt]], ode_spelling)
             )
           },
           character(1),
@@ -110,8 +100,8 @@ pmx_write_mrgsolve <- function(model) {
     mrg_block_lines("SIGMA", m$random_effects$sigma),
     "",
     "$TABLE",
-    sprintf("double IPRED = %s;", mrg_prediction(m, names)),
-    sprintf("double Y = %s;", mrg_residual(m, names)),
+    sprintf("double IPRED = %s;", mrg_prediction(m, spelling)),
+    sprintf("double Y = %s;", mrg_residual(m, spelling)),
     "",
     "$CAPTURE IPRED Y"
   )
@@ -119,7 +109,7 @@ pmx_write_mrgsolve <- function(model) {
   path <- tempfile(fileext = ".cpp")
   on.exit(unlink(path))
   writeLines(text, path)
-  back <- mrg_read(path)
+  back <- read_back(mrg_read(path), "mrgsolve")
   new_written(
     text = text,
     format = "mrgsolve",
@@ -157,11 +147,7 @@ mrg_reserved <- c(
 # Every symbol's C++ text.
 mrg_names <- function(m) {
   closed <- identical(m$structure$type, "closed")
-  compartments <- if (closed) {
-    closed_compartments(m$structure)
-  } else {
-    m$structure$compartments
-  }
+  compartments <- model_compartments(m$structure)
   cmt_names <- if (closed) {
     toupper(sub(
       "^peripheral",
@@ -174,7 +160,9 @@ mrg_names <- function(m) {
   map <- c(
     nm_index_names(m$random_effects$omega, "ETA"),
     nm_index_names(m$random_effects$sigma, "EPS"),
-    stats::setNames(cmt_names, compartments)
+    stats::setNames(cmt_names, compartments),
+    # Time (D15): the record's TIME in $MAIN and $TABLE; SOLVERTIME in $ODE.
+    t = "TIME"
   )
   vars <- setdiff(
     unique(c(
@@ -189,17 +177,11 @@ mrg_names <- function(m) {
     names(map)
   )
   out <- gsub(".", "_", vars, fixed = TRUE)
-  if (closed) {
-    required <- nm_closed[[as.character(m$structure$advan)]]$names
-    owner <- m$structure$parameters[names(required)]
-    taken <- out %in% required & vars != unname(owner[match(out, required)])
-    out[taken] <- paste0(out[taken], "_")
-  }
-  all <- c(unname(map), out)
+  out <- closed_free_names(vars, out, m$structure)
+  spelled <- c(unname(map), out)
   bad <- vars[
-    out %in%
-      mrg_reserved |
-      duplicated(all)[-seq_along(map)] |
+    (out %in% mrg_reserved) |
+      duplicated(spelled)[-seq_along(map)] |
       !grepl("^[A-Za-z_][A-Za-z0-9_]*$", out)
   ]
   if (length(bad) > 0) {
@@ -213,14 +195,14 @@ mrg_names <- function(m) {
   c(map, stats::setNames(out, vars))
 }
 
-mrg_param_lines <- function(p, names) {
+mrg_param_lines <- function(p, spelling) {
   vapply(
     seq_len(nrow(p)),
     function(i) {
       value <- if (is.na(p$estimate[[i]])) p$init[[i]] else p$estimate[[i]]
       sprintf(
         "%s : %s : [%s, %s]%s",
-        names[[p$name[[i]]]],
+        spelling[[p$name[[i]]]],
         num_text(value),
         num_text(p$lower[[i]]),
         num_text(p$upper[[i]]),
@@ -231,38 +213,19 @@ mrg_param_lines <- function(p, names) {
   )
 }
 
-mrg_closed_aliases <- function(m, names) {
-  s <- m$structure
-  if (!identical(s$type, "closed")) {
-    return(list())
-  }
-  required <- nm_closed[[as.character(s$advan)]]$names
-  out <- list()
-  for (canonical in names(required)) {
-    if (names[[s$parameters[[canonical]]]] != required[[canonical]]) {
-      out[[length(out) + 1]] <- call(
-        "<-",
-        as.symbol(required[[canonical]]),
-        as.symbol(s$parameters[[canonical]])
-      )
-    }
-  }
-  out
-}
-
-mrg_dosing_lines <- function(m, names, compartments) {
+mrg_dosing_lines <- function(m, spelling) {
   macro <- c(lag = "ALAG", bioavailability = "F", rate = "R", duration = "D")
   out <- character()
   for (cmt in names(m$dosing)) {
     for (attr in names(m$dosing[[cmt]])) {
       target <- if (attr == "initial") {
-        paste0(names[[cmt]], "_0")
+        paste0(spelling[[cmt]], "_0")
       } else {
-        paste0(macro[[attr]], "_", names[[cmt]])
+        paste0(macro[[attr]], "_", spelling[[cmt]])
       }
       out <- c(
         out,
-        sprintf("%s = %s;", target, cpp_expr(m$dosing[[cmt]][[attr]], names))
+        sprintf("%s = %s;", target, cpp_expr(m$dosing[[cmt]][[attr]], spelling))
       )
     }
   }
@@ -283,7 +246,7 @@ mrg_block_lines <- function(record, blocks) {
 # The prediction as C++. A closed form's central concentration is written
 # over the ADVAN's own name for the central volume (V2 = v is aliased in
 # $MAIN), so it reads back as the central concentration.
-mrg_prediction <- function(m, names) {
+mrg_prediction <- function(m, spelling) {
   pred <- m$observations[[1]]$prediction
   s <- m$structure
   if (identical(s$type, "closed")) {
@@ -291,7 +254,7 @@ mrg_prediction <- function(m, names) {
       identical(pred, call("/", quote(central), as.symbol(s$parameters[["v"]])))
     ) {
       v <- nm_closed[[as.character(s$advan)]]$names[["v"]]
-      return(sprintf("%s / %s", names[["central"]], v))
+      return(sprintf("%s / %s", spelling[["central"]], v))
     }
     if (any(all.vars(pred) %in% closed_compartments(s))) {
       write_error(
@@ -302,19 +265,26 @@ mrg_prediction <- function(m, names) {
       )
     }
   }
-  cpp_expr(pred, names)
+  cpp_expr(pred, spelling)
 }
 
-mrg_residual <- function(m, names) {
+mrg_residual <- function(m, spelling) {
   r <- m$observations[[1]]$residual
-  p <- vapply(r$parameters, function(e) names[[e]], character(1))
+  p <- vapply(r$parameters, function(e) spelling[[e]], character(1))
   switch(
     r$type,
     additive = sprintf("IPRED + %s", p[[1]]),
     proportional = sprintf("IPRED * (1 + %s)", p[[1]]),
     combined = sprintf("IPRED * (1 + %s) + %s", p[[2]], p[[1]]),
     exponential = sprintf("IPRED * exp(%s)", p[[1]]),
-    expression = cpp_expr(r$expression, c(names, F = "IPRED")),
+    # mrgsolve's reader finds the prediction by Y's form, so a residual
+    # written as an expression would not read back.
+    expression = write_error(
+      "a residual model written as an expression over epsilons",
+      "observations",
+      formats = "nonmem",
+      call = NULL
+    ),
     write_error(
       sprintf("a %s residual model", r$type),
       "observations",
@@ -326,56 +296,57 @@ mrg_residual <- function(m, names) {
 
 # Statements as C++. A variable is declared `double` where it is first
 # assigned at the top level; one assigned only inside `if` is declared
-# first with the value 0, the value NM-TRAN gives it.
-mrg_stmt_lines <- function(stmts, names, declared = character(), indent = 0) {
-  pad <- strrep(" ", indent)
+# first with the value 0 (D14). Readers already make that 0 explicit, so
+# this only matters for models built by other means.
+mrg_stmt_lines <- function(stmts, spelling, declared = character(), depth = 0) {
+  pad <- strrep(" ", depth)
   out <- character()
   for (x in stmts) {
     if (is_call(x, "<-")) {
       name <- as.character(x[[2]])
-      text <- names[name] %|NA|% name
-      decl <- if (indent == 0 && !name %in% declared) "double " else ""
+      text <- spelling[name] %|NA|% name
+      decl <- if (depth == 0 && !name %in% declared) "double " else ""
       declared <- c(declared, name)
       out <- c(
         out,
-        sprintf("%s%s%s = %s;", pad, decl, text, cpp_expr(x[[3]], names))
+        sprintf("%s%s%s = %s;", pad, decl, text, cpp_expr(x[[3]], spelling))
       )
     } else {
-      if (indent == 0) {
+      if (depth == 0) {
         fresh <- setdiff(stmt_targets(list(x)), declared)
-        out <- c(out, sprintf("double %s = 0.0;", names[fresh] %|NA|% fresh))
+        out <- c(out, sprintf("double %s = 0.0;", spelling[fresh] %|NA|% fresh))
         declared <- c(declared, fresh)
       }
-      out <- c(out, mrg_if_lines(x, names, declared, indent))
+      out <- c(out, mrg_if_lines(x, spelling, declared, depth))
     }
   }
   out
 }
 
-mrg_if_lines <- function(x, names, declared, indent) {
-  pad <- strrep(" ", indent)
+mrg_if_lines <- function(x, spelling, declared, depth) {
+  pad <- strrep(" ", depth)
   out <- c(
-    sprintf("%sif (%s) {", pad, cpp_expr(x[[2]], names)),
-    mrg_stmt_lines(stmt_body(x[[3]]), names, declared, indent + 2)
+    sprintf("%sif (%s) {", pad, cpp_expr(x[[2]], spelling)),
+    mrg_stmt_lines(stmt_body(x[[3]]), spelling, declared, depth + 2)
   )
   if (length(x) == 4) {
     other <- x[[4]]
     if (is_call(other, "if")) {
-      inner <- mrg_if_lines(other, names, declared, indent)
+      inner <- mrg_if_lines(other, spelling, declared, depth)
       inner[[1]] <- sprintf("%s} else %s", pad, trimws(inner[[1]]))
       return(c(out, inner))
     }
     out <- c(
       out,
       sprintf("%s} else {", pad),
-      mrg_stmt_lines(stmt_body(other), names, declared, indent + 2)
+      mrg_stmt_lines(stmt_body(other), spelling, declared, depth + 2)
     )
   }
   c(out, sprintf("%s}", pad))
 }
 
-cpp_expr <- function(x, names) {
-  expr_print(x, names, cpp_dialect)
+cpp_expr <- function(x, spelling) {
+  expr_print(x, spelling, cpp_dialect)
 }
 
 cpp_dialect <- list(

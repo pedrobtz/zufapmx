@@ -20,5 +20,7 @@ test_that("nlmixr2lib models round-trip exactly or are refused", {
 
   pk <- grep("^PK_[123]cmt", names, value = TRUE)
   expect_true(all(pk %in% accepted))
-  expect_gte(length(accepted), length(names) / 2)
+  # nlmixr2lib 0.3.2 has 59 models, of which 44 read; a reader regression
+  # that newly refuses one shows here.
+  expect_gte(length(accepted), 44)
 })

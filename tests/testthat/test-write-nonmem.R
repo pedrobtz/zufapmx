@@ -11,10 +11,6 @@ test_that("rxode2 corpus models write as equivalent control streams", {
     w <- pmx_write_nonmem(corpus_rxode2_model(id))
     expect_equal(pmx_fidelity(w), "equivalent", label = id)
   }
-  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model("twocmt-oral"))))
-  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model(
-    "onecmt-oral-mm"
-  ))))
 })
 
 test_that("models round-trip between rxode2 and NONMEM and still predict", {
@@ -70,8 +66,8 @@ test_that("estimates are written as final or initial values, and the other is lo
 })
 
 test_that("a model without estimates writes its initial values and loses nothing", {
-  w <- pmx_write_nonmem(pmx_read_nonmem(file.path(
-    zupkpmx_corpus()$path[[1]],
+  w <- pmx_write_nonmem(pmx_read_nonmem(corpus_file(
+    "onecmt-oral",
     "model.ctl"
   )))
   expect_equal(pmx_losses(w), character())
@@ -116,7 +112,7 @@ test_that("expressions print with Fortran precedence", {
   expect_equal(nm_expr(quote(a^-b), names), "A ** (-B)")
   expect_equal(
     nm_expr(quote(!(a > 1) | b <= c), names),
-    ".NOT.(A .GT. 1) .OR. B .LE. C"
+    ".NOT.(A .GT. 1.0) .OR. B .LE. C"
   )
   expect_equal(nm_expr(quote(exp(log10(a))), names), "EXP(LOG10(A))")
 })
@@ -150,7 +146,10 @@ test_that("constructs NM-TRAN cannot hold are refused", {
   )
 
   clash <- parts
-  clash$individual <- c(clash$individual, list(quote(f <- 1)))
+  clash$individual <- c(
+    clash$individual,
+    list(quote(cl.a <- 1), quote(cl_a <- 2))
+  )
   expect_error(
     pmx_write_nonmem(do.call(new_model, clash)),
     class = "zupkpmx_write_error"
@@ -162,4 +161,65 @@ test_that("constructs NM-TRAN cannot hold are refused", {
     pmx_write_nonmem(do.call(new_model, iov)),
     class = "zupkpmx_write_error"
   )
+})
+
+test_that("variables PREDPP reserves are renamed", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tka <- c(0, 1)
+      tcl <- c(0, 4)
+      tv <- c(0, 50)
+      tf <- 0.1
+      sd <- c(0, 0.2)
+    })
+    model({
+      f1 <- tf
+      mtime1 <- 2
+      ka <- tka * (1 + f1)
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ prop(sd)
+    })
+  })
+  text <- pmx_write_nonmem(m)$text
+
+  expect_true(all(
+    c("F1_ = THETA(4)", "MTIME1_ = 2.0", "KA = THETA(1) * (1.0 + F1_)") %in%
+      text
+  ))
+  expect_false(any(grepl("^F1 =", text)))
+})
+
+test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
+  skip_on_cran()
+  skip_if_not_installed("rxode2")
+  corpus <- zupkpmx_corpus()
+
+  for (i in seq_len(nrow(corpus))) {
+    path <- withr::local_tempfile(fileext = ".ctl")
+    writeLines(
+      pmx_write_nonmem(pmx_read_mrgsolve(file.path(
+        corpus$path[[i]],
+        "model.cpp"
+      )))$text,
+      path
+    )
+    fun <- eval(parse(text = pmx_write_rxode2(pmx_read_nonmem(path))$text))
+    got <- corpus_solve_rxode2(fun, corpus$regimen[[i]], "Y")
+    expected <- corpus_expected(corpus$path[[i]])$pred
+
+    expect_lte(corpus_max_rel_dev(got, expected), 1e-6, label = corpus$id[[i]])
+  }
+})
+
+test_that("whole numbers in NM-TRAN expressions carry a point", {
+  expect_equal(nm_expr(quote(3 / 4 * x), c(x = "X")), "3.0 / 4.0 * X")
+})
+
+test_that("written text is stable", {
+  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model("twocmt-oral"))))
+  expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model(
+    "onecmt-oral-mm"
+  ))))
 })

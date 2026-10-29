@@ -120,7 +120,10 @@ test_that("residual models are recognised in $TABLE", {
 })
 
 test_that("$NMEXT reads a NONMEM run's estimates as parameters", {
-  ext <- normalizePath(test_path("fixtures", "nonmem", "run1.ext"))
+  ext <- normalizePath(
+    test_path("fixtures", "nonmem", "run1.ext"),
+    winslash = "/"
+  )
   m <- read_cpp(c(
     sprintf("$NMEXT path = \"%s\"", ext),
     "$PKMODEL advan = 4, trans = 4, cmt = \"DEPOT CENT PERIPH\"",
@@ -137,7 +140,10 @@ test_that("$NMEXT reads a NONMEM run's estimates as parameters", {
 
   expect_equal(pmx_parameters(m)$estimate, c(1.12, 4.25, 21.5, 2.15, 41.5))
   expect_equal(diag(pmx_omega(m)), c(ETA1 = 0.084, ETA2 = 0.096))
-  expect_equal(unclass(m)$provenance$estimates, ext)
+  expect_equal(
+    normalizePath(unclass(m)$provenance$estimates, winslash = "/"),
+    ext
+  )
 })
 
 test_that("code outside mrgsolve's documented C++ is refused", {
@@ -161,4 +167,148 @@ test_that("code outside mrgsolve's documented C++ is refused", {
     "double IPRED = CENT / V1;",
     "double Y = IPRED + EPS(1);"
   ))
+})
+
+test_that("dosing macros under $PKMODEL use the file's compartment names", {
+  m <- pmx_read_mrgsolve(corpus_file("onecmt-oral-lag", "model.cpp"))
+
+  expect_equal(
+    unclass(m)$dosing,
+    list(depot = list(lag = quote(TVLAG), bioavailability = quote(TVF)))
+  )
+  expect_false(any(
+    c("ALAG_GUT", "F_GUT") %in% stmt_targets(unclass(m)$individual)
+  ))
+})
+
+test_that("dosing macros inside if, or read as variables, are refused", {
+  refused <- function(lines) {
+    expect_error(read_cpp(lines), class = "zupkpmx_parse_error")
+  }
+
+  refused(cpp_onecmt(main = "if (CL > 1) F_CENT = 0.5;"))
+  refused(cpp_onecmt(main = c("F_CENT = 0.5;", "double X = F_CENT * 2.0;")))
+})
+
+test_that("the $TABLE prediction is the term in F's place, fully expanded", {
+  m <- read_cpp(cpp_onecmt(
+    table = c(
+      "double CP = CENT / V;",
+      "double IPRED = CP;",
+      "double Y = IPRED * (1 + EPS(1));"
+    )
+  ))
+  expect_equal(unclass(m)$observations$Y$prediction, quote(CENT / V))
+
+  expect_error(
+    read_cpp(cpp_onecmt(
+      table = c(
+        "double IPRED = CENT / V;",
+        "double W = 0.5;",
+        "double Y = W * EPS(1) + IPRED;"
+      )
+    )),
+    class = "zupkpmx_parse_error"
+  )
+})
+
+test_that("$PKMODEL parameters can come straight from $PARAM", {
+  lines <- c(
+    "$PARAM CL = 4, V = 50, KA = 1",
+    "$PKMODEL ncmt = 1, depot = TRUE, cmt = \"GUT CENT\"",
+    "$SIGMA 0.04",
+    "$TABLE",
+    "double IPRED = CENT / V;",
+    "double Y = IPRED * (1 + EPS(1));"
+  )
+  m <- read_cpp(lines)
+
+  expect_equal(
+    unclass(m)$structure$parameters,
+    c(cl = "CL", v = "V", ka = "KA")
+  )
+  expect_equal(pmx_fidelity(pmx_write_mrgsolve(m)), "exact")
+  expect_true(all(
+    c("CL = THETA(1)", "V = THETA(2)", "KA = THETA(3)") %in%
+      pmx_write_nonmem(m)$text
+  ))
+  expect_true(pmx_fidelity(pmx_write_rxode2(m)) %in% c("exact", "equivalent"))
+
+  skip_on_cran()
+  skip_if_not_installed("rxode2")
+  got <- corpus_solve_rxode2(as_rxode2_function(m), "oral", "Y")
+  expected <- corpus_expected(
+    corpus_file("onecmt-oral", "expected.csv") |> dirname()
+  )$pred
+  expect_lte(corpus_max_rel_dev(got, expected), 1e-6)
+})
+
+test_that("Y is matched exactly in $TABLE", {
+  expect_error(
+    read_cpp(cpp_onecmt(
+      table = c(
+        "double IPRED = CENT / V;",
+        "double YOBS = IPRED * (1 + EPS(1));"
+      )
+    )),
+    class = "zupkpmx_parse_error"
+  )
+})
+
+test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order", {
+  dir <- withr::local_tempdir()
+  file.copy(test_path("fixtures", "nonmem", "run1.ext"), dir)
+  lines <- c(
+    "$OMEGA 0.5",
+    "$NMEXT path = \"run1.ext\", root = \"cppfile\"",
+    "$PKMODEL advan = 4, trans = 4, cmt = \"DEPOT CENT PERIPH\"",
+    "$MAIN",
+    "double KA = THETA1 * exp(ETA(1));",
+    "double CL = THETA2 * exp(ETA(2));",
+    "double V2 = THETA3 * exp(ETA(3));",
+    "double Q = THETA4;",
+    "double V3 = THETA5;",
+    "$TABLE",
+    "double IPRED = CENT / V2;",
+    "double Y = IPRED * (1 + EPS(1));"
+  )
+  path <- file.path(dir, "model.cpp")
+  writeLines(lines, path)
+  m <- pmx_read_mrgsolve(path)
+
+  expect_equal(diag(pmx_omega(m)), c(ETA1 = 0.5, ETA2 = 0.084, ETA3 = 0.096))
+  expect_equal(unclass(m)$random_effects$attach$parameter, c("KA", "CL", "V2"))
+
+  withr::local_dir(dir)
+  writeLines(sub(", root = \"cppfile\"", "", lines, fixed = TRUE), "model.cpp")
+  expect_equal(
+    pmx_parameters(pmx_read_mrgsolve("model.cpp"))$estimate[[1]],
+    1.12
+  )
+
+  writeLines(c("$THETA 1", lines), "model.cpp")
+  expect_error(pmx_read_mrgsolve("model.cpp"), class = "zupkpmx_parse_error")
+})
+
+test_that("$NMXML needs zuxml", {
+  local_mocked_bindings(has_zuxml = function() FALSE)
+  xml <- normalizePath(
+    test_path("fixtures", "nonmem", "run1.xml"),
+    winslash = "/"
+  )
+  expect_error(
+    read_cpp(c(sprintf("$NMXML path = \"%s\"", xml), cpp_onecmt())),
+    class = "zupkpmx_engine_error"
+  )
+})
+
+test_that("a directory is not a model file", {
+  expect_error(
+    pmx_read_mrgsolve(withr::local_tempdir()),
+    class = "zupkpmx_model_error"
+  )
+  expect_error(
+    pmx_read_nonmem(withr::local_tempdir()),
+    class = "zupkpmx_model_error"
+  )
 })

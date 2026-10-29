@@ -1,4 +1,4 @@
-# rxode2 corpus models write as equivalent control streams
+# written text is stable
 
     Code
       print(pmx_write_nonmem(corpus_rxode2_model("twocmt-oral")))

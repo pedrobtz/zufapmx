@@ -2,11 +2,9 @@ test_that("every corpus model round-trips exactly", {
   for (id in zupkpmx_corpus()$id) {
     m <- corpus_rxode2_model(id)
     w <- pmx_write_rxode2(m)
-    back <- pmx_read_rxode2(eval(parse(text = w$text)))
 
     expect_equal(pmx_fidelity(w), "exact", label = id)
     expect_equal(pmx_losses(w), character(), label = id)
-    expect_true(same_content(model_content(back), model_content(m)), label = id)
   }
 })
 
@@ -165,4 +163,55 @@ test_that("fidelity tolerates a parser that is off by one ulp", {
   expect_false(same_content(list(quote(a <- b)), list(quote(a <- c))))
   expect_false(same_content(data.frame(a = 1), data.frame(b = 1)))
   expect_false(same_content(list(NA_real_), list(1)))
+})
+
+test_that("fidelity is equivalent only through known reparameterisations", {
+  m <- corpus_rxode2_model("twocmt-oral")
+  parts <- unclass(m)
+
+  renamed <- parts
+  renamed$individual <- c(renamed$individual, list(quote(V2 <- v)))
+  renamed$structure$parameters[["v"]] <- "V2"
+  renamed$observations$cp$prediction <- quote(central / V2)
+  back <- do.call(new_model, renamed)
+  expect_equal(written_fidelity(character(), m, back), "equivalent")
+
+  changed <- parts
+  changed$individual[[2]] <- quote(cl <- tcl * exp(eta.cl) * 2)
+  back <- do.call(new_model, changed)
+  expect_error(
+    written_fidelity(character(), m, back),
+    class = "zupkpmx_write_error"
+  )
+})
+
+test_that("variables linCmt() would read as parameters are renamed", {
+  m <- read_ctl(c(
+    "$PROBLEM x",
+    "$SUBROUTINES ADVAN3 TRANS4",
+    "$PK",
+    "CL = THETA(1)",
+    "V1 = THETA(2)",
+    "Q = THETA(3)",
+    "V2 = THETA(4)",
+    "VPX = 2",
+    "KE = CL / V1",
+    "VMAX = 3",
+    "S1 = V1",
+    "$ERROR",
+    "Y = F + EPS(1)",
+    "$THETA 4 20 2 40",
+    "$SIGMA 0.1"
+  ))
+  text <- pmx_write_rxode2(m)$text
+
+  expect_true(all(
+    c("x_VPX <- 2", "x_KE <- CL/V1", "VMAX <- 3") %in% trimws(text)
+  ))
+  skip_on_cran()
+  skip_if_not_installed("rxode2")
+  expect_s3_class(
+    suppressMessages(rxode2::rxode2(eval(parse(text = text)))),
+    "rxUi"
+  )
 })

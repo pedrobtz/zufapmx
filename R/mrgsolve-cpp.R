@@ -16,137 +16,85 @@ cpp_functions <- c(
 )
 
 cpp_tokenize <- function(lines, line_numbers, file) {
-  patterns <- c(
-    space = "^\\s+",
-    number = "^([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?[fF]?",
-    name = "^[A-Za-z_][A-Za-z0-9_]*",
-    op = "^(&&|\\|\\||==|!=|<=|>=|[-+*/()=<>!,;{}])"
+  tokenize(
+    lines,
+    line_numbers,
+    c(
+      space = "^\\s+",
+      number = "^([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?[fF]?",
+      name = "^[A-Za-z_][A-Za-z0-9_]*",
+      op = "^(&&|\\|\\||==|!=|<=|>=|[-+*/()=<>!,;{}])"
+    ),
+    file,
+    "C++ of mrgsolve's model code"
   )
-  tokens <- list()
-  for (k in seq_along(lines)) {
-    text <- lines[[k]]
-    pos <- 1L
-    n <- nchar(text)
-    while (pos <= n) {
-      rest <- substr(text, pos, n)
-      matched <- FALSE
-      for (type in names(patterns)) {
-        m <- regmatches(rest, regexpr(patterns[[type]], rest, perl = TRUE))
-        if (length(m) == 1 && nzchar(m)) {
-          if (type != "space") {
-            tokens[[length(tokens) + 1]] <- list(
-              type = type,
-              value = m,
-              line = line_numbers[[k]],
-              column = pos
-            )
-          }
-          pos <- pos + nchar(m)
-          matched <- TRUE
-          break
-        }
-      }
-      if (!matched) {
-        parse_error(
-          file,
-          line_numbers[[k]],
-          pos,
-          seen = substr(rest, 1, 1),
-          expected = "C++ of mrgsolve's model code",
-          call = NULL
-        )
-      }
-    }
-  }
-  tokens
 }
 
 # Parse a block's code into statements.
-mrg_code <- function(block, file) {
+cpp_parse <- function(block, file) {
   tokens <- cpp_tokenize(block$lines, block$line, file)
-  i <- 1L
-  peek <- function(k = 0L) if (i + k <= length(tokens)) tokens[[i + k]]
-  is <- function(value, k = 0L) {
-    t <- peek(k)
-    !is.null(t) && t$value %in% value
-  }
-  fail <- function(expected) {
-    t <- peek()
-    if (is.null(t)) {
-      t <- list(
-        value = "end of block",
-        line = max(block$line),
-        column = NA_integer_
-      )
-    }
-    parse_error(
-      file,
-      t$line,
-      t$column,
-      seen = t$value,
-      expected = expected,
-      call = NULL
-    )
-  }
-  take <- function(value = NULL) {
-    t <- peek()
-    if (is.null(t) || (!is.null(value) && !t$value %in% value)) {
-      fail(if (is.null(value)) "more code" else paste(value, collapse = " or "))
-    }
-    i <<- i + 1L
-    t
-  }
-  binary <- function(next_level, ops, map) {
-    function() {
-      left <- next_level()
-      while (is(ops)) {
-        op <- take()$value
-        left <- call(map[[op]], left, next_level())
-      }
-      left
-    }
-  }
+  s <- token_stream(
+    tokens,
+    file,
+    end = list(value = "end of block", line = max(block$line))
+  )
+  peek <- s$peek
+  at <- s$at
+  take <- s$take
+  fail <- s$fail
+  binary <- s$binary
+
   primary <- function() {
-    t <- peek()
-    if (is.null(t)) {
+    tok <- peek()
+    if (is.null(tok)) {
       fail("an expression")
     }
-    if (t$type == "number") {
+    if (tok$type == "number") {
       take()
-      return(as.numeric(sub("[fF]$", "", t$value)))
+      # A literal without a point or exponent is an int in C++; it stays
+      # integer until cpp_integers() has checked the arithmetic.
+      if (grepl("^[0-9]+$", tok$value)) {
+        return(as.integer(tok$value))
+      }
+      return(as.numeric(sub("[fF]$", "", tok$value)))
     }
-    if (t$value == "(") {
+    if (tok$value == "(") {
       take()
       inner <- or_expr()
       take(")")
       return(call("(", inner))
     }
-    if (t$type != "name") {
+    if (tok$type != "name") {
       fail("an expression")
     }
     take()
-    if (!is("(")) {
-      return(as.symbol(t$value))
+    if (!at("(")) {
+      return(as.symbol(tok$value))
     }
     take("(")
     args <- list()
-    if (!is(")")) {
+    if (!at(")")) {
       args <- list(or_expr())
-      while (is(",")) {
+      while (at(",")) {
         take()
         args[[length(args) + 1]] <- or_expr()
       }
     }
     take(")")
-    name <- t$value
+    name <- tok$value
     if (name %in% c("ETA", "EPS", "THETA")) {
-      if (length(args) != 1 || !is.numeric(args[[1]])) {
+      if (
+        length(args) != 1 ||
+          !is.numeric(args[[1]]) ||
+          args[[1]] != round(args[[1]]) ||
+          args[[1]] < 1
+      ) {
         parse_error(
           file,
-          t$line,
-          t$column,
+          tok$line,
+          tok$column,
           seen = name,
-          expected = sprintf("%s(n)", name),
+          expected = sprintf("%s(n) with a whole number n", name),
           call = NULL
         )
       }
@@ -156,39 +104,46 @@ mrg_code <- function(block, file) {
       return(call("^", args[[1]], args[[2]]))
     }
     if (name %in% names(cpp_functions)) {
+      arity <- expr_functions[[cpp_functions[[name]]]]
+      if (length(args) != arity) {
+        parse_error(
+          file,
+          tok$line,
+          tok$column,
+          seen = name,
+          expected = sprintf("%s() with %d arguments", name, arity),
+          call = NULL
+        )
+      }
       return(as.call(c(as.symbol(cpp_functions[[name]]), args)))
     }
     parse_error(
       file,
-      t$line,
-      t$column,
+      tok$line,
+      tok$column,
       seen = name,
       expected = "a function of mrgsolve's documented C++",
       call = NULL
     )
   }
   unary <- function() {
-    if (is(c("-", "+", "!"))) {
+    if (at(c("-", "+", "!"))) {
       return(call(take()$value, unary()))
     }
     primary()
   }
-  multiplicative <- binary(unary, c("*", "/"), c(`*` = "*", `/` = "/"))
-  additive <- binary(multiplicative, c("+", "-"), c(`+` = "+", `-` = "-"))
-  relational <- binary(
-    additive,
-    c("<", "<=", ">", ">="),
-    c(`<` = "<", `<=` = "<=", `>` = ">", `>=` = ">=")
-  )
-  equality <- binary(relational, c("==", "!="), c(`==` = "==", `!=` = "!="))
+  multiplicative <- binary(unary, c("*", "/"))
+  additive <- binary(multiplicative, c("+", "-"))
+  relational <- binary(additive, c("<", "<=", ">", ">="))
+  equality <- binary(relational, c("==", "!="))
   and_expr <- binary(equality, "&&", c(`&&` = "&"))
   or_expr <- binary(and_expr, "||", c(`||` = "|"))
 
   body <- function() {
-    if (is("{")) {
+    if (at("{")) {
       take()
       stmts <- list()
-      while (!is("}")) {
+      while (!at("}")) {
         if (is.null(peek())) {
           fail("}")
         }
@@ -204,43 +159,79 @@ mrg_code <- function(block, file) {
     if (is.null(s)) list() else list(s)
   }
   statement <- function() {
-    if (is(";")) {
+    if (at(";")) {
       take()
       return(NULL)
     }
-    if (is("if")) {
+    if (at("if")) {
       take()
       take("(")
       cond <- or_expr()
       take(")")
       yes <- as.call(c(as.symbol("{"), body()))
-      if (is("else")) {
+      if (at("else")) {
         take()
-        no <- if (is("if")) statement() else as.call(c(as.symbol("{"), body()))
+        no <- if (at("if")) statement() else as.call(c(as.symbol("{"), body()))
         return(call("if", cond, yes, no))
       }
       return(call("if", cond, yes))
     }
-    while (is(c("double", "int", "bool", "capture", "const", "localdouble"))) {
+    if (at("int")) {
+      fail("double: an int declaration truncates")
+    }
+    while (at(c("double", "bool", "capture", "const", "localdouble"))) {
       take()
     }
-    t <- peek()
-    if (is.null(t) || t$type != "name" || !is("=", 1L)) {
+    tok <- peek()
+    if (is.null(tok) || tok$type != "name" || !at("=", 1L)) {
       fail("a declaration or an assignment")
     }
     take()
     take("=")
     value <- or_expr()
     take(";")
-    call("<-", as.symbol(t$value), value)
+    call("<-", as.symbol(tok$value), value)
   }
 
   out <- list()
   while (!is.null(peek())) {
     s <- statement()
     if (!is.null(s)) {
-      out[[length(out) + 1]] <- s
+      out[[length(out) + 1]] <- cpp_integers(s, file)$expr
     }
   }
   out
+}
+
+# Integer arithmetic as C++ does it. Integer literals and +, -, * of them
+# are int; dividing two ints truncates (3/4 is 0), which the representation
+# cannot hold, so it is refused. Everything else becomes double.
+cpp_integers <- function(x, file) {
+  if (is.integer(x)) {
+    return(list(expr = as.numeric(x), int = TRUE))
+  }
+  if (!is.call(x)) {
+    return(list(expr = x, int = FALSE))
+  }
+  parts <- lapply(as.list(x)[-1], cpp_integers, file = file)
+  x[-1] <- lapply(parts, `[[`, "expr")
+  op <- as.character(x[[1]])
+  ints <- vapply(parts, `[[`, logical(1), "int")
+  if (op == "/" && all(ints)) {
+    parse_error(
+      file,
+      NA_integer_,
+      NA_integer_,
+      seen = expr_text(x),
+      message = sprintf(
+        "not translated: `%s` is integer division in C++",
+        expr_text(x)
+      ),
+      call = NULL
+    )
+  }
+  list(
+    expr = x,
+    int = op %in% c("+", "-", "*", "(") && length(ints) > 0 && all(ints)
+  )
 }

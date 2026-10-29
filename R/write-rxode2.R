@@ -6,31 +6,45 @@
 #' rxode2's `ini()` holds one value per parameter: a model with estimates
 #' is written with its estimates, and its initial values are recorded as
 #' lost. Residual error held as sigma variances, as NONMEM holds it, is
-#' written as standard-deviation parameters named after the epsilons. Constructs rxode2 cannot hold,
-#' such as residual error written as an expression over epsilons, stop
-#' with an error of class `zupkpmx_write_error`.
+#' written as standard-deviation parameters named after the epsilons.
+#' Variables `linCmt()` would read as parameters are renamed with an `x_`
+#' prefix. Constructs rxode2 cannot hold, such as residual error written as
+#' an expression over epsilons, or an individual parameter that reads the
+#' record's time, stop with an error of class `zupkpmx_write_error`.
 #'
-#' @param model A model read by one of the `pmx_read_*()` functions.
-#' @return A written model: the text as lines, its fidelity and its losses.
+#' @inheritParams pmx_inspect
+#' @return A `zupkpmx_written` object: the text as lines, with its fidelity
+#'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
+#'   give the text.
+#' @family writers
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
-#' fun <- eval(parse(file.path(corpus$path[[2]], "model-rxode2.R")))
+#' path <- system.file(
+#'   "corpus", "onecmt-oral-mm", "model-rxode2.R",
+#'   package = "zupkpmx"
+#' )
+#' fun <- eval(parse(path))
 #' pmx_write_rxode2(pmx_read_rxode2(fun))
 pmx_write_rxode2 <- function(model) {
   check_model(model)
   m <- unclass(model)
   losses <- character()
 
-  m <- rxode2_sd_from_sigma(m)
-  m <- rxode2_free_lincmt_names(m)
-  if (isTRUE(m$random_effects$iov$present)) {
-    write_error(
-      "inter-occasion variability",
-      "random_effects$iov",
-      formats = character(),
-      call = NULL
-    )
+  m <- rxode2_write_sd_from_sigma(m)
+  m <- rxode2_write_lincmt_parameters(m)
+  m <- rxode2_write_free_lincmt(m)
+  check_writable(m, one_endpoint = FALSE)
+  # The record's time in individual statements (D15) has no rxode2
+  # spelling: rxode2 evaluates every statement in continuous time.
+  for (x in m$individual) {
+    if ("t" %in% all.vars(x)) {
+      write_error(
+        "an individual parameter that reads the record's time",
+        "individual",
+        formats = c("nonmem", "mrgsolve"),
+        call = NULL
+      )
+    }
   }
   if (any(!is.na(m$parameters$estimate))) {
     losses <- c(
@@ -42,15 +56,18 @@ pmx_write_rxode2 <- function(model) {
   text <- c(
     "function() {",
     "  ini({",
-    indent(rxode2_ini_lines(m), 4),
+    indent(rxode2_write_ini(m), 4),
     "  })",
     "  model({",
-    indent(rxode2_model_lines(m), 4),
+    indent(rxode2_write_model(m), 4),
     "  })",
     "}"
   )
 
-  back <- read_rxode2_body(body(eval(parse(text = text))), "written")
+  back <- read_back(
+    rxode2_read_body(body(eval(parse(text = text))), "written"),
+    "rxode2"
+  )
   new_written(
     text = text,
     format = "rxode2",
@@ -62,7 +79,7 @@ pmx_write_rxode2 <- function(model) {
 # Residual error held as sigma variances (as NONMEM holds it) becomes
 # standard-deviation parameters, named after their epsilons, whose values
 # are the square roots of the variances.
-rxode2_sd_from_sigma <- function(m) {
+rxode2_write_sd_from_sigma <- function(m) {
   blocks <- m$random_effects$sigma
   if (length(blocks) == 0) {
     return(m)
@@ -102,10 +119,44 @@ rxode2_sd_from_sigma <- function(m) {
   m
 }
 
+# linCmt() finds its parameters among model() variables, never ini()
+# parameters. A closed form whose CL is a parameter (mrgsolve's $PKMODEL
+# over $PARAM) gets the parameter renamed tCL and `CL <- tCL` in model().
+rxode2_write_lincmt_parameters <- function(m) {
+  if (!identical(m$structure$type, "closed")) {
+    return(m)
+  }
+  direct <- intersect(m$structure$parameters, m$parameters$name)
+  if (length(direct) == 0) {
+    return(m)
+  }
+  taken <- unique(c(
+    m$parameters$name,
+    stmt_targets(m$individual),
+    unlist(lapply(model_expressions(m), all.vars))
+  ))
+  renamed <- make.unique(c(taken, paste0("t", direct)))[
+    length(taken) + seq_along(direct)
+  ]
+  map <- stats::setNames(renamed, direct)
+  m$parameters$name <- map[m$parameters$name] %|NA|% m$parameters$name
+  rename <- function(x) rename_symbols(x, map)
+  m$individual <- c(
+    lapply(seq_along(direct), function(i) {
+      call("<-", as.symbol(direct[[i]]), as.symbol(renamed[[i]]))
+    }),
+    lapply(m$individual, rename)
+  )
+  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
+  m
+}
+
 # Names linCmt() reads as parameters. In a closed form, any other variable
 # with one of them (V next to V1 and V2, say, after a NONMEM ADVAN alias)
-# makes rxode2 refuse the model, so it is renamed with an `x_` prefix
-# (rxode2 matches these names by prefix, so a suffix is not enough).
+# makes rxode2 refuse the model, so it is renamed with an `x_` prefix.
+# rxode2 also reads some stems as prefixes: VPX or VP_ next to V1 "mixes
+# volume styles", and KE or K10 is "ambiguous kel"; a suffix is not enough,
+# while VMAX, CLR or KAPPA are left alone (probed with rxode2 5.1.8).
 lincmt_reserved <- c(
   "cl",
   "v",
@@ -126,6 +177,8 @@ lincmt_reserved <- c(
   "q4",
   "ka",
   "k",
+  "ke",
+  "k10",
   "kel",
   "k12",
   "k21",
@@ -136,14 +189,16 @@ lincmt_reserved <- c(
   "gamma"
 )
 
-rxode2_free_lincmt_names <- function(m) {
+rxode2_write_free_lincmt <- function(m) {
   if (!identical(m$structure$type, "closed")) {
     return(m)
   }
   vars <- stmt_targets(m$individual)
-  clash <- vars[
-    tolower(vars) %in% lincmt_reserved & !vars %in% m$structure$parameters
-  ]
+  lower <- tolower(vars)
+  reads <- lower %in%
+    lincmt_reserved |
+    grepl("^(vp|ke|k10)", lower)
+  clash <- vars[reads & !vars %in% m$structure$parameters]
   if (length(clash) == 0) {
     return(m)
   }
@@ -168,33 +223,14 @@ rxode2_free_lincmt_names <- function(m) {
   m
 }
 
-rename_symbols <- function(x, map) {
-  if (is.symbol(x)) {
-    name <- as.character(x)
-    return(if (name %in% names(map)) as.symbol(map[[name]]) else x)
-  }
-  if (is.call(x)) {
-    x[] <- lapply(as.list(x), rename_symbols, map = map)
-  }
-  x
-}
-
-rxode2_ini_lines <- function(m) {
+rxode2_write_ini <- function(m) {
   p <- m$parameters
   params <- vapply(
     seq_len(nrow(p)),
     function(i) {
       value <- if (is.na(p$estimate[[i]])) p$init[[i]] else p$estimate[[i]]
-      values <- if (is.infinite(p$upper[[i]]) && p$upper[[i]] > 0) {
-        if (is.infinite(p$lower[[i]]) && p$lower[[i]] < 0) {
-          value
-        } else {
-          c(p$lower[[i]], value)
-        }
-      } else {
-        c(p$lower[[i]], value, p$upper[[i]])
-      }
-      paste(p$name[[i]], "<-", rxode2_values(values, p$fixed[[i]]))
+      values <- bounded_values(p$lower[[i]], value, p$upper[[i]])
+      paste(p$name[[i]], "<-", rxode2_write_values(values, p$fixed[[i]]))
     },
     character(1)
   )
@@ -206,7 +242,7 @@ rxode2_ini_lines <- function(m) {
       paste(
         paste(block$names, collapse = " + "),
         "~",
-        rxode2_values(values, block$fixed)
+        rxode2_write_values(values, block$fixed)
       )
     },
     character(1)
@@ -214,7 +250,7 @@ rxode2_ini_lines <- function(m) {
   c(params, etas)
 }
 
-rxode2_values <- function(values, fixed) {
+rxode2_write_values <- function(values, fixed) {
   text <- vapply(values, num_text, character(1))
   if (fixed) {
     return(sprintf("fix(%s)", paste(text, collapse = ", ")))
@@ -226,7 +262,7 @@ rxode2_values <- function(values, fixed) {
   }
 }
 
-rxode2_model_lines <- function(m) {
+rxode2_write_model <- function(m) {
   s <- m$structure
   lines <- stmt_lines(m$individual)
 
@@ -267,15 +303,7 @@ rxode2_model_lines <- function(m) {
 
   for (endpoint in names(m$observations)) {
     obs <- m$observations[[endpoint]]
-    if (obs$transform != "none") {
-      write_error(
-        sprintf("a %s-transformed endpoint", obs$transform),
-        sprintf("observations$%s", endpoint),
-        formats = character(),
-        call = NULL
-      )
-    }
-    lines <- c(lines, rxode2_prediction(s, endpoint, obs$prediction))
+    lines <- c(lines, rxode2_write_prediction(s, endpoint, obs$prediction))
   }
   for (endpoint in names(m$observations)) {
     lines <- c(
@@ -283,14 +311,14 @@ rxode2_model_lines <- function(m) {
       sprintf(
         "%s ~ %s",
         endpoint,
-        rxode2_residual_text(m$observations[[endpoint]]$residual, endpoint)
+        rxode2_write_residual(m$observations[[endpoint]]$residual, endpoint)
       )
     )
   }
   lines
 }
 
-rxode2_prediction <- function(s, endpoint, prediction) {
+rxode2_write_prediction <- function(s, endpoint, prediction) {
   if (identical(prediction, as.symbol(endpoint))) {
     return(character())
   }
@@ -315,7 +343,7 @@ rxode2_prediction <- function(s, endpoint, prediction) {
   sprintf("%s <- %s", endpoint, expr_line(prediction))
 }
 
-rxode2_residual_text <- function(residual, endpoint) {
+rxode2_write_residual <- function(residual, endpoint) {
   p <- residual$parameters
   switch(
     residual$type,
@@ -337,43 +365,4 @@ stmt_lines <- function(stmts) {
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "if")) expr_deparse(x) else expr_line(x)
   }))
-}
-
-expr_line <- function(x) {
-  paste(expr_deparse(x), collapse = " ")
-}
-
-# Deparse with 15 significant digits unless a constant needs 17 to read
-# back as the same number.
-expr_deparse <- function(x) {
-  numbers <- expr_numbers(x)
-  exact <- all(vapply(
-    numbers,
-    function(n) identical(as.numeric(as.character(n)), n),
-    logical(1)
-  ))
-  opts <- if (exact) "keepNA" else c("keepNA", "digits17")
-  deparse(x, width.cutoff = 500L, control = opts)
-}
-
-expr_numbers <- function(x) {
-  if (is.numeric(x)) {
-    return(as.list(x))
-  }
-  if (is.call(x)) {
-    return(unlist(lapply(as.list(x)[-1], expr_numbers), recursive = FALSE))
-  }
-  list()
-}
-
-# 15 significant digits when they read back within a few ulps, which the
-# fidelity check allows (same_content()); 17 otherwise. 0.2^2 prints as
-# 0.04, not 0.040000000000000008.
-num_text <- function(x) {
-  text <- as.character(x)
-  if (same_content(as.numeric(text), x)) text else sprintf("%.17g", x)
-}
-
-indent <- function(lines, n) {
-  paste0(strrep(" ", n), lines)
 }

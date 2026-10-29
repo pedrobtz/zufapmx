@@ -84,7 +84,7 @@ test_that("verbatim code is refused with its line", {
     class = "zupkpmx_parse_error"
   )
   expect_equal(err$line, 2L)
-  expect_match(conditionMessage(err), "verbatim Fortran at line 2")
+  expect_snapshot(cat(conditionMessage(err)))
 })
 
 test_that("a function outside the table is refused with its position", {
@@ -131,4 +131,36 @@ test_that("records split on $ and accept abbreviations", {
     nm_split(c("$PROB x", "$FOO"), "t.ctl"),
     class = "zupkpmx_parse_error"
   )
+})
+
+test_that("NM-TRAN names are case-insensitive", {
+  expect_equal(
+    nm_parse_lines(c("Cl = Theta(2) * exp(Eta(1))", "k = CL / v")),
+    list(quote(CL <- THETA2 * exp(ETA1)), quote(K <- CL / V))
+  )
+  expect_equal(
+    nm_parse_lines(c("if (wt.gt.70) then", "x = 1", "endif")),
+    list(quote(
+      if (WT > 70) {
+        X <- 1
+      }
+    ))
+  )
+})
+
+test_that("record names need three letters, and an ambiguous one says so", {
+  expect_error(
+    nm_split(c("$PROB x", "$OM 0.1"), "t.ctl"),
+    class = "zupkpmx_parse_error"
+  )
+  err <- expect_error(
+    nm_split(c("$PROB x", "$S 0.1"), "t.ctl"),
+    class = "zupkpmx_parse_error"
+  )
+  expect_equal(err$seen, "$S")
+  err <- expect_error(
+    nm_split(c("$PROB x", "$SI 0.1"), "t.ctl"),
+    class = "zupkpmx_parse_error"
+  )
+  expect_equal(err$seen, "$SI")
 })

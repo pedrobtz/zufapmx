@@ -32,10 +32,8 @@ test_that("a parse error can explain itself instead of listing tokens", {
   )
 
   expect_s3_class(err, "zupkpmx_parse_error")
-  expect_equal(
-    conditionMessage(err),
-    "run1.ctl:40:1: not translated: verbatim Fortran at line 40"
-  )
+  expect_equal(c(err$line, err$column), c(40L, 1L))
+  expect_snapshot(cat(conditionMessage(err)))
 })
 
 test_that("write errors carry the construct, location and formats", {

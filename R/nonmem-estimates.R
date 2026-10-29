@@ -6,7 +6,7 @@
 has_zuxml <- function() requireNamespace("zuxml", quietly = TRUE)
 
 nm_attach_estimates <- function(model, file, source) {
-  stem <- sub("\\.[^.]*$", "", file)
+  stem <- tools::file_path_sans_ext(file)
   paths <- c(
     xml = paste0(stem, ".xml"),
     ext = paste0(stem, ".ext"),
@@ -92,15 +92,6 @@ nm_block_estimates <- function(blocks, full, path) {
   })
 }
 
-# A full symmetric matrix from lower-triangle values listed row by row.
-lower_to_full <- function(values) {
-  n <- (sqrt(8 * length(values) + 1) - 1) / 2
-  m <- matrix(0, n, n)
-  m[upper.tri(m, diag = TRUE)] <- values
-  m[lower.tri(m)] <- t(m)[lower.tri(m)]
-  m
-}
-
 nm_estimates_ext <- function(path) {
   lines <- readLines(path, warn = FALSE)
   tables <- grep("^TABLE NO\\.", lines)
@@ -109,12 +100,22 @@ nm_estimates_ext <- function(path) {
       path,
       1L,
       1L,
-      seen = lines[[1]],
+      seen = if (length(lines) > 0) lines[[1]] else "an empty file",
       expected = "TABLE NO.",
       call = NULL
     )
   }
   last <- tables[[length(tables)]]
+  if (last + 1 > length(lines)) {
+    parse_error(
+      path,
+      last,
+      1L,
+      seen = "end of file",
+      expected = "a header and rows after TABLE NO.",
+      call = NULL
+    )
+  }
   body <- lines[(last + 1):length(lines)]
   header <- strsplit(trimws(body[[1]]), "\\s+")[[1]]
   rows <- lapply(strsplit(trimws(body[-1]), "\\s+"), as.numeric)
@@ -143,7 +144,19 @@ nm_estimates_ext <- function(path) {
 nm_estimates_xml <- function(path) {
   # NONMEM declares encoding="ASCII", which expat does not know by that
   # name. ISO-8859-1 reads every byte, and ASCII is a subset of it.
-  doc <- zuxml::xml_read(path, encoding = "ISO-8859-1")
+  doc <- tryCatch(
+    zuxml::xml_read(path, encoding = "ISO-8859-1"),
+    error = function(e) {
+      parse_error(
+        path,
+        NA_integer_,
+        NA_integer_,
+        seen = "the XML",
+        message = conditionMessage(e),
+        call = NULL
+      )
+    }
+  )
   ns <- "http://namespaces.oup.com/nonmem"
   est <- zuxml::xml_find(zuxml::xml_root(doc), "estimation", ns = ns)
   if (length(est) == 0) {
