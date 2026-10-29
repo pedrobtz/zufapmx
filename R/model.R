@@ -84,7 +84,7 @@ pmx_parameters <- function(model) {
 #' @export
 pmx_omega <- function(model, values = c("estimate", "init")) {
   check_model(model)
-  values <- match.arg(values)
+  values <- check_choice(values)
   blocks <- model$random_effects$omega
   names <- unlist(lapply(blocks, `[[`, "names"))
   out <- matrix(0, length(names), length(names), dimnames = list(names, names))
@@ -116,6 +116,7 @@ print.zufapmx_model <- function(x, ...) {
 
 #' @export
 format.zufapmx_model <- function(x, ...) {
+  check_model(x)
   p <- x$parameters
   estimated <- sum(!is.na(p$estimate))
   attach <- x$random_effects$attach
@@ -297,6 +298,31 @@ validate_parameters <- function(x) {
       paste(columns, collapse = ", ")
     )
   }
+  types <- list(
+    name = is.character,
+    role = is.character,
+    init = is.numeric,
+    lower = is.numeric,
+    upper = is.numeric,
+    fixed = is.logical,
+    estimate = is.numeric
+  )
+  for (col in names(types)) {
+    # Only an estimate may be missing: a parameter read without one.
+    if (!types[[col]](x[[col]]) || (col != "estimate" && anyNA(x[[col]]))) {
+      model_abort(
+        "Parameter column `%s` must be %s with no missing values.",
+        col,
+        switch(
+          col,
+          name = ,
+          role = "character",
+          fixed = "logical",
+          "numeric"
+        )
+      )
+    }
+  }
   if (anyDuplicated(x$name)) {
     model_abort(
       "Parameter `%s` is defined twice.",
@@ -412,6 +438,9 @@ validate_dosing <- function(x, compartments) {
 }
 
 validate_observations <- function(x) {
+  if (length(x) > 0 && (is.null(names(x)) || !all(nzchar(names(x))))) {
+    model_abort("Every endpoint needs a name.")
+  }
   for (endpoint in names(x)) {
     obs <- x[[endpoint]]
     expr_check(obs$prediction)
@@ -428,8 +457,51 @@ model_abort <- function(fmt, ...) {
   zufapmx_abort(sprintf(fmt, ...), "model", call = sys.call(-1))
 }
 
+# A model handed to an exported function is validated again: it is data
+# (D3), and may have been edited since it was read.
 check_model <- function(x) {
   if (!inherits(x, "zufapmx_model")) {
     model_abort("Expected a zufapmx model, not %s.", class(x)[[1]])
+  }
+  validate_model(x)
+}
+
+# Argument checks shared by the exported functions. Both raise a model
+# error, the class for invalid input that is not a model file.
+check_choice <- function(
+  arg,
+  choices = eval(formals(sys.function(-1))[[name]], envir = sys.frame(-1)),
+  name = deparse(substitute(arg))
+) {
+  if (identical(arg, choices)) {
+    return(choices[[1]])
+  }
+  if (!is.character(arg) || length(arg) != 1 || !arg %in% choices) {
+    zufapmx_abort(
+      sprintf(
+        "`%s` must be one of %s.",
+        name,
+        paste0("\"", choices, "\"", collapse = ", ")
+      ),
+      "model",
+      call = sys.call(-1)
+    )
+  }
+  arg
+}
+
+check_file <- function(file) {
+  if (
+    !is.character(file) ||
+      length(file) != 1 ||
+      is.na(file) ||
+      !file.exists(file) ||
+      dir.exists(file)
+  ) {
+    zufapmx_abort(
+      "`file` must be the path of an existing file.",
+      "model",
+      call = sys.call(-1)
+    )
   }
 }

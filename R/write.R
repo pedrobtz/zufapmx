@@ -96,7 +96,7 @@ closed_alias_lines <- function(structure, spelling, format) {
 }
 
 # What no writer can hold yet: inter-occasion variability, transformed
-# endpoints, and (for NONMEM and mrgsolve) more than one endpoint.
+# endpoints, and (for NONMEM and mrgsolve) other than one endpoint.
 check_writable <- function(m, one_endpoint = TRUE) {
   if (isTRUE(m$random_effects$iov$present)) {
     write_error(
@@ -118,7 +118,11 @@ check_writable <- function(m, one_endpoint = TRUE) {
   }
   if (one_endpoint && length(m$observations) != 1) {
     write_error(
-      "more than one endpoint",
+      if (length(m$observations) == 0) {
+        "no endpoint"
+      } else {
+        "more than one endpoint"
+      },
       "observations",
       formats = "rxode2",
       call = NULL

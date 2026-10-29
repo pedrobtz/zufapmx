@@ -242,3 +242,54 @@ test_that("a name assigned inside if needs a value before it (D14)", {
   ind <- c(unclass(m)$individual, list(quote(f <- 1)), ind[length(ind)])
   expect_s3_class(model_with(m, individual = ind), "zufapmx_model")
 })
+
+test_that("a choice argument outside its documented strings is a model error", {
+  ctl <- corpus_file("onecmt-oral", "model.ctl")
+  m <- model_twocmt_oral()
+  for (bad in list("EXT", "bogus", NA, c("final", "initial", "x"), 1)) {
+    expect_error(pmx_read_nonmem(ctl, bad), class = "zufapmx_model_error")
+    expect_error(pmx_write_nonmem(m, bad), class = "zufapmx_model_error")
+    expect_error(pmx_omega(m, bad), class = "zufapmx_model_error")
+  }
+  expect_equal(pmx_omega(m, "init"), pmx_omega(m))
+})
+
+test_that("a file argument must name one existing file", {
+  for (bad in list(NA_character_, character(), c("a", "b"), tempdir(), 1)) {
+    expect_error(pmx_read_nonmem(bad), class = "zufapmx_model_error")
+    expect_error(pmx_read_mrgsolve(bad), class = "zufapmx_model_error")
+  }
+})
+
+test_that("an edited model is validated again before use", {
+  m <- model_twocmt_oral()
+  edits <- list(
+    function(x) {
+      x$parameters$fixed[1] <- NA
+      x
+    },
+    function(x) {
+      x$parameters$init[1] <- "1"
+      x
+    },
+    function(x) {
+      x$parameters$init[1] <- NA
+      x
+    },
+    function(x) structure(list(), class = "zufapmx_model")
+  )
+  for (edit in edits) {
+    bad <- edit(m)
+    expect_error(pmx_write_nonmem(bad), class = "zufapmx_model_error")
+    expect_error(pmx_write_rxode2(bad), class = "zufapmx_model_error")
+    expect_error(pmx_write_mrgsolve(bad), class = "zufapmx_model_error")
+    expect_error(pmx_parameters(bad), class = "zufapmx_model_error")
+    expect_error(format(bad), class = "zufapmx_model_error")
+  }
+})
+
+test_that("a model without endpoints is valid but not written to one-endpoint formats", {
+  m <- model_with(model_twocmt_oral(), observations = list())
+  err <- expect_error(pmx_write_nonmem(m), class = "zufapmx_write_error")
+  expect_equal(err$location, "observations")
+})

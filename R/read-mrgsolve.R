@@ -40,14 +40,7 @@
 #' )
 #' pmx_read_mrgsolve(path)
 pmx_read_mrgsolve <- function(file) {
-  if (
-    !is.character(file) ||
-      length(file) != 1 ||
-      !file.exists(file) ||
-      dir.exists(file)
-  ) {
-    zufapmx_abort("`file` must be the path of an existing file.", "model")
-  }
+  check_file(file)
   mrg_read(file)
 }
 

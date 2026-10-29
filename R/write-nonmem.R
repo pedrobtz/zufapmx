@@ -31,10 +31,7 @@
 #' pmx_write_nonmem(pmx_read_rxode2(fun))
 pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   check_model(model)
-  if (!is.character(estimates) || anyNA(estimates)) {
-    zufapmx_abort("`estimates` must be one of the documented strings.", "model")
-  }
-  estimates <- match.arg(estimates)
+  estimates <- check_choice(estimates)
   m <- unclass(model)
   losses <- character()
 

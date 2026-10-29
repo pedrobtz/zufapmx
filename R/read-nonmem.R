@@ -49,18 +49,8 @@ pmx_read_nonmem <- function(
   file,
   estimates = c("auto", "xml", "ext", "lst", "none")
 ) {
-  if (!is.character(estimates) || anyNA(estimates)) {
-    zufapmx_abort("`estimates` must be one of the documented strings.", "model")
-  }
-  estimates <- match.arg(estimates)
-  if (
-    !is.character(file) ||
-      length(file) != 1 ||
-      !file.exists(file) ||
-      dir.exists(file)
-  ) {
-    zufapmx_abort("`file` must be the path of an existing file.", "model")
-  }
+  estimates <- check_choice(estimates)
+  check_file(file)
   model <- nm_read(file)
   nm_attach_estimates(model, file, estimates)
 }
