@@ -73,12 +73,14 @@ become <code>A(n)</code>. A closed form is written as its <code>ADVAN</code>/<co
 ODE model as <code>ADVAN13</code> with <code>$MODEL</code> and <code>$DES</code>. Residual error held as
 standard deviations, as rxode2 holds it, is written as <code>$SIGMA</code>
 variances: the same model, parameterised as NONMEM parameterises it.</p>
-<p><code>$INPUT</code> and <code>$DATA</code> are placeholders to point at a dataset, and no
-<code>$ESTIMATION</code> is written: the representation holds neither.</p>
+<p><code>$INPUT</code> and <code>$DATA</code> are placeholders to point at a dataset: <code>$INPUT</code>
+lists the standard data items and the model's covariates. No
+<code>$ESTIMATION</code> is written: the representation holds none.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p>Other writers:
+<code><a href="pmx_fidelity.html">pmx_fidelity()</a></code>,
 <code><a href="pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code>,
 <code><a href="pmx_write_rxode2.html">pmx_write_rxode2()</a></code></p></div>
     </div>

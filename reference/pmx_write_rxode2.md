@@ -32,13 +32,18 @@ is written with its estimates, and its initial values are recorded as
 lost. Residual error held as sigma variances, as NONMEM holds it, is
 written as standard-deviation parameters named after the epsilons.
 Variables `linCmt()` would read as parameters are renamed with an `x_`
-prefix. Constructs rxode2 cannot hold, such as residual error written as
-an expression over epsilons, or an individual parameter that reads the
-record's time, stop with an error of class `zufapmx_write_error`.
+prefix. `linCmt()` reads its parameters from `model()` only, so a
+closed-form parameter held directly as a fixed effect (mrgsolve's
+`$PKMODEL` over `$PARAM`) is renamed with a `t` prefix (`tCL`) and
+assigned in `model()` (`CL <- tCL`). Constructs rxode2 cannot hold, such
+as residual error written as an expression over epsilons, or an
+individual parameter that reads the record's time, stop with an error of
+class `zufapmx_write_error`.
 
 ## See also
 
 Other writers:
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md),
 [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md),
 [`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md)
 

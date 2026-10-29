@@ -22,7 +22,9 @@ pmx_ode(model)
 
 - values:
 
-  For `pmx_omega()`: `"estimate"` (the default) or `"init"`.
+  For `pmx_omega()`: `"estimate"` (the default) returns the final
+  estimates where the model was read with them, and `"init"` the initial
+  values.
 
 ## Value
 
@@ -38,3 +40,30 @@ pmx_ode(model)
 
 - `pmx_ode()`: a named list of expressions, one derivative per
   compartment, or `NULL` for a closed-form model.
+
+## Examples
+
+``` r
+path <- system.file(
+  "corpus", "onecmt-oral-mm", "model.ctl",
+  package = "zufapmx"
+)
+model <- pmx_read_nonmem(path)
+pmx_parameters(model)
+#>     name  role init lower upper fixed estimate
+#> 1 THETA1 other    1     0   Inf FALSE       NA
+#> 2 THETA2 other   20     0   Inf FALSE       NA
+#> 3 THETA3 other    2     0   Inf FALSE       NA
+#> 4 THETA4 other   50     0   Inf FALSE       NA
+pmx_omega(model, "init")
+#>      ETA1 ETA2
+#> ETA1 0.09 0.00
+#> ETA2 0.00 0.09
+pmx_ode(model)
+#> $DEPOT
+#> -KA * DEPOT
+#> 
+#> $CENTRAL
+#> KA * DEPOT - VM * C2/(KM + C2)
+#> 
+```

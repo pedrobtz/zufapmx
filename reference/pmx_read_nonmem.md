@@ -53,11 +53,15 @@ that NM-TRAN keeps from earlier records for variables assigned only
 inside `IF` (the representation starts them at 0).
 
 NONMEM's names are kept, upper case: `THETA(1)` reads as `THETA1`,
-`ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. `T` and `TIME` read as the
-representation's time, `t`. Free names such as `WT` are recorded as
-covariates. The observation is the endpoint `Y`.
+`ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. Time is `t`: read from `T` in
+`$DES` and from `TIME` elsewhere; `TIME` in `$DES` is refused. Free
+names such as `WT` are recorded as covariates. The observation is the
+endpoint `Y`.
 
 ## See also
+
+[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+for the model's parts.
 
 Other readers:
 [`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),

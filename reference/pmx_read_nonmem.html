@@ -86,13 +86,15 @@ outputs <code>Y</code> does not use, and values that NM-TRAN keeps from earlier
 records for variables assigned only inside <code>IF</code> (the representation
 starts them at 0).</p>
 <p>NONMEM's names are kept, upper case: <code>THETA(1)</code> reads as <code>THETA1</code>,
-<code>ETA(1)</code> as <code>ETA1</code> and <code>EPS(1)</code> as <code>EPS1</code>. <code>T</code> and <code>TIME</code> read as the
-representation's time, <code>t</code>. Free names such as <code>WT</code> are recorded as
-covariates. The observation is the endpoint <code>Y</code>.</p>
+<code>ETA(1)</code> as <code>ETA1</code> and <code>EPS(1)</code> as <code>EPS1</code>. Time is <code>t</code>: read from <code>T</code> in
+<code>$DES</code> and from <code>TIME</code> elsewhere; <code>TIME</code> in <code>$DES</code> is refused. Free names
+such as <code>WT</code> are recorded as covariates. The observation is the endpoint
+<code>Y</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p>Other readers:
+    <div class="dont-index"><p><a href="pmx_inspect.html">pmx_inspect</a> for the model's parts.</p>
+<p>Other readers:
 <code><a href="pmx_read_mrgsolve.html">pmx_read_mrgsolve()</a></code>,
 <code><a href="pmx_read_rxode2.html">pmx_read_rxode2()</a></code></p></div>
     </div>

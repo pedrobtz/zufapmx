@@ -66,13 +66,18 @@ is written with its estimates, and its initial values are recorded as
 lost. Residual error held as sigma variances, as NONMEM holds it, is
 written as standard-deviation parameters named after the epsilons.
 Variables <code>linCmt()</code> would read as parameters are renamed with an <code>x_</code>
-prefix. Constructs rxode2 cannot hold, such as residual error written as
-an expression over epsilons, or an individual parameter that reads the
-record's time, stop with an error of class <code>zufapmx_write_error</code>.</p>
+prefix. <code>linCmt()</code> reads its parameters from <code>model()</code> only, so a
+closed-form parameter held directly as a fixed effect (mrgsolve's
+<code>$PKMODEL</code> over <code>$PARAM</code>) is renamed with a <code>t</code> prefix (<code>tCL</code>) and
+assigned in <code>model()</code> (<code>CL &lt;- tCL</code>). Constructs rxode2 cannot hold,
+such as residual error written as an expression over epsilons, or an
+individual parameter that reads the record's time, stop with an error of
+class <code>zufapmx_write_error</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p>Other writers:
+<code><a href="pmx_fidelity.html">pmx_fidelity()</a></code>,
 <code><a href="pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code>,
 <code><a href="pmx_write_nonmem.html">pmx_write_nonmem()</a></code></p></div>
     </div>

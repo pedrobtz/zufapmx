@@ -70,8 +70,10 @@ declarations and integer division (<code>3/4</code>), is refused with an error o
 class <code>zufapmx_parse_error</code>. <code>$PKMODEL</code> may take its parameters from
 <code>$PARAM</code> directly or from <code>$MAIN</code>.</p>
 <p>Recorded as losses of the read: the title, <code>$PLUGIN</code>, <code>$SET</code>, <code>$PARAM</code>
-descriptions, and <code>$TABLE</code> outputs <code>Y</code> does not use. <code>TIME</code> and
-<code>SOLVERTIME</code> read as the representation's time, <code>t</code>. <code>$NMXML</code> and
+descriptions, <code>$PARAM</code> values written as constant expressions
+(<code>log(2)</code>), which are evaluated, and <code>$TABLE</code> outputs <code>Y</code> does not use.
+Time is <code>t</code>: read from <code>SOLVERTIME</code> in <code>$ODE</code> and from <code>TIME</code> elsewhere;
+the other name is refused, since it is a different time. <code>$NMXML</code> and
 <code>$NMEXT</code> resolve a relative path against the working directory, or the
 model file's with <code>root = "cppfile"</code>, as mrgsolve does.</p>
 <p>The observation is <code>Y</code> in <code>$TABLE</code>, written over a prediction such as
@@ -82,7 +84,8 @@ them.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p>Other readers:
+    <div class="dont-index"><p><a href="pmx_inspect.html">pmx_inspect</a> for the model's parts.</p>
+<p>Other readers:
 <code><a href="pmx_read_nonmem.html">pmx_read_nonmem()</a></code>,
 <code><a href="pmx_read_rxode2.html">pmx_read_rxode2()</a></code></p></div>
     </div>

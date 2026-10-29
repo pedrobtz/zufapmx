@@ -35,6 +35,13 @@ when nothing was lost.
 A construct that would change predictions is never dropped: the writer
 stops with an error of class `zufapmx_write_error` instead.
 
+## See also
+
+Other writers:
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md),
+[`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md),
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_rxode2.md)
+
 ## Examples
 
 ``` r

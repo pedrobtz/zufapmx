@@ -93,7 +93,9 @@
 <li>
 <strong>Readers and writers</strong> (<a href="R/read-rxode2.R">R/read-rxode2.R</a>, <a href="R/write-rxode2.R">R/write-rxode2.R</a>): a reader raises <code>zufapmx_parse_error</code> for anything it does not support, never a model error; a writer reads its own output back and sets the fidelity (<a href="R/written.R">R/written.R</a>) from whether the representation came back identical.</li>
 <li>
-<strong>mrgsolve</strong> (<a href="R/mrgsolve-cpp.R">R/mrgsolve-cpp.R</a>, <a href="R/read-mrgsolve.R">R/read-mrgsolve.R</a>, <a href="R/write-mrgsolve.R">R/write-mrgsolve.R</a>): blocks and a C++ subset parser; <code>$PKMODEL</code> uses NONMEM’s names, so closed forms share <code>nm_closed</code>. Expressions print through dialects (<a href="R/print-expr.R">R/print-expr.R</a>): NM-TRAN and C++.</li>
+<strong>mrgsolve</strong> (<a href="R/mrgsolve-cpp.R">R/mrgsolve-cpp.R</a>, <a href="R/read-mrgsolve.R">R/read-mrgsolve.R</a>, <a href="R/write-mrgsolve.R">R/write-mrgsolve.R</a>): blocks and a C++ subset parser; <code>$PKMODEL</code> uses NONMEM’s names, so closed forms share <code>closed_forms</code> (<a href="R/closed.R">R/closed.R</a>). Expressions print through dialects (<a href="R/print-expr.R">R/print-expr.R</a>): NM-TRAN and C++.</li>
+<li>
+<strong>Names.</strong> Format code is prefixed <code>nm_</code>, <code>mrg_</code> or <code>cpp_</code>, and <code>rxode2_read_</code>/<code>rxode2_write_</code>; code more than one format uses has a neutral name in a shared file (<code>closed_forms</code>, <code>sigma_from_sd()</code>, <code>model_rename()</code>). <code>check_*()</code> validates an argument, <code>validate_*()</code> a model component, <code>expr_check()</code>/<code>stmt_check()</code> an expression, and the condition constructors are <code>*_error()</code>. Each format keeps one table per spelling (<code>nm_dosing_prefixes</code>), read inverted by <code>invert_names()</code>.</li>
 <li>
 <strong>Writers</strong> (<a href="R/write-rxode2.R">R/write-rxode2.R</a>, <a href="R/write-nonmem.R">R/write-nonmem.R</a>) convert residual error between NONMEM’s sigma variances and rxode2’s standard-deviation parameters; that conversion is why cross-format writes are <code>equivalent</code>, not <code>exact</code>.</li>
 <li>
@@ -127,7 +129,7 @@
 <li>
 <strong>Readers strip source references.</strong> A model typed with <code>keep.source = TRUE</code> (tests, interactive use) otherwise differs from the same model parsed from text, and every round trip reads as <code>equivalent</code> instead of <code>exact</code>.</li>
 <li>
-<strong><code>linCmt()</code> has two naming styles.</strong> rxode2’s (<code>cl</code>, <code>v</code>, <code>q</code>, <code>vp</code>) and NONMEM’s numbered <code>TRANS4</code> names, where <code>V2</code> is the central volume when there is a depot. <code>lincmt_aliases()</code> tells them apart; reading <code>V2</code> as a peripheral volume refused every NONMEM-read closed form written back.</li>
+<strong><code>linCmt()</code> has two naming styles.</strong> rxode2’s (<code>cl</code>, <code>v</code>, <code>q</code>, <code>vp</code>) and NONMEM’s numbered <code>TRANS4</code> names, where <code>V2</code> is the central volume when there is a depot. <code>rxode2_lincmt_aliases()</code> tells them apart; reading <code>V2</code> as a peripheral volume refused every NONMEM-read closed form written back.</li>
 <li>
 <strong>Read <code>run.xml</code> with an encoding override.</strong> NONMEM declares <code>encoding="ASCII"</code>, which zuxml (expat) rejects (<a href="https://github.com/pedrobtz/zuxml/issues/84" class="external-link">pedrobtz/zuxml#84</a>).</li>
 <li>
@@ -138,6 +140,12 @@
 <strong>C++ literals carry a decimal point.</strong> <code>1/2</code> is integer division in C++; the mrgsolve dialect writes <code>1.0 / 2.0</code>.</li>
 <li>
 <strong><code>$PARAM @annotated</code> descriptions hold bounds.</strong> <code>[lower, upper]</code> and <code>fixed</code> are zufapmx’s convention; without it every mrgsolve write of a bounded model would be <code>lossy</code>.</li>
+<li>
+<strong>Who assigns and reads what (D14, D18).</strong> The validator refuses assignments to parameters, random effects, compartments and time; ODE code reassigning an individual name; individual statements reading an amount; and a name an <code>if</code> assigns without a value before it. A reader that meets one of these refuses it or, for rxode2, moves statements into the ODE code; writers rely on all four.</li>
+<li>
+<strong>Each record reads its own time (D15).</strong> <code>TIME</code> in <code>$DES</code> or <code>$ODE</code> and <code>SOLVERTIME</code> outside <code>$ODE</code> are refused; <code>T</code> outside <code>$DES</code> is a NONMEM variable.</li>
+<li>
+<strong>A statement’s refusal points at its record</strong> through <code>record_at()</code>: statements carry no positions of their own.</li>
 <li>
 <strong>Exported functions are <code>pmx_*</code> (D10),</strong> with <code><a href="reference/zufapmx_corpus.html">zufapmx_corpus()</a></code> the one package-level exception.</li>
 </ul></div>
@@ -154,7 +162,11 @@
 <li>
 <strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. Here the corpus is <code>inst/corpus/</code>, one directory per model in every format that holds it, with <code>expected.csv</code> of typical-subject predictions. The oracles are <code>nonmem2rx</code> (every entry) and <code>amp.sim</code> (general ODE entries only); <a href=".agents/oracle-agreement.html"><code>.agents/oracle-agreement.md</code></a> records where each agrees and why it fails elsewhere.</li>
 <li>
-<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> <code>helper-corpus.R</code> simulates the typical subject of a corpus entry through rxode2, mrgsolve or an oracle at fixed tight tolerances, and <code>corpus_max_rel_dev()</code> measures agreement. The <code>tools/</code> scripts source it, so the corpus files, the scripts and the tests share one implementation.</li>
+<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> <code>helper-corpus.R</code> simulates the typical subject of a corpus entry through rxode2, mrgsolve or an oracle at fixed tight tolerances, and <code>corpus_max_rel_dev()</code> measures agreement. The <code>tools/</code> scripts source it, so the corpus files, the scripts and the tests share one implementation. <code>expect_refused()</code> asserts a refusal’s class, <code>seen</code> and line; <code>expect_faithful()</code> a write that is exact or equivalent; <code>str_full()</code> snapshots a representation untruncated.</li>
+<li>
+<strong>Skip engines with <code>skip_if_no_engine()</code>,</strong> not <code>skip_if_not_installed()</code>. CI sets <code>ZUFAPMX_REQUIRE_ENGINES=true</code>, so a runner leg where an engine failed to install fails instead of skipping.</li>
+<li>
+<strong>One test file per module</strong>, named after the R file it tests.</li>
 <li>
 <strong>Keep the suite inside the CRAN time budget.</strong> No runtime recorded yet.</li>
 </ul></div>

@@ -43,6 +43,9 @@ time is continuous; a `linCmt()` model refuses them.
 
 ## See also
 
+[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+for the model's parts.
+
 Other readers:
 [`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),
 [`pmx_read_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_nonmem.md)

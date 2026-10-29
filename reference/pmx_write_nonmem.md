@@ -38,12 +38,14 @@ ODE model as `ADVAN13` with `$MODEL` and `$DES`. Residual error held as
 standard deviations, as rxode2 holds it, is written as `$SIGMA`
 variances: the same model, parameterised as NONMEM parameterises it.
 
-`$INPUT` and `$DATA` are placeholders to point at a dataset, and no
-`$ESTIMATION` is written: the representation holds neither.
+`$INPUT` and `$DATA` are placeholders to point at a dataset: `$INPUT`
+lists the standard data items and the model's covariates. No
+`$ESTIMATION` is written: the representation holds none.
 
 ## See also
 
 Other writers:
+[`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md),
 [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md),
 [`pmx_write_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_rxode2.md)
 
