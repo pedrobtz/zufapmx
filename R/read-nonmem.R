@@ -770,17 +770,8 @@ nm_prediction <- function(scale, compartments, defobs, closed, file, record) {
     )
   }
   if (length(scaled) == 1) {
+    # nm_pk() has checked that S<n> names a compartment.
     defobs <- as.integer(scaled)
-    if (defobs < 1 || defobs > length(compartments)) {
-      parse_error(
-        file,
-        record_line(record),
-        NA_integer_,
-        seen = paste0("S", scaled),
-        expected = "a scale of a compartment",
-        call = NULL
-      )
-    }
   }
   observed <- as.symbol(compartments[[defobs]])
   if (length(scaled) == 1) {

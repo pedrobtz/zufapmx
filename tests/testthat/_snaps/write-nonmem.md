@@ -61,3 +61,19 @@
       $SIGMA 0.04
       # nonmem, fidelity: equivalent
 
+# writer refusals name the construct and where to take it
+
+    Code
+      pmx_write_nonmem(m)
+    Condition
+      Error:
+      ! Cannot write the power residual model (at `observations$cp$residual`). Formats that can: rxode2.
+
+---
+
+    Code
+      pmx_write_mrgsolve(m)
+    Condition
+      Error:
+      ! Cannot write the power residual model (at `observations$cp$residual`). Formats that can: rxode2.
+

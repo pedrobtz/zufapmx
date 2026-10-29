@@ -348,7 +348,7 @@ rxode2_write_residual <- function(residual, endpoint) {
     exponential = sprintf("lnorm(%s)", p[[1]]),
     power = sprintf("pow(%s)", paste(p, collapse = ", ")),
     write_error(
-      sprintf("a %s residual model", residual$type),
+      sprintf("the %s residual model", residual$type),
       sprintf("observations$%s$residual", endpoint),
       formats = residual_formats(residual$type),
       call = NULL

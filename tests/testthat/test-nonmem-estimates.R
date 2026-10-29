@@ -52,7 +52,7 @@ test_that("an .ext without rows or without a final row is refused", {
 })
 
 test_that("unreadable XML, or XML without an estimation, is refused", {
-  skip_if_not_installed("zuxml")
+  skip_if_no_engine("zuxml")
   expect_refused(pmx_read_nonmem(local_run("xml", "<a"), "xml"), "the XML")
   expect_refused(
     pmx_read_nonmem(local_run("xml", "<a/>"), "xml"),
@@ -75,7 +75,7 @@ test_that("a missing output file named by `estimates` is a model error", {
 })
 
 test_that("$NMXML reads run.xml through zuxml", {
-  skip_if_not_installed("zuxml")
+  skip_if_no_engine("zuxml")
   xml <- normalizePath(
     test_path("fixtures", "nonmem", "run1.xml"),
     winslash = "/"
@@ -118,4 +118,22 @@ test_that("$NMEXT keeps a correlated omega as one block", {
   expect_equal(dim(omega), c(3L, 3L))
   expect_true(all(omega[lower.tri(omega)] != 0))
   expect_length(unclass(m)$random_effects$omega, 1)
+})
+
+test_that("estimates are found next to a control stream in a dotted directory", {
+  dir <- file.path(withr::local_tempdir(), "runs.v2")
+  dir.create(dir)
+  file.copy(test_path("fixtures", "nonmem", c("run1.ctl", "run1.ext")), dir)
+  file.rename(file.path(dir, "run1.ctl"), file.path(dir, "run1"))
+
+  m <- pmx_read_nonmem(file.path(dir, "run1"), "ext")
+  expect_equal(basename(unclass(m)$provenance$estimates), "run1.ext")
+})
+
+test_that("an empty .ext is refused", {
+  expect_refused(
+    pmx_read_nonmem(local_run("ext", character()), "ext"),
+    "an empty file",
+    1
+  )
 })

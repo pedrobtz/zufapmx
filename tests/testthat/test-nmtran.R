@@ -196,3 +196,26 @@ test_that("compartment indices are whole numbers", {
   expect_error(nm_parse_lines("DADT(1.7) = 0"), class = "zufapmx_parse_error")
   expect_error(nm_parse_lines("A_0(1.0) = 0"), class = "zufapmx_parse_error")
 })
+
+test_that("abbreviated code is refused with its position", {
+  err <- expect_error(
+    nm_parse_lines(c("X = 1", "ELSE")),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$line, 2L)
+  err <- expect_error(
+    nm_parse_lines("X = THETA(Y)"),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$seen, "THETA")
+  err <- expect_error(
+    nm_parse_lines("FOO(1) = 2"),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$seen, "FOO")
+  err <- expect_error(
+    read_ctl(ctl_onecmt(pk = "X = A(5)")),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(c(err$line, err$column), c(8L, 5L))
+})

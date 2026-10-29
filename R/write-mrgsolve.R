@@ -321,7 +321,7 @@ mrg_residual <- function(m, spelling) {
       call = NULL
     ),
     write_error(
-      sprintf("a %s residual model", r$type),
+      sprintf("the %s residual model", r$type),
       sprintf("observations$%s$residual", names(m$observations)[[1]]),
       formats = residual_formats(r$type),
       call = NULL

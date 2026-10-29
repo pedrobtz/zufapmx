@@ -39,7 +39,7 @@ test_that("closed-form and ODE control streams read into their structures", {
 
 test_that("corpus control streams predict their expected.csv", {
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -127,7 +127,10 @@ test_that("dosing attributes and IF blocks in $PK read", {
   )
   expect_equal(unclass(m)$individual[[4]], quote(WTF <- 0))
   expect_true(is_call(unclass(m)$individual[[5]], "if"))
-  expect_true(any(grepl("D14", unclass(m)$provenance$losses)))
+  expect_contains(
+    unclass(m)$provenance$losses,
+    "values kept from earlier records by variables assigned only inside IF (D14)"
+  )
 })
 
 test_that("unsupported control streams are refused with a position", {
@@ -194,7 +197,7 @@ test_that("estimates come from run.xml, .ext or .lst", {
 })
 
 test_that("auto prefers run.xml through zuxml", {
-  skip_if_not_installed("zuxml")
+  skip_if_no_engine("zuxml")
   m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"))
 
   expect_equal(pmx_parameters(m)$estimate, c(1.13, 4.26, 21.6, 2.16, 41.6))
@@ -256,40 +259,38 @@ test_that("$SIZES and $ERROR (ONLY OBSERVATIONS) are read as losses", {
   expect_true("record options ($ERROR (ONLY OBSERVATIONS))" %in% losses)
 })
 
-test_that("estimate matrices keep their orientation from every source", {
+# run2's three output files agree, with distinct off-diagonal elements.
+expect_run2_estimates <- function(source) {
   omega <- matrix(
     c(0.11, 0.012, 0.023, 0.012, 0.21, 0.034, 0.023, 0.034, 0.31),
     3,
     dimnames = list(paste0("ETA", 1:3), paste0("ETA", 1:3))
   )
-  sigma <- matrix(c(0.031, 0, 0, 0.41), 2)
-  sources <- c(
-    "ext",
-    "lst",
-    if (requireNamespace("zuxml", quietly = TRUE)) "xml"
+  m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run2.ctl"), source)
+  re <- unclass(m)$random_effects
+
+  expect_equal(pmx_parameters(m)$estimate, c(1.21, 4.31, 51.1), label = source)
+  expect_equal(pmx_omega(m), omega, label = source)
+  expect_equal(
+    diag(pmx_omega(m, "init")),
+    c(ETA1 = 0.1, ETA2 = 0.2, ETA3 = 0.3),
+    label = source
   )
+  expect_equal(
+    c(re$sigma[[1]]$estimate[[1]], re$sigma[[2]]$estimate[[1]]),
+    c(0.031, 0.41),
+    label = source
+  )
+}
 
-  for (source in sources) {
-    m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run2.ctl"), source)
-    re <- unclass(m)$random_effects
+test_that("estimate matrices keep their orientation from .ext and .lst", {
+  expect_run2_estimates("ext")
+  expect_run2_estimates("lst")
+})
 
-    expect_equal(
-      pmx_parameters(m)$estimate,
-      c(1.21, 4.31, 51.1),
-      label = source
-    )
-    expect_equal(pmx_omega(m), omega, label = source)
-    expect_equal(
-      diag(pmx_omega(m, "init")),
-      c(ETA1 = 0.1, ETA2 = 0.2, ETA3 = 0.3),
-      label = source
-    )
-    expect_equal(
-      c(re$sigma[[1]]$estimate[[1]], re$sigma[[2]]$estimate[[1]]),
-      diag(sigma),
-      label = source
-    )
-  }
+test_that("estimate matrices keep their orientation from run.xml", {
+  skip_if_no_engine("zuxml")
+  expect_run2_estimates("xml")
 })
 
 test_that("Y is assigned once, outside IF", {
@@ -326,13 +327,17 @@ test_that("scale and dosing names are assigned once", {
     c("ALAG1 = 1", "ALAG1 = 2"),
     c("A_0(2) = 1", "A_0(2) = 2")
   )) {
-    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zufapmx_parse_error")
+    expect_error(
+      read_ctl(ctl_onecmt(pk = pk)),
+      class = "zufapmx_parse_error",
+      info = pk[[length(pk)]]
+    )
   }
 })
 
 test_that("TSCALE, XSCALE and INITIALOFF are refused", {
   for (pk in c("TSCALE = 60", "XSCALE = 1000")) {
-    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zufapmx_parse_error")
+    expect_refused(read_ctl(ctl_onecmt(pk = pk)), sub(" .*", "", pk), info = pk)
   }
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   lines <- sub(
@@ -354,4 +359,159 @@ test_that("time is T in $DES and TIME elsewhere", {
   m <- read_ctl(ctl_onecmt(pk = c("T = 2", "CL = CL * T")))
   expect_true("T" %in% stmt_targets(unclass(m)$individual))
   expect_false("t" %in% all.vars(unclass(m)$individual))
+})
+
+test_that("a derivative inside IF, or a scale of no compartment, is refused", {
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
+  expect_refused(
+    read_ctl(sub(
+      "DADT(1) = -KA * A(1)",
+      "IF (T.GT.1) DADT(1) = -KA * A(1)",
+      lines,
+      fixed = TRUE
+    )),
+    "DADT(1)",
+    14
+  )
+  expect_refused(
+    read_ctl(sub("S2 = V", "S5 = V", lines, fixed = TRUE)),
+    "S5",
+    8
+  )
+})
+
+test_that("other free symbols are recorded as covariates", {
+  m <- read_ctl(ctl_onecmt(pk = "X = WT / 70"))
+  expect_equal(unclass(m)$provenance$covariates, "WT")
+})
+
+test_that("time is one symbol, spelled for each format and block (D15)", {
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
+  lines <- sub(
+    "VM = THETA(2) * EXP(ETA(1))",
+    "VM = THETA(2) * EXP(ETA(1)) * (1 + 0.01 * TIME)",
+    lines,
+    fixed = TRUE
+  )
+  lines <- sub(
+    "DADT(1) = -KA * A(1)",
+    "DADT(1) = -KA * A(1) * EXP(-0.1 * T)",
+    lines,
+    fixed = TRUE
+  )
+  m <- read_ctl(lines)
+
+  expect_true("t" %in% all.vars(unclass(m)$individual[[2]]))
+  expect_true("t" %in% all.vars(pmx_ode(m)$DEPOT))
+  expect_equal(pmx_fidelity(pmx_write_nonmem(m)), "exact")
+  nm <- pmx_write_nonmem(m)$text
+  expect_true(any(grepl("(1.0 + 0.01 * TIME)", nm, fixed = TRUE)))
+  expect_true(any(grepl("EXP(-0.1 * T)", nm, fixed = TRUE)))
+  mrg <- pmx_write_mrgsolve(m)$text
+  expect_true(any(grepl("0.01 * TIME", mrg, fixed = TRUE)))
+  expect_true(any(grepl("exp(-0.1 * SOLVERTIME)", mrg, fixed = TRUE)))
+  expect_error(pmx_write_rxode2(m), class = "zufapmx_write_error")
+})
+
+test_that("NONMEM records are refused with their position", {
+  base <- ctl_onecmt()
+
+  expect_refused(read_ctl(c("CL = 1", base)), "CL = 1", 1)
+  expect_refused(read_ctl(c(base, "$PK", "X = 1")), "$PK", 14)
+  expect_refused(
+    read_ctl(base[
+      !startsWith(base, "$ERROR") &
+        base != "IPRED = F" &
+        !startsWith(base, "Y =")
+    ]),
+    "end of file",
+    10
+  )
+  expect_refused(read_ctl(c(base, "$DES", "DADT(1) = 1")), "$DES", 14)
+  expect_refused(read_ctl(ctl_onecmt(pk = c("S1 = V", "S2 = V"))), "S2", 3)
+  expect_refused(read_ctl(sub("ADVAN2 TRANS2", "TRANS2", base)), "TRANS2", 2)
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
+  expect_refused(
+    read_ctl(sub("COMP=", "CMP=", lines)),
+    "CMP=(DEPOT, DEFDOSE)   CMP=(CENTRAL, DEFOBS)",
+    5
+  )
+  expect_refused(read_ctl(ctl_onecmt(pk = "ALAG3 = 1")), "ALAG3", 3)
+  expect_refused(
+    read_ctl(ctl_onecmt(error = c("IF (DV.GT.0) W = 1", "Y = F + W * EPS(1)"))),
+    "W",
+    8
+  )
+  expect_refused(
+    read_ctl(sub("^\\$OMEGA .*", "$OMEGA BLOCK(2) 0.1 0.01", base)),
+    "2 values",
+    12
+  )
+})
+
+test_that("malformed $THETA items are refused at their line", {
+  base <- ctl_onecmt()
+  thetas <- list(
+    list("$THETA (0, 1 FIX", "end of record"),
+    list("$THETA (0, 1, 2, 3) (0, 4) (0, 50)", "("),
+    list("$THETA (0 1) (0, 4) (0, 50)", "1")
+  )
+  for (theta in thetas) {
+    expect_refused(
+      read_ctl(sub("^\\$THETA .*", theta[[1]], base)),
+      theta[[2]],
+      11,
+      info = theta[[1]]
+    )
+  }
+})
+
+test_that("a combined F + F*EPS + EPS residual is recognised", {
+  m <- read_ctl(ctl_onecmt(
+    error = "Y = F + F * EPS(1) + EPS(2)",
+    extra = "$SIGMA 0.01"
+  ))
+  expect_equal(
+    unclass(m)$observations$Y$residual,
+    list(type = "combined", parameters = c("EPS2", "EPS1"))
+  )
+})
+
+test_that("$THETA values must be in bound order", {
+  expect_refused(
+    read_ctl(sub(
+      "^\\$THETA .*",
+      "$THETA (10, 5) (0, 4) (0, 50)",
+      ctl_onecmt()
+    )),
+    "10, 5"
+  )
+})
+
+test_that("malformed control streams are parse errors, never bare R errors", {
+  expect_error(read_ctl(character()), class = "zufapmx_parse_error")
+  expect_refused(read_ctl(ctl_onecmt(pk = "S0 = V")), "S0", 3)
+  expect_refused(read_ctl(ctl_onecmt(pk = "DADT(1) = 1")), "DADT(1)", 3)
+
+  lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
+  expect_error(
+    read_ctl(c(lines, "$DES", "DADT(3) = 1")),
+    class = "zufapmx_parse_error"
+  )
+  expect_refused(read_ctl(sub("DADT\\(2\\)", "DADT(3)", lines)), "DADT(3)", 14)
+})
+
+test_that("undeclared or fractional THETA and ETA indices are refused", {
+  expect_error(
+    read_ctl(ctl_onecmt(pk = "X = THETA(9)")),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    read_ctl(ctl_onecmt(pk = "X = ETA(5)")),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    read_ctl(ctl_onecmt(pk = "X = THETA(1.5)")),
+    class = "zufapmx_parse_error"
+  )
 })

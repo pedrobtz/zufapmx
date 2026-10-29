@@ -31,7 +31,7 @@ test_that("closed-form and ODE models read into their structures", {
 
 test_that("corpus mrgsolve models predict their expected.csv", {
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -258,10 +258,10 @@ test_that("$PKMODEL parameters can come straight from $PARAM", {
     c("CL = THETA(1)", "V = THETA(2)", "KA = THETA(3)") %in%
       pmx_write_nonmem(m)$text
   ))
-  expect_true(pmx_fidelity(pmx_write_rxode2(m)) %in% c("exact", "equivalent"))
+  expect_faithful(pmx_write_rxode2(m))
 
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   got <- corpus_solve_rxode2(as_rxode2_function(m), "oral", "Y")
   expected <- corpus_expected(
     corpus_file("onecmt-oral", "expected.csv") |> dirname()
@@ -387,9 +387,10 @@ test_that("$NMXML and $NMEXT refuse options the reader does not honour", {
   for (option in c("omega = FALSE", "tname = \"x\"", "path = 1")) {
     err <- expect_error(
       read_cpp(c(sprintf("$NMEXT run = 1, %s", option), cpp_onecmt()[-1])),
-      class = "zufapmx_parse_error"
+      class = "zufapmx_parse_error",
+      info = option
     )
-    expect_equal(err$line, 1)
+    expect_equal(err$line, 1, info = option)
   }
   err <- expect_error(
     read_cpp(c("$NMEXT path = \"no-such.ext\"", cpp_onecmt())),
@@ -427,4 +428,176 @@ test_that("a $PARAM value cannot run code", {
   )
   expect_error(read_cpp(lines), class = "zufapmx_parse_error")
   expect_false(file.exists(marker))
+})
+
+test_that("$PKMODEL refuses an unknown advan or trans", {
+  pkmodel <- function(spec) {
+    read_cpp(c(
+      "$PARAM CL = 1, V = 2",
+      sprintf("$PKMODEL %s, cmt = \"CENT\"", spec),
+      "$TABLE",
+      "double IPRED = CENT / V;",
+      "double Y = IPRED + EPS(1);"
+    ))
+  }
+  expect_refused(pkmodel("advan = 7, trans = 2"), "advan = 7", 2)
+  expect_refused(pkmodel("advan = 1, trans = 9"), "trans = 9", 2)
+})
+
+test_that("a $PARAM item without = is refused", {
+  expect_refused(
+    read_cpp(sub("TVCL = 4", "TVCL 4", cpp_onecmt(), fixed = TRUE)),
+    "TVCL 4",
+    1
+  )
+})
+
+test_that("$PKMODEL takes its compartment names from $CMT", {
+  m <- read_cpp(c(
+    "$PARAM CL = 1, V = 20, KA = 1",
+    "$CMT GUT CENT",
+    "$PKMODEL ncmt = 1, depot = TRUE",
+    "$TABLE",
+    "double IPRED = CENT / V;",
+    "double Y = IPRED * (1 + EPS(1));"
+  ))
+  expect_equal(
+    unclass(m)$structure$parameters,
+    c(cl = "CL", v = "V", ka = "KA")
+  )
+  expect_equal(unclass(m)$observations$Y$prediction, quote(central / V))
+})
+
+test_that("annotated parameter names must be names", {
+  expect_error(
+    read_cpp(c(
+      "$PARAM @annotated",
+      "q <- 1; message('x'); TVCL : 1 : x",
+      cpp_onecmt()[-1]
+    )),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("C++ integer division and int declarations are refused", {
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double X = pow(CL / 70.0, 3 / 4);")),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double X = (1 + 2) / 4;")),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    read_cpp(cpp_onecmt(main = "int N = 2;")),
+    class = "zufapmx_parse_error"
+  )
+
+  m <- read_cpp(cpp_onecmt(
+    main = c("double X = 3.0 / 4;", "double Z = 2 * CL;")
+  ))
+  expect_equal(unclass(m)$individual[[3]], quote(X <- 3 / 4))
+  expect_identical(unclass(m)$individual[[4]][[3]][[2]], 2)
+})
+
+test_that("mrgsolve blocks are refused with their position", {
+  base <- cpp_onecmt()
+
+  expect_refused(
+    read_cpp(c(
+      "$PARAM CL = 1, V = 2",
+      "$PKMODEL advan = 4, trans = 4, cmt = \"A B\"",
+      "$TABLE",
+      "double IPRED = B / V;",
+      "double Y = IPRED + EPS(1);"
+    )),
+    "A B",
+    2
+  )
+  expect_refused(read_cpp(base[base != "$CMT CENT"]), "end of file", 11)
+  expect_refused(read_cpp(c(base, "$OMEGA @block", "0.1 0.2")), "2 values", 13)
+  # The refusal points at the first $ODE block, the record's start.
+  expect_refused(read_cpp(c(base, "$ODE", "dxdt_GUT = 1;")), "dxdt_GUT", 6)
+})
+
+test_that("mrgsolve $INIT, $SET and annotated $CMT read", {
+  m <- read_cpp(c(
+    "$PARAM TVCL = 4, TVV = 50",
+    "$CMT @annotated",
+    "CENT : central amount",
+    "$INIT CENT = 10",
+    "$SET end = 24",
+    cpp_onecmt()[-(1:2)]
+  ))
+
+  expect_equal(unclass(m)$dosing$CENT, list(initial = 10))
+  expect_true("simulation settings ($SET)" %in% unclass(m)$provenance$losses)
+})
+
+test_that("$NMEXT finds a run by run and project", {
+  project <- withr::local_tempdir()
+  dir.create(file.path(project, "101"))
+  file.copy(
+    test_path("fixtures", "nonmem", "run1.ext"),
+    file.path(project, "101", "101.ext")
+  )
+  m <- read_cpp(c(
+    sprintf(
+      "$NMEXT run = 101, project = \"%s\"",
+      normalizePath(project, winslash = "/")
+    ),
+    "$PKMODEL advan = 4, trans = 4, cmt = \"DEPOT CENT PERIPH\"",
+    "$MAIN",
+    "double KA = THETA1;",
+    "double CL = THETA2 * exp(ETA(1));",
+    "double V2 = THETA3 * exp(ETA(2));",
+    "double Q = THETA4;",
+    "double V3 = THETA5;",
+    "$TABLE",
+    "double IPRED = CENT / V2;",
+    "double Y = IPRED * (1 + EPS(1));"
+  ))
+  expect_equal(pmx_parameters(m)$estimate[[2]], 4.25)
+})
+
+test_that("$PARAM bounds must be in order", {
+  expect_error(
+    read_cpp(c(
+      "$PARAM @annotated",
+      "TVCL : 5 : [10, 20]",
+      "TVV : 50 : [0, Inf]",
+      cpp_onecmt()[-1]
+    )),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("malformed model files are parse errors, never bare R errors", {
+  expect_error(read_cpp(character()), class = "zufapmx_parse_error")
+  pkmodel <- function(ncmt) {
+    c(
+      "$PARAM CL = 1, V = 2",
+      sprintf("$PKMODEL ncmt = %d", ncmt),
+      "$TABLE",
+      "double IPRED = CENT / V;",
+      "double Y = IPRED + EPS(1);"
+    )
+  }
+  expect_refused(read_cpp(pkmodel(4)), "ncmt = 4", 2)
+  expect_refused(read_cpp(pkmodel(0)), "ncmt = 0", 2)
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double X = exp(CL, V);")),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    read_cpp(c("$PARAM TVCL = 1", cpp_onecmt())),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("an undeclared ETA index is refused", {
+  expect_error(
+    read_cpp(cpp_onecmt(main = "double X = ETA(4);")),
+    class = "zufapmx_parse_error"
+  )
 })

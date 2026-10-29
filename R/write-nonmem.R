@@ -140,7 +140,7 @@ nm_sigma_from_sd <- function(m) {
     r <- m$observations[[e]]$residual
     if (!r$type %in% c("additive", "proportional", "combined", "exponential")) {
       write_error(
-        sprintf("a %s residual model", r$type),
+        sprintf("the %s residual model", r$type),
         sprintf("observations$%s$residual", e),
         formats = residual_formats(r$type),
         call = NULL
@@ -418,7 +418,7 @@ nm_error_lines <- function(m, spelling) {
     exponential = sprintf("F * EXP(%s)", p[[1]]),
     expression = nm_expr(r$expression, c(spelling, F = "F")),
     write_error(
-      sprintf("a %s residual model", r$type),
+      sprintf("the %s residual model", r$type),
       sprintf("observations$%s$residual", names(m$observations)[[1]]),
       formats = residual_formats(r$type),
       call = NULL

@@ -49,3 +49,16 @@ test_that("covariates that differ only in case are not folded together", {
   lower <- normalise_model(with_covariates(quote(wt), quote(age)))
   expect_true(same_content(upper, lower))
 })
+
+test_that("a writer whose text does not read back raises a write error", {
+  m <- model_twocmt_oral()
+  p <- pmx_parameters(m)
+  p$name[[1]] <- "if"
+  ind <- unclass(m)$individual
+  ind[[1]] <- quote(ka <- `if`)
+
+  expect_error(
+    pmx_write_rxode2(model_with(m, parameters = p, individual = ind)),
+    class = "zufapmx_write_error"
+  )
+})

@@ -10,7 +10,7 @@ test_that("every corpus model round-trips exactly", {
 
 test_that("written corpus models simulate to their expected predictions", {
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -50,6 +50,7 @@ test_that("a model with estimates is written with them and loses its initial val
 
   expect_equal(pmx_fidelity(w), "lossy")
   expect_length(pmx_losses(w), 1)
+  expect_match(pmx_losses(w), "^initial values")
   expect_true(any(grepl("tcl <- c(0, 4.4)", w$text, fixed = TRUE)))
 })
 
@@ -87,7 +88,7 @@ test_that("bounds, fixed values, blocks and dosing round-trip", {
 
 test_that("a fixed omega block written by the writer parses in rxode2", {
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   m <- pmx_read_rxode2(function() {
     ini({
       lcl <- 1
@@ -209,7 +210,7 @@ test_that("variables linCmt() would read as parameters are renamed", {
     c("x_VPX <- 2", "x_KE <- CL/V1", "VMAX <- 3") %in% trimws(text)
   ))
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   expect_s3_class(
     suppressMessages(rxode2::rxode2(eval(parse(text = text)))),
     "rxUi"
@@ -224,4 +225,24 @@ test_that("a sigma variance is written as its standard deviation", {
   )
   text <- pmx_write_rxode2(do.call(new_model, parts))$text
   expect_true("    eps.prop <- c(0, 0.25)" %in% text)
+})
+
+test_that("a power residual model round-trips through pow()", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+      pw <- 0.5
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ pow(sd, pw)
+    })
+  })
+  w <- pmx_write_rxode2(m)
+  expect_equal(pmx_fidelity(w), "exact")
+  expect_true("    cp ~ pow(sd, pw)" %in% w$text)
 })

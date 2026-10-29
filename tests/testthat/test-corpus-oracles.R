@@ -3,8 +3,8 @@
 
 test_that("nonmem2rx translations agree with every entry", {
   skip_on_cran()
-  skip_if_not_installed("nonmem2rx")
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("nonmem2rx")
+  skip_if_no_engine("rxode2")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -17,8 +17,8 @@ test_that("nonmem2rx translations agree with every entry", {
 
 test_that("amp.sim translations agree with every ODE entry", {
   skip_on_cran()
-  skip_if_not_installed("amp.sim")
-  skip_if_not_installed("mrgsolve")
+  skip_if_no_engine("amp.sim")
+  skip_if_no_engine("mrgsolve")
   corpus <- zufapmx_corpus()
   # amp.sim writes compartments from $MODEL only, so it cannot translate the
   # closed-form ADVANs (oracle-agreement.md).
