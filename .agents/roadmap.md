@@ -93,8 +93,6 @@ on it, and where they agree and disagree is recorded.
   missing.
 - A script under `tools/` that runs the CRAN point converters on the corpus
   and writes their agreement to `.agents/oracle-agreement.md` (design §9).
-- Check where `daffiz` is on its way to CRAN (D11). It must be accepted
-  before Stage 7 starts.
 
 **Exit criteria.**
 
@@ -105,7 +103,7 @@ on it, and where they agree and disagree is recorded.
 - The quick profile, with `Suggests` installed, still finishes in under
   five minutes, or this roadmap records what was tuned.
 
-**Design.** §7, §9, Q2, D11, D12.
+**Design.** §7, §9, Q2, D12.
 
 **Deviations (2026-10-28).**
 
@@ -120,8 +118,8 @@ on it, and where they agree and disagree is recorded.
   compatible licence) is applied as written.
 - `nlmixr2` is not in `Suggests` yet. Nothing in this stage uses it; the
   rxode2 reader stage adds it if its tests need it.
-- `daffiz` is not on CRAN as of 2026-10-28 and has no `CRAN-submission`
-  issue. Stage 7 waits on it (D11).
+- `daffiz` was not on CRAN on 2026-10-28, and Stage 7 was to wait on it
+  (D11). D17 (2026-10-29) drops it: Stage 7 no longer waits.
 
 **CI tuning (2026-10-28, [#18](https://github.com/pedrobtz/zufapmx/pull/18)).**
 With the engines in `Suggests`, the R-devel containers took 15 to 17
@@ -321,7 +319,7 @@ differ, through independent engines.
 - `pmx_design()`: typical subject, `n` subjects with seeded etas, the
   regimen set of §4.4, residual error off (D5).
 - `pmx_compare()`: engine resolution that never uses the writer under test
-  (D4), simulation, alignment and tolerances through `daffiz` (D11), and
+  (D4), simulation, alignment and tolerances in base R (D17), and
   a `zufapmx_comparison` value. A failed comparison is a
   value, never an error.
 - `pmx_report()` writing Markdown with the design and both model texts.
@@ -336,7 +334,7 @@ differ, through independent engines.
 - A missing engine raises `zufapmx_engine_error`, tested.
 - The full r-actions profile is green on the pull request.
 
-**Design.** §4.4, §6 (comparison), §7, D4, D5, D11.
+**Design.** §4.4, §6 (comparison), §7, D4, D5, D17.
 
 ## Stage 8 — Tables, JSON and property tests
 
@@ -430,7 +428,7 @@ default branch's code.
 
 - `Version: 0.1.0` and the matching `NEWS.md` heading.
 - `cran-comments.md` listing the r-actions CI legs as test environments.
-- Every `Suggests` entry, `daffiz` included, is on CRAN (D11).
+- Every `Suggests` entry is on CRAN.
 - `pmx_report()` output for one corpus model reviewed by one
   pharmacometrician outside the family, and the review recorded (§12, Q4).
 - `pkg-critical-review` run; blocking and required findings fixed.
@@ -465,8 +463,9 @@ against, and the harness that makes them checkable.
 
 ## Open questions
 
-Q5 is settled by D11 (2026-10-28): `daffiz` goes to CRAN before Stage 7.
-That makes `daffiz` reaching CRAN a dependency of Stage 7.
+Q5 is settled by D17 (2026-10-29): `pmx_compare()` carries its own
+alignment and tolerance check, and nothing outside this repository
+blocks Stage 7.
 
 - **Q2, blocks Stage 1.** May the corpus carry open-access published models
   whose licence is silent? The design says no.

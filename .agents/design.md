@@ -12,7 +12,8 @@ on 2026-10-28. From here on this file is authoritative; the RFC is history.
 - **Packages:** `zufapmx` (not yet created; crandb returns `not_found` and
   there is no `pedrobtz/zufapmx` repository). Pure R in v0.1.0. No
   `Imports`. `Suggests: testthat, rxode2, nlmixr2, mrgsolve, nonmem2rx,
-  nonmem2mrgsolve, zuxml, zucsv, zujson, daffiz`. MIT.
+  nonmem2mrgsolve, zuxml, zucsv, zujson, daffiz`. MIT. (`daffiz` dropped
+  by D17.)
 - **Source:** the re-check in
   [`archive/reviews/pharmacometrics-review-2026-10-28.md`](https://github.com/pedrobtz/packages/blob/main/archive/reviews/pharmacometrics-review-2026-10-28.md)
   and the sources it lists; the nlmixr2 team's report of its seminar to
@@ -95,17 +96,15 @@ behaviour per function.
   `$TABLE` output, which are large and delimiter-sniffed; `sniff_csv()`
   handles the space-delimited tables with a title line. Base R is the
   fallback when it is not installed.
-- **`daffiz`** (0.1.0, not yet on CRAN): `Suggests`. Its value-by-value
-  table comparison with casting rules and a diff summary is the core of
-  `pmx_compare()` (§4.4), and `expect_table_equal()` is how the corpus
-  round-trip tests are written (§9). Q5 says what happens if it is not
-  on CRAN in time.
+- **`daffiz`** (0.1.0, not yet on CRAN): not in v0.1.0 (D17).
+  `pmx_compare()` aligns and compares its own two prediction tables. Once
+  on CRAN, `daffiz`'s value-by-value comparison with casting rules and a
+  diff summary can make a richer report (§14).
 - **`zujson`** (CRAN 0.1.0): `Suggests`. `pmx_write_json()` and
   `pmx_read_json()` serialise the representation when it is installed.
 - **`zudiff`** (RFC 0045): not in v0.1.0. It is a sequence diff with
-  exact equality, and RFC 0045 §1.1 leaves tables to `daffiz`, which is
-  why the numeric comparison in `pmx_compare()` goes to `daffiz` and not
-  here. Its place is §14: the statement-level `pmx_diff()` between two
+  exact equality, and RFC 0045 §1.1 leaves tables to `daffiz`; the
+  numeric comparison in `pmx_compare()` is the harness's own (D17). Its place is §14: the statement-level `pmx_diff()` between two
   versions of one model, and the text diff between a model's source and
   its rewritten form in fidelity reports.
 - **`zufuzz`**: development only. Fuzzes the three parsers (§9).
@@ -195,9 +194,10 @@ values and says so.
    with interval and additional doses, and steady state. Residual error
    is off; the harness compares predictions, not noise. Covariates take
    the values in the design table.
-3. Simulates both, then hands the two prediction tables to `daffiz`,
-   which aligns them on subject, time and endpoint and computes
-   absolute and relative deviations under the design's tolerances.
+3. Simulates both, aligns the two prediction tables on subject, time and
+   endpoint, and computes absolute and relative deviations under the
+   design's tolerances, in base R (D17). A missing or short table is a
+   failure, never a pass.
 4. Returns a `zufapmx_comparison`: pass or fail, the worst deviation and
    where it occurred, per-regimen summaries, the engines and versions
    used, and both models' provenance. `pmx_report()` writes it as
@@ -307,8 +307,8 @@ typical-subject predictions on the standard design.
 
 - One test file per reader, per writer and for the harness.
 - Every corpus entry is a snapshot test of its representation and a
-  round-trip test in every direction available, written with
-  `daffiz::expect_table_equal()` on the prediction tables.
+  round-trip test in every direction available, comparing the prediction
+  tables with the harness's own tolerance check (D17).
 - The three parsers have `zufuzz` targets, run in the family's fuzz job.
 - Oracle tests skip when the oracle is not installed and are required on
   the r-actions legs that install `Suggests`.
@@ -388,9 +388,9 @@ decides it and the maintainer may overturn it.
   grammars replace them when `zupeg` exists; the representation does
   not change.
 - **D8 (C).** Pure R, no `Imports`. Engines, oracles and the siblings
-  `zuxml`, `zucsv`, `zujson` and `daffiz` are `Suggests`. Every reader
-  degrades without them: estimates fall back to `.ext`, tables to base
-  R, JSON is unavailable, and comparison without `daffiz` is Q5.
+  `zuxml`, `zucsv` and `zujson` are `Suggests`. Every reader degrades
+  without them: estimates fall back to `.ext`, tables to base R, and JSON
+  is unavailable. Comparison needs no sibling (D17).
 - **D9a (M).** Siblings already on CRAN are used wherever they fit
   rather than re-implemented: `zuxml` for `run.xml`, `zucsv` for tables.
 - **D9 (C).** Writers never fabricate values and never silently drop a
@@ -399,9 +399,8 @@ decides it and the maintainer may overturn it.
   `zupkpmx`, with `zupkode` (RFC 0047) as its sibling. Functions carry the
   role word only: `pmx_*`, with `<package>_corpus()` for the package-level
   entry point; that part stands.
-- **D11 (M), 2026-10-28.** `daffiz` goes to CRAN before the harness
-  stage (§11 stage 5), so it stays in `Suggests` and `pmx_compare()`
-  carries no alignment-and-tolerance routine of its own. Resolves Q5.
+- **D11 (M), 2026-10-28, superseded by D17.** `daffiz` was to go to CRAN
+  before the harness stage, with `pmx_compare()` relying on it.
 - **D12 (M), 2026-10-28.** `nonmem2mrgsolve` is not on CRAN (it is on
   GitHub only), so it cannot be in `Suggests`. `amp.sim` (CRAN 0.1.1),
   which translates NONMEM to mrgsolve, takes its place as the mrgsolve-side
@@ -428,6 +427,14 @@ decides it and the maintainer may overturn it.
   RFC 0047's sibling is `zufaode`. `fa` replaces `pk` as the mark of the
   sub-family, so a later package would be `zufanca`. Supersedes D10's
   naming; the package was renamed from `zupkpmx` before any release.
+- **D17 (M), 2026-10-29.** `pmx_compare()` aligns and compares its two
+  prediction tables itself, in base R, and `daffiz` is not a dependency of
+  v0.1.0. Both tables come from one design, so alignment is a join on
+  subject, time and endpoint, and the comparison is relative and absolute
+  deviations against tolerances; that does not justify waiting on another
+  package's CRAN release. `daffiz` can return in a later version, in
+  `Suggests`, for a richer diff report. Supersedes D11; resolves Q5 the
+  other way.
 
 ## 14. Later versions, in the order they are expected
 
@@ -448,6 +455,8 @@ decides it and the maintainer may overturn it.
 - **Text diffs in fidelity reports**: `pmx_write_*()` output against the
   source text through `zudiff`, so a reviewer sees what a round trip
   changed rather than only that it was `lossy`.
+- **`daffiz` diff reports** in `pmx_report()`, once `daffiz` is on CRAN
+  (D17).
 - **`zupeg` grammars** replacing the hand-written parsers.
 - **Inter-occasion variability and mixtures** in writers.
 
@@ -473,4 +482,5 @@ decides it and the maintainer may overturn it.
   Stage 5, or `pmx_compare()` carries a minimal alignment-and-tolerance
   routine of its own and `daffiz` becomes the richer report when
   installed. This RFC prefers submitting `daffiz` first and makes it a
-  Stage 0 check. **Resolved by D11:** `daffiz` goes to CRAN first.
+  Stage 0 check. **Resolved by D17:** `pmx_compare()` carries its own
+  alignment and tolerance check; `daffiz` is not needed for v0.1.0.
