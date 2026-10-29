@@ -97,7 +97,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   new_written(
     text = text,
     format = "nonmem",
-    fidelity = written_fidelity(losses, model, back),
+    fidelity = written_fidelity(losses, model, back, values = estimates),
     losses = losses
   )
 }

@@ -206,3 +206,20 @@ test_that("written text is stable", {
     "onecmt-oral-mm"
   ))))
 })
+
+test_that("a lossy write is still checked against its source", {
+  m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"), "ext")
+  w <- pmx_write_mrgsolve(m)
+
+  expect_equal(pmx_fidelity(w), "lossy")
+  expect_true("0.084" %in% w$text)
+
+  parts <- unclass(m)
+  wrong <- parts
+  wrong$individual[[2]] <- quote(CL <- THETA2 * exp(ETA1) * 2)
+  back <- do.call(new_model, wrong)
+  expect_error(
+    written_fidelity("initial values", m, back),
+    class = "zufapmx_write_error"
+  )
+})

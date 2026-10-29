@@ -113,7 +113,7 @@ pmx_write_mrgsolve <- function(model) {
   new_written(
     text = text,
     format = "mrgsolve",
-    fidelity = written_fidelity(losses, model, back),
+    fidelity = written_fidelity(losses, model, back, fixed_blocks = FALSE),
     losses = losses
   )
 }
@@ -232,9 +232,11 @@ mrg_dosing_lines <- function(m, spelling) {
   out
 }
 
+# A block's estimates when it has them, like $PARAM's values.
 mrg_block_lines <- function(record, blocks) {
   unlist(lapply(blocks, function(b) {
-    v <- b$matrix[upper.tri(b$matrix, diag = TRUE)]
+    m <- b$estimate %||% b$matrix
+    v <- m[upper.tri(m, diag = TRUE)]
     c(
       "",
       sprintf("$%s%s", record, if (length(b$names) > 1) " @block" else ""),

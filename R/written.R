@@ -75,19 +75,27 @@ as.character.zufapmx_written <- function(x, ...) {
 
 # Fidelity of a write, from the losses the writer recorded and whether its
 # output reads back to the same representation.
-written_fidelity <- function(losses, model, back) {
-  if (length(losses) > 0) {
-    return("lossy")
-  }
-  if (same_content(model_content(back), model_content(model))) {
-    return("exact")
+written_fidelity <- function(
+  losses,
+  model,
+  back,
+  values = "final",
+  fixed_blocks = TRUE
+) {
+  # What the writer meant to write: estimates in place of initial values
+  # (or not), and blocks without their fixed flags where the format cannot
+  # hold them. Declared losses are applied to the source before comparing,
+  # so a lossy write is still checked (design D9).
+  intended <- as_written(model, values, fixed_blocks)
+  if (same_content(model_content(back), model_content(intended))) {
+    return(if (length(losses) > 0) "lossy" else "exact")
   }
   # Equivalent only through the reparameterisations writers are known to
   # make (normalise_model()); anything else is a translation error.
-  a <- normalise_model(model)
+  a <- normalise_model(intended)
   b <- normalise_model(back)
   if (same_content(a, b)) {
-    return("equivalent")
+    return(if (length(losses) > 0) "lossy" else "equivalent")
   }
   differs <- names(a)[
     !vapply(names(a), function(n) same_content(a[[n]], b[[n]]), logical(1))
@@ -98,6 +106,33 @@ written_fidelity <- function(losses, model, back) {
     formats = character(),
     call = NULL
   )
+}
+
+# A model as a writer writes it: with `values = "final"` its estimates
+# become its initial values; with `"initial"` its estimates are dropped.
+# `fixed_blocks = FALSE` drops the fixed flags of omega and sigma blocks.
+as_written <- function(model, values, fixed_blocks) {
+  m <- unclass(model)
+  p <- m$parameters
+  if (values == "final") {
+    has <- !is.na(p$estimate)
+    p$init[has] <- p$estimate[has]
+  }
+  p$estimate <- NA_real_
+  m$parameters <- p
+  block <- function(b) {
+    if (values == "final" && !is.null(b$estimate)) {
+      b$matrix <- b$estimate
+    }
+    b$estimate <- NULL
+    if (!fixed_blocks) {
+      b$fixed <- FALSE
+    }
+    b
+  }
+  m$random_effects$omega <- lapply(m$random_effects$omega, block)
+  m$random_effects$sigma <- lapply(m$random_effects$sigma, block)
+  structure(m, class = class(model))
 }
 
 # A model with the reparameterisations writers make undone, for comparing
