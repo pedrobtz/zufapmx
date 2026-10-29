@@ -10,7 +10,7 @@ pmx_write_mrgsolve(model)
 \item{model}{A model read by one of the \verb{pmx_read_*()} functions.}
 }
 \value{
-A \code{zupkpmx_written} object: the text as lines, with its fidelity
+A \code{zufapmx_written} object: the text as lines, with its fidelity
 and losses (see \code{\link[=pmx_fidelity]{pmx_fidelity()}}). \code{format()} and \code{as.character()}
 give the text.
 }
@@ -33,7 +33,7 @@ as lost.
 \examples{
 path <- system.file(
   "corpus", "onecmt-oral", "model-rxode2.R",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 fun <- eval(parse(path))
 pmx_write_mrgsolve(pmx_read_rxode2(fun))

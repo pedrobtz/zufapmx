@@ -1,14 +1,14 @@
 test_that("every corpus control stream reads", {
-  for (path in zupkpmx_corpus()$path) {
+  for (path in zufapmx_corpus()$path) {
     expect_s3_class(
       pmx_read_nonmem(file.path(path, "model.ctl")),
-      "zupkpmx_model"
+      "zufapmx_model"
     )
   }
 })
 
 test_that("closed-form and ODE control streams read into their structures", {
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
   closed <- pmx_read_nonmem(file.path(
     corpus$path[corpus$id == "twocmt-oral"],
     "model.ctl"
@@ -40,7 +40,7 @@ test_that("closed-form and ODE control streams read into their structures", {
 test_that("corpus control streams predict their expected.csv", {
   skip_on_cran()
   skip_if_not_installed("rxode2")
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     model <- pmx_read_nonmem(file.path(corpus$path[[i]], "model.ctl"))
@@ -132,7 +132,7 @@ test_that("dosing attributes and IF blocks in $PK read", {
 
 test_that("unsupported control streams are refused with a position", {
   refused <- function(lines) {
-    expect_error(read_ctl(lines), class = "zupkpmx_parse_error")
+    expect_error(read_ctl(lines), class = "zufapmx_parse_error")
   }
   base <- ctl_onecmt()
 
@@ -155,7 +155,7 @@ test_that("an ODE model needs a derivative for every compartment", {
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   expect_error(
     read_ctl(lines[!grepl("DADT\\(2\\)", lines)]),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -190,7 +190,7 @@ test_that("auto falls back to .ext without zuxml", {
 
   m <- pmx_read_nonmem(ctl)
   expect_equal(basename(unclass(m)$provenance$estimates), "run1.ext")
-  expect_error(pmx_read_nonmem(ctl, "xml"), class = "zupkpmx_engine_error")
+  expect_error(pmx_read_nonmem(ctl, "xml"), class = "zufapmx_engine_error")
 })
 
 test_that("auto reads no estimates when there are no output files", {
@@ -199,13 +199,13 @@ test_that("auto reads no estimates when there are no output files", {
   expect_true(all(is.na(pmx_parameters(m)$estimate)))
   expect_error(
     pmx_read_nonmem(corpus_file("onecmt-oral", "model.ctl"), "ext"),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
 test_that("dosing and scale assignments inside IF, or read as variables, are refused", {
   refused <- function(pk) {
-    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zupkpmx_parse_error")
+    expect_error(read_ctl(ctl_onecmt(pk = pk)), class = "zufapmx_parse_error")
   }
 
   refused("IF (KA.GT.0) F1 = 0.5")

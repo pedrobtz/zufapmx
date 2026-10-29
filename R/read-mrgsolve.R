@@ -13,7 +13,7 @@
 #' `F_CMT`, `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything else,
 #' including `$GLOBAL`, `$PREAMBLE`, the `nm-vars` plugin, `int`
 #' declarations and integer division (`3/4`), is refused with an error of
-#' class `zupkpmx_parse_error`. `$PKMODEL` may take its parameters from
+#' class `zufapmx_parse_error`. `$PKMODEL` may take its parameters from
 #' `$PARAM` directly or from `$MAIN`.
 #'
 #' Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
@@ -29,13 +29,13 @@
 #' them.
 #'
 #' @param file Path to the model file.
-#' @return A `zupkpmx_model`; see [pmx_inspect] and [pmx_write_mrgsolve()].
+#' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_mrgsolve()].
 #' @family readers
 #' @export
 #' @examples
 #' path <- system.file(
 #'   "corpus", "twocmt-bolus", "model.cpp",
-#'   package = "zupkpmx"
+#'   package = "zufapmx"
 #' )
 #' pmx_read_mrgsolve(path)
 pmx_read_mrgsolve <- function(file) {
@@ -45,7 +45,7 @@ pmx_read_mrgsolve <- function(file) {
       !file.exists(file) ||
       dir.exists(file)
   ) {
-    zupkpmx_abort("`file` must be the path of an existing file.", "model")
+    zufapmx_abort("`file` must be the path of an existing file.", "model")
   }
   mrg_read(file)
 }
@@ -395,7 +395,7 @@ mrg_number <- function(text, file, line) {
         expr_check(x)
         TRUE
       },
-      zupkpmx_model_error = function(e) FALSE
+      zufapmx_model_error = function(e) FALSE
     )
   if (!ok) {
     parse_error(
@@ -641,7 +641,7 @@ mrg_nonmem <- function(b, file) {
     path <- file.path(root, path)
   }
   if (!file.exists(path)) {
-    zupkpmx_abort(sprintf("No NONMEM output at `%s`.", path), "model")
+    zufapmx_abort(sprintf("No NONMEM output at `%s`.", path), "model")
   }
   est <- if (b$name == "NMXML") {
     if (!has_zuxml()) {

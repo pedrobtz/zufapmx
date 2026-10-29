@@ -27,7 +27,7 @@ subset into the representation, with estimates from `run.xml`, `.ext` or
   `.ext`, else none. `"xml"`, `"ext"`, `"lst"`, `"none"` force a source.
 - Refused: verbatim code (`"` lines), `$INFN`, `$PRED`, `$MIX`, `$PRIOR`,
   `SAME`, `SD`/`CORR` options, user subroutines (`OTHER=`), and any
-  function or variable outside the table. Each is `zupkpmx_parse_error`
+  function or variable outside the table. Each is `zufapmx_parse_error`
   with file, line and column.
 - Losses: `$PROBLEM`, `$INPUT`, `$DATA`, `$ESTIMATION`, `$COVARIANCE`,
   `$TABLE`, comments, the ODE solver (D13), unused `$ERROR` statements.

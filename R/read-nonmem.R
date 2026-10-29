@@ -14,7 +14,7 @@
 #' Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines,
 #' dosing or scale assignments inside `IF`, undeclared `THETA`/`ETA`/`EPS`
 #' indices and anything else outside that subset are refused with an error
-#' of class `zupkpmx_parse_error` naming the file and, where it can, the
+#' of class `zufapmx_parse_error` naming the file and, where it can, the
 #' line and column.
 #'
 #' Recorded as losses of the read: the title, `$SIZES`, data records,
@@ -35,13 +35,13 @@
 #'   `run.xml` (`<file>.xml`) when it exists and zuxml is installed, else
 #'   the `.ext` file, else none. `"xml"`, `"ext"` and `"lst"` read that
 #'   file and fail if it is missing; `"none"` reads no estimates.
-#' @return A `zupkpmx_model`; see [pmx_inspect] and [pmx_write_nonmem()].
+#' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_nonmem()].
 #' @family readers
 #' @export
 #' @examples
 #' path <- system.file(
 #'   "corpus", "twocmt-bolus", "model.ctl",
-#'   package = "zupkpmx"
+#'   package = "zufapmx"
 #' )
 #' pmx_read_nonmem(path)
 pmx_read_nonmem <- function(
@@ -49,7 +49,7 @@ pmx_read_nonmem <- function(
   estimates = c("auto", "xml", "ext", "lst", "none")
 ) {
   if (!is.character(estimates) || anyNA(estimates)) {
-    zupkpmx_abort("`estimates` must be one of the documented strings.", "model")
+    zufapmx_abort("`estimates` must be one of the documented strings.", "model")
   }
   estimates <- match.arg(estimates)
   if (
@@ -58,7 +58,7 @@ pmx_read_nonmem <- function(
       !file.exists(file) ||
       dir.exists(file)
   ) {
-    zupkpmx_abort("`file` must be the path of an existing file.", "model")
+    zufapmx_abort("`file` must be the path of an existing file.", "model")
   }
   model <- nm_read(file)
   nm_attach_estimates(model, file, estimates)

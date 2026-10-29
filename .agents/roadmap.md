@@ -1,10 +1,10 @@
-# zupkpmx: roadmap
+# zufapmx: roadmap
 
 Status: draft 2026-10-28. Implements [design.md](design.md).
 Target: v0.1.0, the first CRAN release.
-Tracking: [v0.1.0 (#1)](https://github.com/pedrobtz/zupkpmx/issues/1), with
+Tracking: [v0.1.0 (#1)](https://github.com/pedrobtz/zufapmx/issues/1), with
 one sub-issue per stage;
-[CRAN-submission (#14)](https://github.com/pedrobtz/zupkpmx/issues/14).
+[CRAN-submission (#14)](https://github.com/pedrobtz/zufapmx/issues/14).
 
 The design's §11 has eight stages. This roadmap brackets them with the
 portfolio's identity, `Full CI` and readiness stages, and splits its Stage 4
@@ -16,23 +16,23 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
-| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupkpmx/issues/2) | [#16](https://github.com/pedrobtz/zupkpmx/pull/16) | 2026-10-28 |
-| 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zupkpmx/issues/3) | [#18](https://github.com/pedrobtz/zupkpmx/pull/18) | 2026-10-28 |
-| 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zupkpmx/issues/4) | [#19](https://github.com/pedrobtz/zupkpmx/pull/19) | 2026-10-28 |
-| 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zupkpmx/issues/5) | [#20](https://github.com/pedrobtz/zupkpmx/pull/20) | 2026-10-28 |
-| 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zupkpmx/issues/6) | [#21](https://github.com/pedrobtz/zupkpmx/pull/21) | 2026-10-28 |
-| 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zupkpmx/issues/7) | [#22](https://github.com/pedrobtz/zupkpmx/pull/22) | 2026-10-28 |
-| 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zupkpmx/issues/8) | [#23](https://github.com/pedrobtz/zupkpmx/pull/23) | 2026-10-28 |
-| 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zupkpmx/issues/9) | | |
-| 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zupkpmx/issues/10) | | |
-| 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zupkpmx/issues/11) | | |
-| 10 | [Full CI](#stage-10--full-ci) | full | [#12](https://github.com/pedrobtz/zupkpmx/issues/12) | | |
-| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#13](https://github.com/pedrobtz/zupkpmx/issues/13) | | |
+| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zufapmx/issues/2) | [#16](https://github.com/pedrobtz/zufapmx/pull/16) | 2026-10-28 |
+| 1 | [Corpus skeleton and oracles](#stage-1--corpus-skeleton-and-oracles) | full | [#3](https://github.com/pedrobtz/zufapmx/issues/3) | [#18](https://github.com/pedrobtz/zufapmx/pull/18) | 2026-10-28 |
+| 2 | [Representation and expressions](#stage-2--representation-and-expressions) | quick | [#4](https://github.com/pedrobtz/zufapmx/issues/4) | [#19](https://github.com/pedrobtz/zufapmx/pull/19) | 2026-10-28 |
+| 3 | [rxode2 reader and writer](#stage-3--rxode2-reader-and-writer) | quick | [#5](https://github.com/pedrobtz/zufapmx/issues/5) | [#20](https://github.com/pedrobtz/zufapmx/pull/20) | 2026-10-28 |
+| 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zufapmx/issues/6) | [#21](https://github.com/pedrobtz/zufapmx/pull/21) | 2026-10-28 |
+| 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zufapmx/issues/7) | [#22](https://github.com/pedrobtz/zufapmx/pull/22) | 2026-10-28 |
+| 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zufapmx/issues/8) | [#23](https://github.com/pedrobtz/zufapmx/pull/23) | 2026-10-28 |
+| 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zufapmx/issues/9) | | |
+| 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zufapmx/issues/10) | | |
+| 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zufapmx/issues/11) | | |
+| 10 | [Full CI](#stage-10--full-ci) | full | [#12](https://github.com/pedrobtz/zufapmx/issues/12) | | |
+| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#13](https://github.com/pedrobtz/zufapmx/issues/13) | | |
 
 ## Stage 0 — Package identity
 
-**Issue.** [#2](https://github.com/pedrobtz/zupkpmx/issues/2), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#2](https://github.com/pedrobtz/zufapmx/issues/2), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
@@ -61,7 +61,7 @@ every pull request in under five minutes.
   minutes; the timing is recorded in this roadmap.
 - `DESCRIPTION` has no placeholder text and no `Imports`.
 
-**Timing (2026-10-28, [#16](https://github.com/pedrobtz/zupkpmx/pull/16)).**
+**Timing (2026-10-28, [#16](https://github.com/pedrobtz/zufapmx/pull/16)).**
 Quick profile, longest check first: pkgdown 2m45s, R CMD check clang23
 2m38s, Ubuntu R-release 1m19s, coverage 1m11s. No tuning needed.
 
@@ -69,8 +69,8 @@ Quick profile, longest check first: pkgdown 2m45s, R CMD check clang23
 
 ## Stage 1 — Corpus skeleton and oracles
 
-**Issue.** [#3](https://github.com/pedrobtz/zupkpmx/issues/3), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#3](https://github.com/pedrobtz/zufapmx/issues/3), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `full — first Suggests guards (rxode2, mrgsolve, nonmem2rx,
 amp.sim); nosuggests must pass before later stages copy the skip
@@ -87,7 +87,7 @@ on it, and where they agree and disagree is recorded.
   (bolus, first-order and zero-order input) and one ODE model, from
   `nlmixr2lib`, mrgsolve's `modlib()` and re-typed PREDPP examples, each
   with its licence recorded.
-- `zupkpmx_corpus()` listing the entries.
+- `zufapmx_corpus()` listing the entries.
 - `Suggests`: `testthat`, `rxode2`, `nlmixr2`, `mrgsolve`, `nonmem2rx`,
   `nonmem2mrgsolve`. A test helper that skips when an oracle or engine is
   missing.
@@ -99,7 +99,7 @@ on it, and where they agree and disagree is recorded.
 **Exit criteria.**
 
 - `.agents/oracle-agreement.md` exists and covers every corpus entry.
-- `zupkpmx_corpus()` returns every entry, tested.
+- `zufapmx_corpus()` returns every entry, tested.
 - The full r-actions profile is green on the pull request, including
   `nosuggests`.
 - The quick profile, with `Suggests` installed, still finishes in under
@@ -123,7 +123,7 @@ on it, and where they agree and disagree is recorded.
 - `daffiz` is not on CRAN as of 2026-10-28 and has no `CRAN-submission`
   issue. Stage 7 waits on it (D11).
 
-**CI tuning (2026-10-28, [#18](https://github.com/pedrobtz/zupkpmx/pull/18)).**
+**CI tuning (2026-10-28, [#18](https://github.com/pedrobtz/zufapmx/pull/18)).**
 With the engines in `Suggests`, the R-devel containers took 15 to 17
 minutes (`clang23` 17m, `ubuntu-clang` 16m, `ubuntu-gcc16` 15m), because
 they compile rxode2 and mrgsolve from source; the binary runners took 3 to
@@ -133,12 +133,12 @@ Ubuntu R-release only, and the containers run in every full profile.
 
 ## Stage 2 — Representation and expressions
 
-**Issue.** [#4](https://github.com/pedrobtz/zupkpmx/issues/4), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#4](https://github.com/pedrobtz/zufapmx/issues/4), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
-**Goal.** A `zupkpmx_model` can be built, validated, inspected and printed
+**Goal.** A `zufapmx_model` can be built, validated, inspected and printed
 without any reader.
 
 **Work.**
@@ -148,8 +148,8 @@ without any reader.
 - The expression tree of §4.5: constants, names, operators, the fixed
   function table and `if`/`else`.
 - `print()` for the model; `pmx_parameters()`, `pmx_omega()`, `pmx_ode()`.
-- The condition classes of §8 (`zupkpmx_parse_error`,
-  `zupkpmx_write_error`, `zupkpmx_engine_error`).
+- The condition classes of §8 (`zufapmx_parse_error`,
+  `zufapmx_write_error`, `zufapmx_engine_error`).
 
 **Exit criteria.**
 
@@ -161,8 +161,8 @@ without any reader.
 
 ## Stage 3 — rxode2 reader and writer
 
-**Issue.** [#5](https://github.com/pedrobtz/zupkpmx/issues/5), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#5](https://github.com/pedrobtz/zufapmx/issues/5), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
@@ -190,7 +190,7 @@ and write back out, with a fidelity and a list of losses.
 - The corpus has no `nlmixr2lib` models (Stage 1), so the first exit
   criterion is checked on the installed library instead: every
   `nlmixr2lib` model either reads and round-trips `exact`, or is refused
-  with `zupkpmx_parse_error`. With nlmixr2lib 0.3.2, 44 of 59 read, all
+  with `zufapmx_parse_error`. With nlmixr2lib 0.3.2, 44 of 59 read, all
   `exact`, including every `PK_*` model; 15 are refused for `logit()`,
   `sin()`/`cos()` of time, a two-value omega and a `log(c(...))` bound.
 - §6's "a model without estimates writes initial values and sets a loss"
@@ -204,8 +204,8 @@ and write back out, with a fidelity and a list of losses.
 
 ## Stage 4 — NONMEM reader
 
-**Issue.** [#6](https://github.com/pedrobtz/zupkpmx/issues/6), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#6](https://github.com/pedrobtz/zufapmx/issues/6), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
@@ -218,7 +218,7 @@ estimates attached from the best available source.
   abbreviated-code subset of §4.2 (D6, D7).
 - Estimates from `run.xml` through `zuxml` when present, else `.ext`, else
   `.lst` when asked. `zuxml` joins `Suggests`.
-- `zupkpmx_parse_error` with file, line, column, token seen and expected;
+- `zufapmx_parse_error` with file, line, column, token seen and expected;
   verbatim Fortran, `$INFN` and user subroutines refused.
 - Settle Q3 (which general ODE `ADVAN`s are accepted) before parsing
   `$SUBROUTINES`.
@@ -235,8 +235,8 @@ general ODE `ADVAN`, solver recorded as a loss).
 
 ## Stage 5 — NONMEM writer
 
-**Issue.** [#7](https://github.com/pedrobtz/zupkpmx/issues/7), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#7](https://github.com/pedrobtz/zufapmx/issues/7), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
@@ -267,12 +267,12 @@ NONMEM control stream.
   simulates identically, so cross-format writes are `equivalent`.
 - First commit: fidelity compares constants within a few ulps. The full
   run on `main` for Stage 3 failed on macOS and `nold`, where R's decimal
-  parser is not correctly rounded ([#12](https://github.com/pedrobtz/zupkpmx/issues/12)).
+  parser is not correctly rounded ([#12](https://github.com/pedrobtz/zufapmx/issues/12)).
 
 ## Stage 6 — mrgsolve reader and writer
 
-**Issue.** [#8](https://github.com/pedrobtz/zupkpmx/issues/8), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#8](https://github.com/pedrobtz/zufapmx/issues/8), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
@@ -289,7 +289,7 @@ three v0.1.0 formats.
 
 - Every corpus model round-trips through every pair of the three formats
   that can hold it with fidelity `exact` or `equivalent`.
-- Undocumented C++ raises `zupkpmx_parse_error`, tested.
+- Undocumented C++ raises `zufapmx_parse_error`, tested.
 - `R CMD check` passes on the quick profile.
 
 **Design.** §4.2, §4.3, §6.
@@ -306,8 +306,8 @@ three v0.1.0 formats.
 
 ## Stage 7 — Equivalence harness
 
-**Issue.** [#9](https://github.com/pedrobtz/zupkpmx/issues/9), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#9](https://github.com/pedrobtz/zufapmx/issues/9), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `full — the engines become a runtime Suggests path for
 pmx_compare(); nosuggests and every platform leg must hold before tables
@@ -322,7 +322,7 @@ differ, through independent engines.
   regimen set of §4.4, residual error off (D5).
 - `pmx_compare()`: engine resolution that never uses the writer under test
   (D4), simulation, alignment and tolerances through `daffiz` (D11), and
-  a `zupkpmx_comparison` value. A failed comparison is a
+  a `zufapmx_comparison` value. A failed comparison is a
   value, never an error.
 - `pmx_report()` writing Markdown with the design and both model texts.
 - Corpus round-trip tests with `pmx_compare()`.
@@ -333,15 +333,15 @@ differ, through independent engines.
   documented in `.agents/oracle-agreement.md`.
 - Every corpus model round-trips through every pair of formats that can
   hold it with `pass`.
-- A missing engine raises `zupkpmx_engine_error`, tested.
+- A missing engine raises `zufapmx_engine_error`, tested.
 - The full r-actions profile is green on the pull request.
 
 **Design.** §4.4, §6 (comparison), §7, D4, D5, D11.
 
 ## Stage 8 — Tables, JSON and property tests
 
-**Issue.** [#10](https://github.com/pedrobtz/zupkpmx/issues/10), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#10](https://github.com/pedrobtz/zufapmx/issues/10), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
@@ -369,8 +369,8 @@ translation, the representation serialises to JSON, and the test plan of
 
 ## Stage 9 — README and article
 
-**Issue.** [#11](https://github.com/pedrobtz/zupkpmx/issues/11), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#11](https://github.com/pedrobtz/zufapmx/issues/11), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `quick`.
 
@@ -396,8 +396,8 @@ first and can follow a translation check end to end.
 
 ## Stage 10 — Full CI
 
-**Issue.** [#12](https://github.com/pedrobtz/zupkpmx/issues/12), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#12](https://github.com/pedrobtz/zufapmx/issues/12), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `full`. Always.
 
@@ -419,8 +419,8 @@ default branch's code.
 
 ## Stage 11 — v0.1.0 readiness
 
-**Issue.** [#13](https://github.com/pedrobtz/zupkpmx/issues/13), sub-issue of
-[v0.1.0](https://github.com/pedrobtz/zupkpmx/issues/1).
+**Issue.** [#13](https://github.com/pedrobtz/zufapmx/issues/13), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zufapmx/issues/1).
 
 **CI.** `full`. Always.
 
@@ -450,7 +450,7 @@ From design §2 and §14, in the order expected:
 
 - Monolix mlxtran reader and writer, with `monolix2rx` as oracle.
 - A Stan plus Torsten writer.
-- `zupkode` as a comparison engine and writer target.
+- `zufaode` as a comparison engine and writer target.
 - Pumas, Phoenix PML, PK-Sim and Campsis writers.
 - PharmML import for the DDMoRe repository, built on `zuxml`.
 - `pmx_diff()`: a structural diff of two representations, built on

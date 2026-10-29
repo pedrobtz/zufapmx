@@ -18,15 +18,15 @@ test_that("initial values need one to three values in bound order", {
   }
   expect_error(
     pmx_read_rxode2(ini_model(quote(c(0, 4, 10, 99)))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(ini_model(quote(c(10, 5)))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(ini_model(quote(c()))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 
   expect_error(
@@ -35,7 +35,7 @@ test_that("initial values need one to three values in bound order", {
       "$THETA (10, 5) (0, 4) (0, 50)",
       ctl_onecmt()
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(c(
@@ -44,7 +44,7 @@ test_that("initial values need one to three values in bound order", {
       "TVV : 50 : [0, Inf]",
       cpp_onecmt()[-1]
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -61,7 +61,7 @@ test_that("residual error parameters must be ini() parameters", {
         cp ~ prop(prop.sd)
       })
     }),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -72,7 +72,7 @@ test_that("annotated parameter names must be names", {
       "q <- 1; message('x'); TVCL : 1 : x",
       cpp_onecmt()[-1]
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -85,20 +85,20 @@ test_that("a writer whose text does not read back raises a write error", {
 
   expect_error(
     pmx_write_rxode2(model_with(m, parameters = p, individual = ind)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 })
 
 test_that("malformed input is a parse error, never a bare R error", {
-  expect_error(read_ctl(character()), class = "zupkpmx_parse_error")
-  expect_error(read_cpp(character()), class = "zupkpmx_parse_error")
+  expect_error(read_ctl(character()), class = "zufapmx_parse_error")
+  expect_error(read_cpp(character()), class = "zufapmx_parse_error")
   expect_error(
     read_ctl(ctl_onecmt(pk = "S0 = V")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_ctl(ctl_onecmt(pk = "DADT(1) = 1")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(c(
@@ -108,7 +108,7 @@ test_that("malformed input is a parse error, never a bare R error", {
       "double IPRED = CENT / V;",
       "double Y = IPRED + EPS(1);"
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(c(
@@ -118,25 +118,25 @@ test_that("malformed input is a parse error, never a bare R error", {
       "double IPRED = CENT / V;",
       "double Y = IPRED + EPS(1);"
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = exp(CL, V);")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(c("$PARAM TVCL = 1", cpp_onecmt())),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   expect_error(
     read_ctl(c(lines, "$DES", "DADT(3) = 1")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_ctl(sub("DADT\\(2\\)", "DADT(3)", lines)),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 
   dir <- withr::local_tempdir()
@@ -144,7 +144,7 @@ test_that("malformed input is a parse error, never a bare R error", {
   writeLines(character(), file.path(dir, "run1.ext"))
   expect_error(
     pmx_read_nonmem(file.path(dir, "run1.ctl"), "ext"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -161,15 +161,15 @@ test_that("estimates are found next to a control stream in a dotted directory", 
 test_that("C++ integer division and int declarations are refused", {
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = pow(CL / 70.0, 3 / 4);")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = (1 + 2) / 4;")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(cpp_onecmt(main = "int N = 2;")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 
   m <- read_cpp(cpp_onecmt(
@@ -182,19 +182,19 @@ test_that("C++ integer division and int declarations are refused", {
 test_that("undeclared or fractional THETA, ETA and EPS indices are refused", {
   expect_error(
     read_ctl(ctl_onecmt(pk = "X = THETA(9)")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_ctl(ctl_onecmt(pk = "X = ETA(5)")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_ctl(ctl_onecmt(pk = "X = THETA(1.5)")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = ETA(4);")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -228,7 +228,7 @@ test_that("time is one symbol, spelled for each format and block (D15)", {
   mrg <- pmx_write_mrgsolve(m)$text
   expect_true(any(grepl("0.01 * TIME", mrg, fixed = TRUE)))
   expect_true(any(grepl("exp(-0.1 * SOLVERTIME)", mrg, fixed = TRUE)))
-  expect_error(pmx_write_rxode2(m), class = "zupkpmx_write_error")
+  expect_error(pmx_write_rxode2(m), class = "zufapmx_write_error")
 })
 
 test_that("rxode2 statements that read time belong to the ODE structure", {

@@ -10,7 +10,7 @@ pmx_read_mrgsolve(file)
 \item{file}{Path to the model file.}
 }
 \value{
-A \code{zupkpmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}}.
+A \code{zufapmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}}.
 }
 \description{
 Reads an mrgsolve model file (\code{.cpp}) into the package's representation.
@@ -27,7 +27,7 @@ declarations and assignments, \code{if}/\verb{else}, arithmetic, comparisons,
 \code{F_CMT}, \code{ALAG_CMT}, \code{R_CMT}, \code{D_CMT} and \code{CMT_0}. Anything else,
 including \verb{$GLOBAL}, \verb{$PREAMBLE}, the \code{nm-vars} plugin, \code{int}
 declarations and integer division (\code{3/4}), is refused with an error of
-class \code{zupkpmx_parse_error}. \verb{$PKMODEL} may take its parameters from
+class \code{zufapmx_parse_error}. \verb{$PKMODEL} may take its parameters from
 \verb{$PARAM} directly or from \verb{$MAIN}.
 
 Recorded as losses of the read: the title, \verb{$PLUGIN}, \verb{$SET}, \verb{$PARAM}
@@ -45,7 +45,7 @@ them.
 \examples{
 path <- system.file(
   "corpus", "twocmt-bolus", "model.cpp",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 pmx_read_mrgsolve(path)
 }

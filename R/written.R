@@ -4,7 +4,7 @@
 new_written <- function(text, format, fidelity, losses) {
   structure(
     list(text = text, format = format, fidelity = fidelity, losses = losses),
-    class = "zupkpmx_written"
+    class = "zufapmx_written"
   )
 }
 
@@ -20,7 +20,7 @@ new_written <- function(text, format, fidelity, losses) {
 #'   each item.
 #'
 #' A construct that would change predictions is never dropped: the writer
-#' stops with an error of class `zupkpmx_write_error` instead.
+#' stops with an error of class `zufapmx_write_error` instead.
 #'
 #' @param written The result of a `pmx_write_*()` function.
 #' @return `pmx_fidelity()`: a string. `pmx_losses()`: a character vector,
@@ -29,7 +29,7 @@ new_written <- function(text, format, fidelity, losses) {
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model-rxode2.R",
-#'   package = "zupkpmx"
+#'   package = "zufapmx"
 #' )
 #' fun <- eval(parse(path))
 #' written <- pmx_write_rxode2(pmx_read_rxode2(fun))
@@ -48,12 +48,12 @@ pmx_losses <- function(written) {
 }
 
 #' @export
-format.zupkpmx_written <- function(x, ...) {
+format.zufapmx_written <- function(x, ...) {
   x$text
 }
 
 #' @export
-print.zupkpmx_written <- function(x, ...) {
+print.zufapmx_written <- function(x, ...) {
   cat(x$text, sep = "\n")
   cat(sprintf(
     "# %s, fidelity: %s%s\n",
@@ -69,7 +69,7 @@ print.zupkpmx_written <- function(x, ...) {
 }
 
 #' @export
-as.character.zupkpmx_written <- function(x, ...) {
+as.character.zufapmx_written <- function(x, ...) {
   x$text
 }
 
@@ -110,7 +110,7 @@ written_fidelity <- function(losses, model, back) {
 # statements, so they are left out.
 normalise_model <- function(model) {
   m <- unclass(model)
-  m <- tryCatch(nm_sigma_from_sd(m), zupkpmx_write_error = function(e) m)
+  m <- tryCatch(nm_sigma_from_sd(m), zufapmx_write_error = function(e) m)
   m <- drop_aliases(m)
 
   closed <- identical(m$structure$type, "closed")
@@ -296,8 +296,8 @@ model_content <- function(model) {
 }
 
 check_written <- function(x) {
-  if (!inherits(x, "zupkpmx_written")) {
-    zupkpmx_abort(
+  if (!inherits(x, "zufapmx_written")) {
+    zufapmx_abort(
       sprintf("Expected a written model, not %s.", class(x)[[1]]),
       "model"
     )

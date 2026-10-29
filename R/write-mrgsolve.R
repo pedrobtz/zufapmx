@@ -15,7 +15,7 @@
 #' as lost.
 #'
 #' @inheritParams pmx_inspect
-#' @return A `zupkpmx_written` object: the text as lines, with its fidelity
+#' @return A `zufapmx_written` object: the text as lines, with its fidelity
 #'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
 #'   give the text.
 #' @family writers
@@ -23,7 +23,7 @@
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model-rxode2.R",
-#'   package = "zupkpmx"
+#'   package = "zufapmx"
 #' )
 #' fun <- eval(parse(path))
 #' pmx_write_mrgsolve(pmx_read_rxode2(fun))

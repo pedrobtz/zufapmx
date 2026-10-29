@@ -3,8 +3,8 @@
     Code
       print(pmx_write_nonmem(corpus_rxode2_model("twocmt-oral")))
     Output
-      $PROBLEM zupkpmx model read from rxode2
-      ; zupkpmx: $INPUT and $DATA are placeholders; point them at your dataset.
+      $PROBLEM zufapmx model read from rxode2
+      ; zufapmx: $INPUT and $DATA are placeholders; point them at your dataset.
       $INPUT ID TIME EVID AMT RATE CMT DV
       $DATA data.csv IGNORE=@
       $SUBROUTINES ADVAN4 TRANS4
@@ -34,8 +34,8 @@
     Code
       print(pmx_write_nonmem(corpus_rxode2_model("onecmt-oral-mm")))
     Output
-      $PROBLEM zupkpmx model read from rxode2
-      ; zupkpmx: $INPUT and $DATA are placeholders; point them at your dataset.
+      $PROBLEM zufapmx model read from rxode2
+      ; zufapmx: $INPUT and $DATA are placeholders; point them at your dataset.
       $INPUT ID TIME EVID AMT RATE CMT DV
       $DATA data.csv IGNORE=@
       $SUBROUTINES ADVAN13 TOL=9

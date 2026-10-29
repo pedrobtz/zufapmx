@@ -8,21 +8,21 @@ test_that("constants, names and table calls are valid expressions", {
 })
 
 test_that("a call outside the function table is an error", {
-  expect_error(expr_check(quote(sin(x))), class = "zupkpmx_model_error")
-  expect_error(expr_check(quote(foo(x, 1))), class = "zupkpmx_model_error")
-  expect_error(expr_check(quote(a %% b)), class = "zupkpmx_model_error")
+  expect_error(expr_check(quote(sin(x))), class = "zufapmx_model_error")
+  expect_error(expr_check(quote(foo(x, 1))), class = "zufapmx_model_error")
+  expect_error(expr_check(quote(a %% b)), class = "zufapmx_model_error")
 })
 
 test_that("non-numeric constants are errors", {
-  expect_error(expr_check("a"), class = "zupkpmx_model_error")
-  expect_error(expr_check(quote(TRUE)), class = "zupkpmx_model_error")
-  expect_error(expr_check(c(1, 2)), class = "zupkpmx_model_error")
-  expect_error(expr_check(NULL), class = "zupkpmx_model_error")
+  expect_error(expr_check("a"), class = "zufapmx_model_error")
+  expect_error(expr_check(quote(TRUE)), class = "zufapmx_model_error")
+  expect_error(expr_check(c(1, 2)), class = "zufapmx_model_error")
+  expect_error(expr_check(NULL), class = "zufapmx_model_error")
 })
 
 test_that("a table function with the wrong number of arguments is an error", {
-  expect_error(expr_check(quote(exp(a, b))), class = "zupkpmx_model_error")
-  expect_error(expr_check(quote(max(a))), class = "zupkpmx_model_error")
+  expect_error(expr_check(quote(exp(a, b))), class = "zufapmx_model_error")
+  expect_error(expr_check(quote(max(a))), class = "zufapmx_model_error")
 })
 
 test_that("assignments and if/else are valid statements", {
@@ -42,10 +42,10 @@ test_that("assignments and if/else are valid statements", {
 })
 
 test_that("a statement must assign to a name", {
-  expect_error(stmt_check(quote(cl)), class = "zupkpmx_model_error")
-  expect_error(stmt_check(quote(f(x) <- 1)), class = "zupkpmx_model_error")
-  expect_error(stmt_check(str2lang("cl = 1")), class = "zupkpmx_model_error")
-  expect_error(stmt_check(quote(cl <- sin(x))), class = "zupkpmx_model_error")
+  expect_error(stmt_check(quote(cl)), class = "zufapmx_model_error")
+  expect_error(stmt_check(quote(f(x) <- 1)), class = "zufapmx_model_error")
+  expect_error(stmt_check(str2lang("cl = 1")), class = "zufapmx_model_error")
+  expect_error(stmt_check(quote(cl <- sin(x))), class = "zufapmx_model_error")
 })
 
 test_that("stmt_targets() lists every name a statement list assigns", {

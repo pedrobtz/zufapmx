@@ -3,7 +3,7 @@
     Code
       print(model_twocmt_oral())
     Output
-      <zupkpmx_model> read from test
+      <zufapmx_model> read from test
       Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)
       Parameters: 5, initial values only
       Random effects: eta.cl on cl (exp), eta.v on v (exp)
@@ -14,7 +14,7 @@
     Code
       print(model_twocmt_oral(estimates = TRUE))
     Output
-      <zupkpmx_model> read from test
+      <zufapmx_model> read from test
       Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)
       Parameters: 5, 5 with estimates
       Random effects: eta.cl on cl (exp), eta.v on v (exp)
@@ -25,7 +25,7 @@
     Code
       print(model_onecmt_mm())
     Output
-      <zupkpmx_model> read from test
+      <zufapmx_model> read from test
       Structure: ODE system over 2 compartments: depot, central
       Parameters: 4, initial values only
       Random effects: eta.vm on vm (exp), eta.v on v (exp)

@@ -3,5 +3,5 @@ Title: Two-compartment model, intravenous bolus
 Structure: ADVAN3 TRANS4
 Regimen: bolus
 Formats: nonmem,rxode2,mrgsolve
-Source: Written for zupkpmx from the PREDPP ADVAN3 TRANS4 structure
+Source: Written for zufapmx from the PREDPP ADVAN3 TRANS4 structure
  (NONMEM Users Guide, Part VI). MIT.

@@ -17,7 +17,7 @@
 #' @param estimates `"final"` writes final estimates where the model has
 #'   them, and its initial values elsewhere; `"initial"` writes initial
 #'   values. Whichever of the two is not written is recorded as lost.
-#' @return A `zupkpmx_written` object: the text as lines, with its fidelity
+#' @return A `zufapmx_written` object: the text as lines, with its fidelity
 #'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
 #'   give the text.
 #' @family writers
@@ -25,14 +25,14 @@
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model-rxode2.R",
-#'   package = "zupkpmx"
+#'   package = "zufapmx"
 #' )
 #' fun <- eval(parse(path))
 #' pmx_write_nonmem(pmx_read_rxode2(fun))
 pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   check_model(model)
   if (!is.character(estimates) || anyNA(estimates)) {
-    zupkpmx_abort("`estimates` must be one of the documented strings.", "model")
+    zufapmx_abort("`estimates` must be one of the documented strings.", "model")
   }
   estimates <- match.arg(estimates)
   m <- unclass(model)
@@ -57,7 +57,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   spelling <- nm_names(m)
   text <- c(
     sprintf("$PROBLEM %s", nm_title(m$provenance)),
-    "; zupkpmx: $INPUT and $DATA are placeholders; point them at your dataset.",
+    "; zufapmx: $INPUT and $DATA are placeholders; point them at your dataset.",
     "$INPUT ID TIME EVID AMT RATE CMT DV",
     "$DATA data.csv IGNORE=@",
     nm_structure_lines(m),
@@ -106,7 +106,7 @@ nm_title <- function(provenance) {
   if (identical(provenance$format, "nonmem")) {
     return(basename(provenance$file))
   }
-  sprintf("zupkpmx model read from %s", provenance$format)
+  sprintf("zufapmx model read from %s", provenance$format)
 }
 
 # Residual error held as standard deviations (as rxode2 holds it) moves to

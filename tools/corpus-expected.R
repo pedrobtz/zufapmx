@@ -9,7 +9,7 @@
 pkgload::load_all(quiet = TRUE)
 source("tests/testthat/helper-corpus.R")
 
-corpus <- zupkpmx_corpus()
+corpus <- zufapmx_corpus()
 for (i in seq_len(nrow(corpus))) {
   regimen <- corpus$regimen[[i]]
   pred <- corpus_solve_entry_rxode2(corpus$path[[i]], regimen)

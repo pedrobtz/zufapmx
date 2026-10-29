@@ -551,7 +551,7 @@ read_model <- function(file, ...) {
   parts$provenance$covariates <- model_covariates(file, parts)
   tryCatch(
     do.call(new_model, parts),
-    zupkpmx_model_error = function(e) {
+    zufapmx_model_error = function(e) {
       parse_error(
         file,
         NA_integer_,

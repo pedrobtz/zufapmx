@@ -31,7 +31,7 @@ fidelity.
 - Eta transform: `exp` for `p <- exp(th + eta)` or `p <- th * exp(eta)`;
   `additive` for `p <- th + eta`; `expression` otherwise.
 - Anything outside §4.2's list or the function table is a
-  `zupkpmx_parse_error`; `nlmixr2lib` models that use it are refused.
+  `zufapmx_parse_error`; `nlmixr2lib` models that use it are refused.
 
 ## Review Focus
 
@@ -48,5 +48,5 @@ fidelity.
    `tests/testthat/test-write-rxode2.R`): corpus round trips `exact`,
    output parses with rxode2 and simulates to `expected.csv`.
 3. `nlmixr2lib` sweep (`tests/testthat/test-nlmixr2lib.R`): accepted
-   models round-trip `exact`; refused ones raise `zupkpmx_parse_error`;
+   models round-trip `exact`; refused ones raise `zufapmx_parse_error`;
    counts recorded in the roadmap.

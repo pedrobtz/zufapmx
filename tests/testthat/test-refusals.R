@@ -7,12 +7,12 @@ test_that("NONMEM records are refused with their position", {
 
   err <- expect_error(
     read_ctl(c("CL = 1", base)),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$line, 1L)
   err <- expect_error(
     read_ctl(c(base, "$PK", "X = 1")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "$PK")
   expect_error(
@@ -21,39 +21,39 @@ test_that("NONMEM records are refused with their position", {
         base != "IPRED = F" &
         !startsWith(base, "Y =")
     ]),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   err <- expect_error(
     read_ctl(c(base, "$DES", "DADT(1) = 1")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "$DES")
   expect_error(
     read_ctl(ctl_onecmt(pk = c("S1 = V", "S2 = V"))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   err <- expect_error(
     read_ctl(sub("ADVAN2 TRANS2", "TRANS2", base)),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "TRANS2")
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   expect_error(
     read_ctl(sub("COMP=", "CMP=", lines)),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   err <- expect_error(
     read_ctl(ctl_onecmt(pk = "ALAG3 = 1")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "ALAG3")
   expect_error(
     read_ctl(ctl_onecmt(error = c("IF (DV.GT.0) W = 1", "Y = F + W * EPS(1)"))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_ctl(sub("^\\$OMEGA .*", "$OMEGA BLOCK(2) 0.1 0.01", base)),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   for (theta in c(
     "$THETA (0, 1 FIX",
@@ -62,7 +62,7 @@ test_that("NONMEM records are refused with their position", {
   )) {
     expect_error(
       read_ctl(sub("^\\$THETA .*", theta, base)),
-      class = "zupkpmx_parse_error"
+      class = "zufapmx_parse_error"
     )
   }
 })
@@ -81,22 +81,22 @@ test_that("a combined F + F*EPS + EPS residual is recognised", {
 test_that("abbreviated code is refused with its position", {
   err <- expect_error(
     nm_parse_lines(c("X = 1", "ELSE")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$line, 2L)
   err <- expect_error(
     nm_parse_lines("X = THETA(Y)"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "THETA")
   err <- expect_error(
     nm_parse_lines("FOO(1) = 2"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "FOO")
   err <- expect_error(
     read_ctl(ctl_onecmt(pk = "X = A(5)")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(c(err$line, err$column), c(8L, 5L))
 })
@@ -112,20 +112,20 @@ test_that("mrgsolve blocks are refused with their position", {
       "double IPRED = B / V;",
       "double Y = IPRED + EPS(1);"
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$line, 2L)
   expect_error(
     read_cpp(base[base != "$CMT CENT"]),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     read_cpp(c(base, "$OMEGA @block", "0.1 0.2")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   err <- expect_error(
     read_cpp(c(base, "$ODE", "dxdt_GUT = 1;")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "dxdt_GUT")
 })
@@ -186,11 +186,11 @@ test_that("rxode2 models are refused for the constructs they lack", {
       quote(cp <- linCmt()),
       quote(cp ~ add(sd))
     ))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(model(list(quote(cp <- 1), quote(cp ~ add(sd))))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 
   lnorm <- pmx_read_rxode2(model(list(
@@ -216,7 +216,7 @@ test_that("writers refuse what their format cannot hold", {
   log <- parts
   log$observations$cp$transform <- "log"
   for (write in list(pmx_write_rxode2, pmx_write_nonmem, pmx_write_mrgsolve)) {
-    expect_error(write(do.call(new_model, log)), class = "zupkpmx_write_error")
+    expect_error(write(do.call(new_model, log)), class = "zufapmx_write_error")
   }
 
   peripheral <- parts
@@ -224,7 +224,7 @@ test_that("writers refuse what their format cannot hold", {
   for (write in list(pmx_write_rxode2, pmx_write_nonmem, pmx_write_mrgsolve)) {
     expect_error(
       write(do.call(new_model, peripheral)),
-      class = "zupkpmx_write_error"
+      class = "zufapmx_write_error"
     )
   }
 
@@ -232,21 +232,21 @@ test_that("writers refuse what their format cannot hold", {
   ode$observations$cp$prediction <- quote(central / v + 1)
   expect_error(
     pmx_write_nonmem(do.call(new_model, ode)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   reused <- parts
   reused$individual[[1]] <- quote(ka <- tka * prop.sd)
   expect_error(
     pmx_write_nonmem(do.call(new_model, reused)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   iov <- parts
   iov$random_effects$iov <- list(present = TRUE, occasion = "OCC")
   expect_error(
     pmx_write_mrgsolve(do.call(new_model, iov)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   expr <- parts
@@ -257,7 +257,7 @@ test_that("writers refuse what their format cannot hold", {
   )
   expect_error(
     pmx_write_rxode2(do.call(new_model, expr)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 })
 
@@ -267,32 +267,32 @@ test_that("the validator refuses malformed components", {
 
   expect_error(
     model_with(m, parameters = list(name = "a")),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
   re <- parts$random_effects
   re$attach$transform[[1]] <- "boxcox"
   expect_error(
     model_with(m, random_effects = re),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
   re <- parts$random_effects
   re$omega[[1]]$estimate <- matrix(1, 1, 1)
   expect_error(
     model_with(m, random_effects = re),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
   s <- parts$structure
   s$parameters[["cl"]] <- "clearance"
-  expect_error(model_with(m, structure = s), class = "zupkpmx_model_error")
+  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
   s <- parts$structure
   s$type <- "pbpk"
-  expect_error(model_with(m, structure = s), class = "zupkpmx_model_error")
+  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
 })
 
 test_that("the corpus reader refuses an empty root, unknown formats and regimens", {
   expect_error(
     corpus_read(withr::local_tempdir()),
-    class = "zupkpmx_corpus_error"
+    class = "zufapmx_corpus_error"
   )
   root <- withr::local_tempdir()
   dir.create(file.path(root, "x"))
@@ -307,15 +307,15 @@ test_that("the corpus reader refuses an empty root, unknown formats and regimens
     ),
     file.path(root, "x", "entry.dcf")
   )
-  expect_error(corpus_read(root), class = "zupkpmx_corpus_error")
-  expect_error(corpus_design("subcutaneous"), class = "zupkpmx_corpus_error")
+  expect_error(corpus_read(root), class = "zufapmx_corpus_error")
+  expect_error(corpus_design("subcutaneous"), class = "zufapmx_corpus_error")
 })
 
 test_that("readers refuse a missing file", {
-  expect_error(pmx_read_nonmem(tempfile()), class = "zupkpmx_model_error")
-  expect_error(pmx_read_mrgsolve(tempfile()), class = "zupkpmx_model_error")
+  expect_error(pmx_read_nonmem(tempfile()), class = "zufapmx_model_error")
+  expect_error(pmx_read_mrgsolve(tempfile()), class = "zufapmx_model_error")
   expect_error(
     pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"), NA),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })

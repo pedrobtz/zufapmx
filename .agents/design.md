@@ -1,6 +1,6 @@
-# RFC 0046: `zupkpmx`, pharmacometric models read, written and proven equal
+# RFC 0046: `zufapmx`, pharmacometric models read, written and proven equal
 
-Adopted from [RFC 0046](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0046-zupkpmx-pharmacometric-model-interchange.md)
+Adopted from [RFC 0046](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0046-zufapmx-pharmacometric-model-interchange.md)
 on 2026-10-28. From here on this file is authoritative; the RFC is history.
 
 - **Status:** Proposed. Merging this file adopts the design as the starting
@@ -9,8 +9,8 @@ on 2026-10-28. From here on this file is authoritative; the RFC is history.
   D3, that the representation is an R object and not a file standard, and
   D6, the NM-TRAN subset, are the ones most worth a second look.
 - **Date:** 2026-10-28.
-- **Packages:** `zupkpmx` (not yet created; crandb returns `not_found` and
-  there is no `pedrobtz/zupkpmx` repository). Pure R in v0.1.0. No
+- **Packages:** `zufapmx` (not yet created; crandb returns `not_found` and
+  there is no `pedrobtz/zufapmx` repository). Pure R in v0.1.0. No
   `Imports`. `Suggests: testthat, rxode2, nlmixr2, mrgsolve, nonmem2rx,
   nonmem2mrgsolve, zuxml, zucsv, zujson, daffiz`. MIT.
 - **Source:** the re-check in
@@ -24,9 +24,9 @@ on 2026-10-28. From here on this file is authoritative; the RFC is history.
   and PREDPP; the mrgsolve user guide; the rxode2 model-syntax articles.
   Nothing has been built.
 
-## 1. What zupkpmx is
+## 1. What zufapmx is
 
-`zupkpmx` holds a population PK/PD model as one R object, reads that object
+`zufapmx` holds a population PK/PD model as one R object, reads that object
 from the formats modellers already have, writes it to the format another
 tool wants, and proves that two models are the same model. The proof is
 the part no existing tool offers: `pmx_compare()` simulates both models on
@@ -36,7 +36,7 @@ to a submission.
 
 The one-line statement that governs every decision below:
 
-> **A model is the same model in every tool, and `zupkpmx` shows it.**
+> **A model is the same model in every tool, and `zufapmx` shows it.**
 
 What it is not:
 
@@ -47,7 +47,7 @@ What it is not:
 - **Not an estimator or a runner.** It never calls NONMEM, Monolix or
   Pumas. It reads their files and writes files for them.
 - **Not a replacement for `babelmixr2`, `nonmem2rx` or Pharmpy.** They are
-  oracles (§7) and consumers: a `zupkpmx` object converts to an rxode2 model
+  oracles (§7) and consumers: a `zufapmx` object converts to an rxode2 model
   function, which is `babelmixr2`'s input.
 - **Not a translator of arbitrary code.** Verbatim Fortran, `$INFN`,
   user subroutines and C++ beyond mrgsolve's documented blocks are refused
@@ -80,7 +80,7 @@ Out of v0.1.0, in the order expected (§14):
 
 ## 3. Position in the `zu*` family
 
-`zupkpmx` is the first package in the family aimed at one scientific
+`zufapmx` is the first package in the family aimed at one scientific
 community rather than at a layer of computing. It stays pure R so that
 the community can install it anywhere, and it follows the family rules:
 no `Imports`, a conformance corpus, a differential oracle, one
@@ -112,16 +112,16 @@ behaviour per function.
 - **`zupeg`** (RFC 0039): the intended parser for v0.2.0. The v0.1.0
   readers are hand-written recursive descent so this package does not
   wait on that one (D7).
-- **`zupkode`** (RFC 0047): a third engine for `pmx_compare()` that
-  belongs to neither side of a translation, and a writer target. `zupkpmx`
-  does not depend on it; its corpus becomes `zupkode`'s conformance suite.
+- **`zufaode`** (RFC 0047): a third engine for `pmx_compare()` that
+  belongs to neither side of a translation, and a writer target. `zufapmx`
+  does not depend on it; its corpus becomes `zufaode`'s conformance suite.
 - **`zutable`** (RFC 0036): not needed; the harness returns data frames.
 
 ## 4. Architecture
 
 ### 4.1 The representation
 
-A `zupkpmx_model` is a list of seven components, each documented as a
+A `zufapmx_model` is a list of seven components, each documented as a
 data structure, none holding code:
 
 1. **Parameters.** Fixed effects with name, initial value, bounds,
@@ -151,7 +151,7 @@ data structure, none holding code:
 ### 4.2 Readers
 
 Each reader is a tokenizer and a recursive-descent parser in R for one
-format, producing the representation or a `zupkpmx_parse_error` naming
+format, producing the representation or a `zufapmx_parse_error` naming
 file, line and column.
 
 - **NONMEM.** `$PROBLEM`, `$INPUT`, `$DATA`, `$SUBROUTINES`, `$MODEL`,
@@ -198,7 +198,7 @@ values and says so.
 3. Simulates both, then hands the two prediction tables to `daffiz`,
    which aligns them on subject, time and endpoint and computes
    absolute and relative deviations under the design's tolerances.
-4. Returns a `zupkpmx_comparison`: pass or fail, the worst deviation and
+4. Returns a `zufapmx_comparison`: pass or fail, the worst deviation and
    where it occurred, per-regimen summaries, the engines and versions
    used, and both models' provenance. `pmx_report()` writes it as
    Markdown with the design and the two model texts appended.
@@ -241,7 +241,7 @@ pmx_report(cmp, "run001-translation.md")
 pmx_compare(pmx_read_tables("run001.tab"), w)   # against NONMEM output
 
 pmx_write_json(m); pmx_read_json(path)          # with zujson installed
-zupkpmx_corpus()                                  # the shipped model corpus
+zufapmx_corpus()                                  # the shipped model corpus
 ```
 
 ## 6. Semantics
@@ -274,7 +274,7 @@ seed is part of the design and of the report.
 Three oracles, all in `Suggests`, all run in CI when installed:
 
 - **`nonmem2rx`**: every NONMEM model in the corpus that it reads must
-  simulate identically to `zupkpmx`'s rxode2 writing of the same model.
+  simulate identically to `zufapmx`'s rxode2 writing of the same model.
 - **`nonmem2mrgsolve`**: the same, for mrgsolve output.
 - **Round trip**: every model read from format X, written to Y, read
   from Y and written back to X must compare as `pass` against the
@@ -290,16 +290,16 @@ typical-subject predictions on the standard design.
 
 ## 8. Errors
 
-- `zupkpmx_parse_error`: file, line, column, the token seen and the tokens
+- `zufapmx_parse_error`: file, line, column, the token seen and the tokens
   expected. Verbatim code and user subroutines raise it with the message
   "not translated: verbatim Fortran at line n".
-- `zupkpmx_write_error`: the construct refused, its location in the
+- `zufapmx_write_error`: the construct refused, its location in the
   representation, and the formats that could hold it.
-- `zupkpmx_engine_error`: the engine missing or failing, with the engine's
+- `zufapmx_engine_error`: the engine missing or failing, with the engine's
   own message attached.
-- `zupkpmx_model_error`: an invalid argument, or a model that fails
+- `zufapmx_model_error`: an invalid argument, or a model that fails
   validation. Readers never raise it for their input: what the validator
-  rejects in a model read from a file is that file's `zupkpmx_parse_error`.
+  rejects in a model read from a file is that file's `zufapmx_parse_error`.
   (Added 2026-10-28, from review issue #68.)
 - `pmx_compare()` never raises on a failed comparison; failure is a value.
 
@@ -354,7 +354,7 @@ shows and how a reviewer reads it.
 - Every behaviour in §6 and §8 has a passing test.
 - Every corpus model round-trips through every pair of v0.1.0 formats
   that can hold it with `pass` from `pmx_compare()`.
-- `zupkpmx` agrees with `nonmem2rx` on every corpus model that
+- `zufapmx` agrees with `nonmem2rx` on every corpus model that
   `nonmem2rx` reads; disagreements are documented, not hidden.
 - `pmx_report()` output for one corpus model is reviewed by one
   pharmacometrician outside the family and the review is recorded.
@@ -395,11 +395,10 @@ decides it and the maintainer may overturn it.
   rather than re-implemented: `zuxml` for `run.xml`, `zucsv` for tables.
 - **D9 (C).** Writers never fabricate values and never silently drop a
   construct that changes predictions.
-- **D10 (M).** The name is `zu` + `pk` + role. `pk` marks the
-  pharmacometrics sub-family and the suffix the package's role, so
-  `zupkpmx` and `zupkode` (RFC 0047) read as siblings and a later
-  `zupknca` would too. Functions carry the role word only: `pmx_*`, with
-  `zupkpmx_corpus()` for the package-level entry point.
+- **D10 (M), superseded by D16.** The name was `zu` + `pk` + role:
+  `zupkpmx`, with `zupkode` (RFC 0047) as its sibling. Functions carry the
+  role word only: `pmx_*`, with `<package>_corpus()` for the package-level
+  entry point; that part stands.
 - **D11 (M), 2026-10-28.** `daffiz` goes to CRAN before the harness
   stage (§11 stage 5), so it stays in `Suggests` and `pmx_compare()`
   carries no alignment-and-tolerance routine of its own. Resolves Q5.
@@ -425,6 +424,10 @@ decides it and the maintainer may overturn it.
   rxode2 writer refuses it. In ODE code and observations it is continuous
   time (NONMEM `T` in `$DES`, mrgsolve `SOLVERTIME` in `$ODE`, rxode2 `t`);
   the rxode2 reader puts statements that read time into the ODE structure.
+- **D16 (M), 2026-10-29.** The name is `zu` + `fa` + role: `zufapmx`, and
+  RFC 0047's sibling is `zufaode`. `fa` replaces `pk` as the mark of the
+  sub-family, so a later package would be `zufanca`. Supersedes D10's
+  naming; the package was renamed from `zupkpmx` before any release.
 
 ## 14. Later versions, in the order they are expected
 
@@ -434,7 +437,7 @@ decides it and the maintainer may overturn it.
   already a model; Torsten's `pmx_solve_*` functions take NONMEM event
   records. Closed-form models map to `pmx_solve_twocpt()` and friends,
   ODE models to `pmx_solve_rk45()` or `pmx_solve_bdf()`.
-- **`zupkode` as an engine** for comparison and as a writer target.
+- **`zufaode` as an engine** for comparison and as a writer target.
 - **Pumas, Phoenix PML, PK-Sim, Campsis** writers, each with a reader
   only when a free engine or free output exists to test against.
 - **PharmML import** for the DDMoRe repository.

@@ -10,7 +10,7 @@ pmx_read_rxode2(model)
 \item{model}{A model function, as written for rxode2 or nlmixr2.}
 }
 \value{
-A \code{zupkpmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}.
+A \code{zufapmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}.
 }
 \description{
 Reads the \code{ini({})} and \code{model({})} blocks of a model function into the
@@ -24,7 +24,7 @@ alone or in blocks; statements built from the function table;
 initial amounts (\verb{depot(0) <-}); time as \code{t} or \code{time}; and residual
 models \code{add()}, \code{prop()}, \code{add() + prop()}, \code{lnorm()} and \code{pow()} whose
 parameters are \code{ini()} parameters or \code{model()} variables. Anything else
-is refused with an error of class \code{zupkpmx_parse_error}.
+is refused with an error of class \code{zufapmx_parse_error}.
 
 Recorded as losses of the read: \code{label()}s, \code{description} and other
 top-level metadata such as \code{reference} or \code{units}, and \code{ini()} values
