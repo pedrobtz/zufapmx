@@ -265,3 +265,11 @@ cpp_integers <- function(x, file) {
     int = bool || op %in% c("+", "-", "*", "(") && length(ints) > 0 && all(ints)
   )
 }
+
+# mrgsolve's dosing macros: ALAG_GUT is compartment GUT's lag time.
+mrg_dosing_macros <- c(
+  lag = "ALAG",
+  bioavailability = "F",
+  rate = "R",
+  duration = "D"
+)

@@ -219,3 +219,9 @@ index_names <- function(blocks, prefix) {
   symbols <- unlist(lapply(blocks, `[[`, "names"))
   stats::setNames(sprintf("%s(%d)", prefix, seq_along(symbols)), symbols)
 }
+
+# A whole number with a decimal point, so Fortran and C++ divide it as a
+# real: 3/4 is 0 in both.
+with_point <- function(text) {
+  if (grepl("^-?[0-9]+$", text)) paste0(text, ".0") else text
+}

@@ -130,7 +130,7 @@ nm_read <- function(file) {
     nm_compartment(n, compartments, sprintf("A(%d)", n), file, line, column)
   }
 
-  thetas <- nm_inits(record("THETA"), "THETA", file)
+  thetas <- nm_thetas(record("THETA"), file)
   omega <- nm_blocks(record("OMEGA"), "ETA", file)
   sigma <- nm_blocks(record("SIGMA"), "EPS", file)
 
@@ -323,7 +323,7 @@ nm_compartments <- function(r, file) {
 }
 
 # $THETA: one row per theta, in order across records.
-nm_inits <- function(records, kind, file) {
+nm_thetas <- function(records, file) {
   items <- nm_init_items(records, file)
   rows <- lapply(seq_along(items), function(i) {
     bounds <- read_bounds(items[[i]]$values)
@@ -338,21 +338,16 @@ nm_inits <- function(records, kind, file) {
       )
     }
     data.frame(
-      name = paste0(kind, i),
+      name = paste0("THETA", i),
       role = "other",
       init = bounds$init,
       lower = bounds$lower,
       upper = bounds$upper,
-      fixed = items[[i]]$fixed
+      fixed = items[[i]]$fixed,
+      estimate = NA_real_
     )
   })
-  out <- if (length(rows) == 0) {
-    model_parameters_empty()[, 1:6]
-  } else {
-    do.call(rbind, rows)
-  }
-  out$estimate <- rep(NA_real_, nrow(out))
-  out
+  if (length(rows) == 0) model_parameters_empty() else do.call(rbind, rows)
 }
 
 # $OMEGA and $SIGMA: blocks named ETA1, ETA2, ... or EPS1, EPS2, ...
@@ -379,9 +374,8 @@ nm_blocks <- function(records, prefix, file) {
         call = NULL
       )
     }
-    size <- regmatches(text, regexec("BLOCK\\s*\\(\\s*([0-9]+)\\s*\\)", text))[[
-      1
-    ]]
+    block_size <- "BLOCK\\s*\\(\\s*([0-9]+)\\s*\\)"
+    size <- regmatches(text, regexec(block_size, text))[[1]]
     r$lines <- gsub(
       "(BLOCK|DIAGONAL)\\s*\\(\\s*[0-9]+\\s*\\)|\\b(VARIANCE|COVARIANCE)\\b",
       " ",
@@ -506,7 +500,12 @@ nm_pk <- function(stmts, compartments, file, record) {
   dosing <- list()
   scale <- list()
   individual <- list()
-  attrs <- c(ALAG = "lag", F = "bioavailability", R = "rate", D = "duration")
+  attrs <- invert_names(nm_dosing_prefixes)
+  # Scales S<n> and the dosing attributes, numbered by compartment.
+  predpp <- sprintf(
+    "^(S|%s)([0-9]+)$",
+    paste(nm_dosing_prefixes, collapse = "|")
+  )
   check_cmt <- function(n, name) {
     nm_compartment(n, compartments, name, file, record_line(record))
   }
@@ -530,7 +529,7 @@ nm_pk <- function(stmts, compartments, file, record) {
   for (x in stmts) {
     target <- if (is_call(x, "<-")) x[[2]]
     name <- if (is.symbol(target)) as.character(target) else ""
-    m <- regmatches(name, regexec("^(S|ALAG|F|R|D)([0-9]+)$", name))[[1]]
+    m <- regmatches(name, regexec(predpp, name))[[1]]
     if (name %in% c("TSCALE", "XSCALE")) {
       # They rescale time or amounts inside PREDPP.
       refuse(name, "a $PK statement zufapmx translates")
@@ -556,7 +555,7 @@ nm_pk <- function(stmts, compartments, file, record) {
   }
   check_dosing_names(
     individual,
-    function(n) grepl("^(S|ALAG|F|R|D)[0-9]+$|^A_0\\(", n),
+    function(n) grepl(predpp, n) | grepl("^A_0\\(", n),
     file,
     record
   )

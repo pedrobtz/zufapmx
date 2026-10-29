@@ -173,7 +173,7 @@ normalise_model <- function(model) {
     unique(unlist(lapply(model_expressions(m), all.vars))),
     c(names(map), "t", "F")
   )
-  folded <- toupper(gsub(".", "_", covariates, fixed = TRUE))
+  folded <- nm_spell(covariates)
   if (anyDuplicated(folded)) {
     # `wt` and `WT` are two covariates here: folding would merge them, so a
     # writer that does must fail the comparison.
@@ -260,28 +260,14 @@ drop_aliases <- function(m) {
     return(m)
   }
   m$individual <- keep
-  rename <- function(x) rename_symbols(x, map)
-  s <- m$structure
-  if (identical(s$type, "closed")) {
-    s$parameters <- vapply(
-      s$parameters,
+  if (identical(m$structure$type, "closed")) {
+    m$structure$parameters <- vapply(
+      m$structure$parameters,
       function(v) map[v] %|NA|% v,
       character(1)
     )
-  } else {
-    s$statements <- lapply(s$statements, rename)
-    s$derivatives <- lapply(s$derivatives, rename)
   }
-  m$structure <- s
-  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
-  m$observations <- lapply(m$observations, function(o) {
-    o$prediction <- rename(o$prediction)
-    if (!is.null(o$residual$expression)) {
-      o$residual$expression <- rename(o$residual$expression)
-    }
-    o
-  })
-  m
+  model_rename(m, map, individual = FALSE)
 }
 
 # Identical, except that numbers may differ by a few units in the last

@@ -249,7 +249,10 @@ validate_assignments <- function(model, compartments) {
   )
   if (length(assigned) > 0) {
     model_abort(
-      "`%s` is a parameter, random effect, compartment or time; it cannot be assigned.",
+      paste(
+        "`%s` is a parameter, random effect, compartment or time;",
+        "it cannot be assigned."
+      ),
       assigned[[1]]
     )
   }
@@ -535,4 +538,30 @@ model_inputs <- function(m) {
     model_compartments(m$structure),
     "t"
   )
+}
+
+# Rename symbols throughout a model's expressions: statements, ODE code,
+# dosing, predictions and residual expressions. `individual = FALSE` and
+# `observations = FALSE` leave those parts as they are, for a caller that
+# renamed them itself or keeps the old names as aliases.
+model_rename <- function(m, map, individual = TRUE, observations = TRUE) {
+  rename <- function(x) rename_symbols(x, map)
+  if (individual) {
+    m$individual <- lapply(m$individual, rename)
+  }
+  if (identical(m$structure$type, "ode")) {
+    m$structure$statements <- lapply(m$structure$statements, rename)
+    m$structure$derivatives <- lapply(m$structure$derivatives, rename)
+  }
+  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
+  if (observations) {
+    m$observations <- lapply(m$observations, function(o) {
+      o$prediction <- rename(o$prediction)
+      if (!is.null(o$residual$expression)) {
+        o$residual$expression <- rename(o$residual$expression)
+      }
+      o
+    })
+  }
+  m
 }

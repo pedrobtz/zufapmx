@@ -32,9 +32,9 @@ class \code{zufapmx_parse_error}. \verb{$PKMODEL} may take its parameters from
 
 Recorded as losses of the read: the title, \verb{$PLUGIN}, \verb{$SET}, \verb{$PARAM}
 descriptions, \verb{$PARAM} values written as constant expressions
-(\code{log(2)}), which are evaluated, and \verb{$TABLE} outputs \code{Y} does not use. Time is \code{t}: read
-from \code{SOLVERTIME} in \verb{$ODE} and from \code{TIME} elsewhere; the other name is
-refused, since it is a different time. \verb{$NMXML} and
+(\code{log(2)}), which are evaluated, and \verb{$TABLE} outputs \code{Y} does not use.
+Time is \code{t}: read from \code{SOLVERTIME} in \verb{$ODE} and from \code{TIME} elsewhere;
+the other name is refused, since it is a different time. \verb{$NMXML} and
 \verb{$NMEXT} resolve a relative path against the working directory, or the
 model file's with \code{root = "cppfile"}, as mrgsolve does.
 

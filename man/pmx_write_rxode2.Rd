@@ -24,9 +24,13 @@ is written with its estimates, and its initial values are recorded as
 lost. Residual error held as sigma variances, as NONMEM holds it, is
 written as standard-deviation parameters named after the epsilons.
 Variables \code{linCmt()} would read as parameters are renamed with an \code{x_}
-prefix. Constructs rxode2 cannot hold, such as residual error written as
-an expression over epsilons, or an individual parameter that reads the
-record's time, stop with an error of class \code{zufapmx_write_error}.
+prefix. \code{linCmt()} reads its parameters from \code{model()} only, so a
+closed-form parameter held directly as a fixed effect (mrgsolve's
+\verb{$PKMODEL} over \verb{$PARAM}) is renamed with a \code{t} prefix (\code{tCL}) and
+assigned in \code{model()} (\code{CL <- tCL}). Constructs rxode2 cannot hold,
+such as residual error written as an expression over epsilons, or an
+individual parameter that reads the record's time, stop with an error of
+class \code{zufapmx_write_error}.
 }
 \examples{
 path <- system.file(

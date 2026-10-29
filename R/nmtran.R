@@ -110,7 +110,11 @@ nm_tokenize <- function(text, line, file) {
     c(
       space = "^\\s+",
       dotop = "(?i)^\\.(EQ|NE|LT|LE|GT|GE|AND|OR|NOT)\\.",
-      number = "^([0-9]+(\\.(?![A-Za-z]{2,3}\\.)[0-9]*)?|\\.[0-9]+)([EeDd][+-]?[0-9]+)?",
+      # A point followed by a dot operator (1.EQ.) ends the number.
+      number = paste0(
+        "^([0-9]+(\\.(?![A-Za-z]{2,3}\\.)[0-9]*)?|\\.[0-9]+)",
+        "([EeDd][+-]?[0-9]+)?"
+      ),
       name = "^[A-Za-z_][A-Za-z0-9_]*",
       op = "^(\\*\\*|==|/=|<=|>=|[-+*/()=<>,])"
     ),
@@ -425,3 +429,14 @@ nm_if_chain <- function(frame) {
   }
   build(1)
 }
+
+# PREDPP's dosing attributes: ALAG1 is compartment 1's lag time.
+nm_dosing_prefixes <- c(
+  lag = "ALAG",
+  bioavailability = "F",
+  rate = "R",
+  duration = "D"
+)
+
+# A name as NM-TRAN spells it: upper case, `.` as `_`.
+nm_spell <- function(x) toupper(gsub(".", "_", x, fixed = TRUE))

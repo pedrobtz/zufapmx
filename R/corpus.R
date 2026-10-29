@@ -94,7 +94,9 @@ corpus_read_entry <- function(dir) {
 }
 
 # The design of the corpus's expected predictions: one 100-unit dose at
-# time 0 by the entry's regimen, observed at fixed times.
+# time 0 by the entry's regimen, observed at fixed times. Only tests and
+# tools/ call it today; it is here because Stage 7's pmx_design() builds on
+# it, and the corpus files are its output.
 corpus_design <- function(regimen) {
   regimens <- c("bolus", "oral", "infusion")
   if (!regimen %in% regimens) {

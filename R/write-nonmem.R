@@ -43,7 +43,10 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
     ))
   if (has_estimates) {
     losses <- if (estimates == "final") {
-      "initial values: final estimates were written as $THETA, $OMEGA and $SIGMA"
+      paste(
+        "initial values: final estimates were written as $THETA, $OMEGA",
+        "and $SIGMA"
+      )
     } else {
       "final estimates: initial values were written"
     }
@@ -142,7 +145,7 @@ nm_names <- function(m) {
     )),
     names(map)
   )
-  nm_vars <- toupper(gsub(".", "_", vars, fixed = TRUE))
+  nm_vars <- nm_spell(vars)
   nm_vars <- closed_free_names(vars, nm_vars, m$structure)
   # A variable PREDPP gives meaning to (F1 is compartment 1's
   # bioavailability) gets a `_` suffix.
@@ -237,7 +240,7 @@ nm_structure_lines <- function(m) {
       paste(
         sprintf(
           "COMP=(%s)",
-          toupper(gsub(".", "_", s$compartments, fixed = TRUE))
+          nm_spell(s$compartments)
         ),
         collapse = " "
       )
@@ -247,7 +250,6 @@ nm_structure_lines <- function(m) {
 
 nm_dosing_lines <- function(m, spelling) {
   compartments <- model_compartments(m$structure)
-  prefix <- c(lag = "ALAG", bioavailability = "F", rate = "R", duration = "D")
   out <- character()
   for (cmt in names(m$dosing)) {
     n <- match(cmt, compartments)
@@ -255,7 +257,7 @@ nm_dosing_lines <- function(m, spelling) {
       target <- if (field == "initial") {
         sprintf("A_0(%d)", n)
       } else {
-        paste0(prefix[[field]], n)
+        paste0(nm_dosing_prefixes[[field]], n)
       }
       out <- c(
         out,
@@ -446,12 +448,9 @@ nm_dialect <- list(
   ),
   not = ".NOT.",
   power = NULL,
-  functions = stats::setNames(names(nm_functions), nm_functions),
+  functions = invert_names(nm_functions),
   # A whole number prints with a point: Fortran divides integer constants
   # as integers (3/4 is 0), and a point makes the intent explicit whatever
   # NM-TRAN does with them.
-  number = function(x) {
-    text <- nm_number(x)
-    if (grepl("^-?[0-9]+$", text)) paste0(text, ".0") else text
-  }
+  number = function(x) with_point(nm_number(x))
 )

@@ -18,9 +18,9 @@
 #'
 #' Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
 #' descriptions, `$PARAM` values written as constant expressions
-#' (`log(2)`), which are evaluated, and `$TABLE` outputs `Y` does not use. Time is `t`: read
-#' from `SOLVERTIME` in `$ODE` and from `TIME` elsewhere; the other name is
-#' refused, since it is a different time. `$NMXML` and
+#' (`log(2)`), which are evaluated, and `$TABLE` outputs `Y` does not use.
+#' Time is `t`: read from `SOLVERTIME` in `$ODE` and from `TIME` elsewhere;
+#' the other name is refused, since it is a different time. `$NMXML` and
 #' `$NMEXT` resolve a relative path against the working directory, or the
 #' model file's with `root = "cppfile"`, as mrgsolve does.
 #'
@@ -140,26 +140,7 @@ mrg_read <- function(file) {
   if ("SET" %in% block_names) {
     losses <- c(losses, "simulation settings ($SET)")
   }
-  for (b in block("PLUGIN")) {
-    plugins <- strsplit(
-      trimws(paste(b$lines, collapse = " ")),
-      "[[:space:],]+"
-    )[[1]]
-    if ("nm-vars" %in% plugins) {
-      parse_error(
-        file,
-        b$line[[1]],
-        1L,
-        seen = "nm-vars",
-        message = sprintf(
-          "not translated: the nm-vars plugin at line %d",
-          b$line[[1]]
-        ),
-        call = NULL
-      )
-    }
-    losses <- c(losses, "plugins ($PLUGIN)")
-  }
+  losses <- c(losses, mrg_plugins(block("PLUGIN"), file))
 
   params <- mrg_params(block("PARAM"), file)
   thetas <- mrg_thetas(block("THETA"), file)
@@ -181,7 +162,7 @@ mrg_read <- function(file) {
     file,
     length(lines)
   )
-  closed <- layout$closed
+  pkmodel <- layout$pkmodel
   rename <- layout$rename
   compartments <- layout$compartments
   code <- function(..., ode = FALSE) {
@@ -216,7 +197,7 @@ mrg_read <- function(file) {
       list(initial = init[[cmt]])
     )
   }
-  if (!is.null(closed)) {
+  if (!is.null(pkmodel)) {
     # Compartments beside a closed form need ODE code it cannot hold.
     for (b in block("ODE", "DES")) {
       parse_error(
@@ -233,8 +214,8 @@ mrg_read <- function(file) {
       )
     }
     structure <- closed_structure(
-      list(advan = closed$structure$advan, trans = closed$structure$trans),
-      closed_forms[[as.character(closed$structure$advan)]],
+      list(advan = pkmodel$structure$advan, trans = pkmodel$structure$trans),
+      closed_forms[[as.character(pkmodel$structure$advan)]],
       # mrgsolve's usual idiom is $PKMODEL over $PARAM names directly.
       c(stmt_targets(main$individual), parameters$name),
       file,
@@ -294,6 +275,108 @@ mrg_read <- function(file) {
   )
 }
 
+# $PLUGIN adds code the reader does not see: nm-vars changes the meaning of
+# names and is refused; any other plugin is a loss.
+mrg_plugins <- function(blocks, file) {
+  for (b in blocks) {
+    plugins <- strsplit(
+      trimws(paste(b$lines, collapse = " ")),
+      "[[:space:],]+"
+    )[[1]]
+    if ("nm-vars" %in% plugins) {
+      parse_error(
+        file,
+        b$line[[1]],
+        1L,
+        seen = "nm-vars",
+        message = sprintf(
+          "not translated: the nm-vars plugin at line %d",
+          b$line[[1]]
+        ),
+        call = NULL
+      )
+    }
+  }
+  if (length(blocks) > 0) "plugins ($PLUGIN)" else character()
+}
+
+# One `@annotated` $PARAM line, `name : value : text`, as a parameter row;
+# NULL for a blank line. Bounds and `fixed` in the text are zufapmx's
+# convention; any other text is a lost description.
+mrg_annotated_param <- function(line, at, file) {
+  line <- trimws(line)
+  if (!nzchar(line)) {
+    return(NULL)
+  }
+  losses <- character()
+  parts <- trimws(strsplit(line, ":", fixed = TRUE)[[1]])
+  if (length(parts) < 2) {
+    parse_error(
+      file,
+      at,
+      1L,
+      seen = line,
+      expected = "name : value : description",
+      call = NULL
+    )
+  }
+  text <- paste(parts[-(1:2)], collapse = ":")
+  bounds <- regmatches(
+    text,
+    regexec("\\[\\s*([^,]+),\\s*([^]]+)\\]", text)
+  )[[1]]
+  if (nzchar(text) && length(bounds) == 0 && !grepl("^fixed$", text)) {
+    losses <- c(losses, "parameter descriptions")
+  }
+  if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", parts[[1]])) {
+    parse_error(
+      file,
+      at,
+      1L,
+      seen = parts[[1]],
+      expected = "a parameter name",
+      call = NULL
+    )
+  }
+  if (any(mrg_evaluated(c(parts[[2]], bounds[-1])))) {
+    losses <- c(
+      losses,
+      "parameter values written as expressions, evaluated"
+    )
+  }
+  init <- mrg_number(parts[[2]], file, at)
+  values <- if (length(bounds) == 3) {
+    c(
+      mrg_number(bounds[[2]], file, at),
+      init,
+      mrg_number(bounds[[3]], file, at)
+    )
+  } else {
+    init
+  }
+  checked <- read_bounds(values)
+  if (is.null(checked)) {
+    parse_error(
+      file,
+      at,
+      1L,
+      seen = line,
+      expected = "lower <= value <= upper",
+      call = NULL
+    )
+  }
+  row <- data.frame(
+    name = parts[[1]],
+    role = "other",
+    init = checked$init,
+    lower = checked$lower,
+    upper = checked$upper,
+    fixed = grepl("\\bfixed\\b", text),
+    estimate = NA_real_
+  )
+  list(row = row, losses = losses)
+}
+
 # $PARAM: `name = value` items, or `@annotated` lines `name : value : text`.
 mrg_params <- function(blocks, file) {
   rows <- list()
@@ -301,75 +384,11 @@ mrg_params <- function(blocks, file) {
   for (b in blocks) {
     if ("@annotated" %in% b$options) {
       for (k in seq_along(b$lines)) {
-        line <- trimws(b$lines[[k]])
-        if (!nzchar(line)) {
-          next
+        param <- mrg_annotated_param(b$lines[[k]], b$line[[k]], file)
+        if (!is.null(param)) {
+          rows[[length(rows) + 1]] <- param$row
+          losses <- c(losses, param$losses)
         }
-        parts <- trimws(strsplit(line, ":", fixed = TRUE)[[1]])
-        if (length(parts) < 2) {
-          parse_error(
-            file,
-            b$line[[k]],
-            1L,
-            seen = line,
-            expected = "name : value : description",
-            call = NULL
-          )
-        }
-        text <- paste(parts[-(1:2)], collapse = ":")
-        bounds <- regmatches(
-          text,
-          regexec("\\[\\s*([^,]+),\\s*([^]]+)\\]", text)
-        )[[1]]
-        if (nzchar(text) && length(bounds) == 0 && !grepl("^fixed$", text)) {
-          losses <- c(losses, "parameter descriptions")
-        }
-        if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", parts[[1]])) {
-          parse_error(
-            file,
-            b$line[[k]],
-            1L,
-            seen = parts[[1]],
-            expected = "a parameter name",
-            call = NULL
-          )
-        }
-        if (any(mrg_evaluated(c(parts[[2]], bounds[-1])))) {
-          losses <- c(
-            losses,
-            "parameter values written as expressions, evaluated"
-          )
-        }
-        init <- mrg_number(parts[[2]], file, b$line[[k]])
-        values <- if (length(bounds) == 3) {
-          c(
-            mrg_number(bounds[[2]], file, b$line[[k]]),
-            init,
-            mrg_number(bounds[[3]], file, b$line[[k]])
-          )
-        } else {
-          init
-        }
-        checked <- read_bounds(values)
-        if (is.null(checked)) {
-          parse_error(
-            file,
-            b$line[[k]],
-            1L,
-            seen = line,
-            expected = "lower <= value <= upper",
-            call = NULL
-          )
-        }
-        rows[[length(rows) + 1]] <- data.frame(
-          name = parts[[1]],
-          role = "other",
-          init = checked$init,
-          lower = checked$lower,
-          upper = checked$upper,
-          fixed = grepl("\\bfixed\\b", text),
-          estimate = NA_real_
-        )
       }
     } else {
       items <- mrg_assignments(b, file)
@@ -600,8 +619,8 @@ mrg_pkmodel <- function(b, file) {
     depot <- isTRUE(args$depot)
     advan <- closed_advan(ncmt, depot)
   }
-  closed <- closed_forms[[as.character(advan)]]
-  if (is.null(closed)) {
+  form <- closed_forms[[as.character(advan)]]
+  if (is.null(form)) {
     parse_error(
       file,
       b$line[[1]],
@@ -625,15 +644,15 @@ mrg_pkmodel <- function(b, file) {
         call = NULL
       )
     }
-    trans <- closed$trans
+    trans <- form$trans
   }
-  if (trans != closed$trans) {
+  if (trans != form$trans) {
     parse_error(
       file,
       b$line[[1]],
       1L,
       seen = sprintf("trans = %d", trans),
-      expected = sprintf("trans = %d", closed$trans),
+      expected = sprintf("trans = %d", form$trans),
       call = NULL
     )
   }
@@ -641,8 +660,8 @@ mrg_pkmodel <- function(b, file) {
     cmt = cmt,
     structure = list(
       type = "closed",
-      ncmt = sum(c("v", "vp", "vp2") %in% names(closed$names)),
-      depot = "ka" %in% names(closed$names),
+      ncmt = sum(c("v", "vp", "vp2") %in% names(form$names)),
+      depot = "ka" %in% names(form$names),
       advan = advan,
       trans = trans
     )
@@ -762,12 +781,16 @@ mrg_nonmem <- function(b, file) {
 mrg_main <- function(stmts, compartments, rename, file, record) {
   dosing <- list()
   individual <- list()
-  macros <- c(F = "bioavailability", ALAG = "lag", R = "rate", D = "duration")
+  macros <- invert_names(mrg_dosing_macros)
+  macro_pattern <- paste(mrg_dosing_macros, collapse = "|")
   file_names <- c(names(rename), setdiff(compartments, rename))
   to_model <- function(cmt) rename[cmt] %|NA|% cmt
   for (x in stmts) {
     target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
-    m <- regmatches(target, regexec("^(F|ALAG|R|D)_(.+)$", target))[[1]]
+    m <- regmatches(
+      target,
+      regexec(sprintf("^(%s)_(.+)$", macro_pattern), target)
+    )[[1]]
     init <- regmatches(target, regexec("^(.+)_0$", target))[[1]]
     if (length(m) == 3 && m[[3]] %in% file_names) {
       cmt <- to_model(m[[3]])
@@ -783,7 +806,8 @@ mrg_main <- function(stmts, compartments, rename, file, record) {
     }
   }
   pattern <- sprintf(
-    "^(F|ALAG|R|D)_(%s)$|^(%s)_0$",
+    "^(%s)_(%s)$|^(%s)_0$",
+    macro_pattern,
     paste(file_names, collapse = "|"),
     paste(file_names, collapse = "|")
   )
@@ -851,24 +875,24 @@ mrg_random_effects <- function(blocks, thetas, file) {
 
 # The compartments: a $PKMODEL's canonical ones, with `rename` from the
 # file's names (DEPOT CENT) to them, or an ODE model's $CMT.
-mrg_compartments <- function(pkmodel, cmt, file, last_line) {
-  cmt_names <- unlist(lapply(cmt, mrg_cmt_names))
-  closed <- NULL
+mrg_compartments <- function(pkmodel, cmt_blocks, file, last_line) {
+  cmt_names <- unlist(lapply(cmt_blocks, mrg_cmt_names))
+  pkmodel_spec <- NULL
   if (length(pkmodel) > 0) {
-    closed <- mrg_pkmodel(pkmodel[[1]], file)
-    if (length(closed$cmt) == 0) {
-      closed$cmt <- cmt_names
+    pkmodel_spec <- mrg_pkmodel(pkmodel[[1]], file)
+    if (length(pkmodel_spec$cmt) == 0) {
+      pkmodel_spec$cmt <- cmt_names
     }
-    canonical <- closed_compartments(closed$structure)
-    if (length(closed$cmt) != length(canonical)) {
+    canonical <- closed_compartments(pkmodel_spec$structure)
+    if (length(pkmodel_spec$cmt) != length(canonical)) {
       parse_error(
         file,
         pkmodel[[1]]$line[[1]],
         1L,
-        seen = if (length(closed$cmt) == 0) {
+        seen = if (length(pkmodel_spec$cmt) == 0) {
           "no compartment names"
         } else {
-          paste(closed$cmt, collapse = " ")
+          paste(pkmodel_spec$cmt, collapse = " ")
         },
         expected = sprintf(
           "%d compartment names, in `cmt =` or $CMT",
@@ -877,7 +901,7 @@ mrg_compartments <- function(pkmodel, cmt, file, last_line) {
         call = NULL
       )
     }
-    rename <- stats::setNames(canonical, closed$cmt)
+    rename <- stats::setNames(canonical, pkmodel_spec$cmt)
     compartments <- canonical
   } else {
     if (length(cmt_names) == 0) {
@@ -893,5 +917,5 @@ mrg_compartments <- function(pkmodel, cmt, file, last_line) {
     rename <- character()
     compartments <- cmt_names
   }
-  list(closed = closed, rename = rename, compartments = compartments)
+  list(pkmodel = pkmodel_spec, rename = rename, compartments = compartments)
 }

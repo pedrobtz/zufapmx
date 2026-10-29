@@ -405,7 +405,10 @@ read_observation <- function(
         record_line(record),
         NA_integer_,
         seen = expr_text(y),
-        expected = "Y as an additive, proportional, combined or exponential model over one prediction",
+        expected = paste(
+          "Y as an additive, proportional, combined or exponential model",
+          "over one prediction"
+        ),
         call = NULL
       )
     }
@@ -551,7 +554,7 @@ read_bounds <- function(values) {
 
 # new_model() for a reader: a model the validator rejects was read from
 # input, so the reader reports it as a parse error of that input.
-read_model <- function(file, ...) {
+read_model <- function(source, ...) {
   parts <- list(...)
   individual <- explicit_zero(parts$individual)
   if (
@@ -560,7 +563,10 @@ read_model <- function(file, ...) {
   ) {
     parts$provenance$losses <- c(
       parts$provenance$losses,
-      "values kept from earlier records by variables assigned only inside IF (D14)"
+      paste(
+        "values kept from earlier records by variables assigned only",
+        "inside IF (D14)"
+      )
     )
     parts$provenance$fidelity <- "lossy"
   }
@@ -571,12 +577,12 @@ read_model <- function(file, ...) {
       assigned = stmt_targets(parts$individual)
     )
   }
-  parts$provenance$covariates <- model_covariates(file, parts)
+  parts$provenance$covariates <- model_covariates(source, parts)
   tryCatch(
     do.call(new_model, parts),
     zufapmx_model_error = function(e) {
       parse_error(
-        file,
+        source,
         NA_integer_,
         NA_integer_,
         seen = "the model as read",
@@ -609,7 +615,7 @@ explicit_zero <- function(stmts, assigned = character()) {
 # Free symbols of a model about to be built: what it reads but does not
 # define. Undeclared THETA, ETA and EPS indices are refused; the rest are
 # covariates, recorded in provenance. `t` is time (D15).
-model_covariates <- function(file, parts) {
+model_covariates <- function(source, parts) {
   defined <- c(
     model_inputs(parts),
     stmt_targets(c(parts$individual, parts$structure$statements)),
@@ -622,7 +628,7 @@ model_covariates <- function(file, parts) {
   undeclared <- grep("^(THETA|ETA|EPS)[0-9]+$", free, value = TRUE)
   if (length(undeclared) > 0) {
     parse_error(
-      file,
+      source,
       NA_integer_,
       NA_integer_,
       seen = undeclared[[1]],
@@ -683,4 +689,11 @@ whole_index <- function(args, name, file, line, column) {
     )
   }
   as.integer(args[[1]])
+}
+
+# A spelling table read the other way. Where several spellings share a
+# meaning, the first is kept: it is the one writers print.
+invert_names <- function(x) {
+  out <- stats::setNames(names(x), x)
+  out[!duplicated(names(out))]
 }

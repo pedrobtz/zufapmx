@@ -34,7 +34,10 @@ pmx_write_mrgsolve <- function(model) {
   if (any(!is.na(m$parameters$estimate))) {
     losses <- c(
       losses,
-      "initial values: mrgsolve's $PARAM holds one value per parameter, so estimates were written"
+      paste(
+        "initial values: mrgsolve's $PARAM holds one value per parameter,",
+        "so estimates were written"
+      )
     )
   }
   if (
@@ -252,18 +255,21 @@ mrg_param_lines <- function(p, spelling) {
 }
 
 mrg_dosing_lines <- function(m, spelling) {
-  macro <- c(lag = "ALAG", bioavailability = "F", rate = "R", duration = "D")
   out <- character()
   for (cmt in names(m$dosing)) {
-    for (attr in names(m$dosing[[cmt]])) {
-      target <- if (attr == "initial") {
+    for (field in names(m$dosing[[cmt]])) {
+      target <- if (field == "initial") {
         paste0(spelling[[cmt]], "_0")
       } else {
-        paste0(macro[[attr]], "_", spelling[[cmt]])
+        paste0(mrg_dosing_macros[[field]], "_", spelling[[cmt]])
       }
       out <- c(
         out,
-        sprintf("%s = %s;", target, cpp_expr(m$dosing[[cmt]][[attr]], spelling))
+        sprintf(
+          "%s = %s;",
+          target,
+          cpp_expr(m$dosing[[cmt]][[field]], spelling)
+        )
       )
     }
   }
@@ -398,18 +404,9 @@ cpp_dialect <- list(
   ),
   not = "!",
   power = "pow",
-  functions = c(
-    exp = "exp",
-    log = "log",
-    log10 = "log10",
-    sqrt = "sqrt",
-    abs = "fabs",
-    min = "fmin",
-    max = "fmax"
-  ),
+  # fabs, fmin and fmax: C++'s abs(), min() and max() are integer or
+  # template functions.
+  functions = invert_names(cpp_functions),
   # A C++ literal without a decimal point is an integer, and 1/2 is 0.
-  number = function(x) {
-    text <- num_text(x)
-    if (grepl("^-?[0-9]+$", text)) paste0(text, ".0") else text
-  }
+  number = function(x) with_point(num_text(x))
 )
