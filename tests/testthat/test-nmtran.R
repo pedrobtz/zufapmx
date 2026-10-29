@@ -81,7 +81,7 @@ test_that("DADT and A_0 are statement targets", {
 test_that("verbatim code is refused with its line", {
   err <- expect_error(
     nm_parse_lines(c("CL = 1", "\"  CALL FOO")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$line, 2L)
   expect_snapshot(cat(conditionMessage(err)))
@@ -90,7 +90,7 @@ test_that("verbatim code is refused with its line", {
 test_that("a function outside the table is refused with its position", {
   err <- expect_error(
     nm_parse_lines("X = SIN(T)"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$line, 1L)
   expect_equal(err$column, 5L)
@@ -100,13 +100,13 @@ test_that("a function outside the table is refused with its position", {
 test_that("unbalanced IF blocks and stray tokens are refused", {
   expect_error(
     nm_parse_lines(c("IF (A.GT.1) THEN", "B = 1")),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
-  expect_error(nm_parse_lines("ENDIF"), class = "zupkpmx_parse_error")
-  expect_error(nm_parse_lines("X = (A + B"), class = "zupkpmx_parse_error")
-  expect_error(nm_parse_lines("X = A B"), class = "zupkpmx_parse_error")
-  expect_error(nm_parse_lines("CALL PASS(MODE)"), class = "zupkpmx_parse_error")
-  expect_error(nm_parse_lines("X = A # B"), class = "zupkpmx_parse_error")
+  expect_error(nm_parse_lines("ENDIF"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("X = (A + B"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("X = A B"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("CALL PASS(MODE)"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("X = A # B"), class = "zufapmx_parse_error")
 })
 
 test_that("records split on $ and accept abbreviations", {
@@ -129,7 +129,7 @@ test_that("records split on $ and accept abbreviations", {
   expect_equal(split$records[[4]]$line, 4:5)
   expect_error(
     nm_split(c("$PROB x", "$FOO"), "t.ctl"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -151,16 +151,16 @@ test_that("NM-TRAN names are case-insensitive", {
 test_that("record names need three letters, and an ambiguous one says so", {
   expect_error(
     nm_split(c("$PROB x", "$OM 0.1"), "t.ctl"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   err <- expect_error(
     nm_split(c("$PROB x", "$S 0.1"), "t.ctl"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "$S")
   err <- expect_error(
     nm_split(c("$PROB x", "$SI 0.1"), "t.ctl"),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "$SI")
 })

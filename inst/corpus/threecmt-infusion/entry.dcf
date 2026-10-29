@@ -3,5 +3,5 @@ Title: Three-compartment model, zero-order infusion
 Structure: ADVAN11 TRANS4
 Regimen: infusion
 Formats: nonmem,rxode2,mrgsolve
-Source: Written for zupkpmx from the PREDPP ADVAN11 TRANS4 structure
+Source: Written for zufapmx from the PREDPP ADVAN11 TRANS4 structure
  (NONMEM Users Guide, Part VI). MIT.

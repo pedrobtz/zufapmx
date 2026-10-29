@@ -30,12 +30,12 @@ each item.
 }
 
 A construct that would change predictions is never dropped: the writer
-stops with an error of class \code{zupkpmx_write_error} instead.
+stops with an error of class \code{zufapmx_write_error} instead.
 }
 \examples{
 path <- system.file(
   "corpus", "onecmt-oral", "model-rxode2.R",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 fun <- eval(parse(path))
 written <- pmx_write_rxode2(pmx_read_rxode2(fun))

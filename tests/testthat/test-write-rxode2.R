@@ -1,5 +1,5 @@
 test_that("every corpus model round-trips exactly", {
-  for (id in zupkpmx_corpus()$id) {
+  for (id in zufapmx_corpus()$id) {
     m <- corpus_rxode2_model(id)
     w <- pmx_write_rxode2(m)
 
@@ -11,7 +11,7 @@ test_that("every corpus model round-trips exactly", {
 test_that("written corpus models simulate to their expected predictions", {
   skip_on_cran()
   skip_if_not_installed("rxode2")
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     w <- pmx_write_rxode2(corpus_rxode2_model(corpus$id[[i]]))
@@ -124,7 +124,7 @@ test_that("correlated sigma, expression residuals and IOV are refused", {
   re$sigma <- list(model_block(c("e1", "e2"), c(0.04, 0.01)))
   expect_error(
     pmx_write_rxode2(model_with(m, random_effects = re)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   obs <- unclass(m)$observations
@@ -135,20 +135,20 @@ test_that("correlated sigma, expression residuals and IOV are refused", {
   )
   expect_error(
     pmx_write_rxode2(model_with(m, observations = obs)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   re <- unclass(m)$random_effects
   re$iov <- list(present = TRUE, occasion = "OCC")
   expect_error(
     pmx_write_rxode2(model_with(m, random_effects = re)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 })
 
 test_that("fidelity accessors reject anything but a written model", {
-  expect_error(pmx_fidelity(list()), class = "zupkpmx_model_error")
-  expect_error(pmx_losses("x"), class = "zupkpmx_model_error")
+  expect_error(pmx_fidelity(list()), class = "zufapmx_model_error")
+  expect_error(pmx_losses("x"), class = "zufapmx_model_error")
 })
 
 test_that("fidelity tolerates a parser that is off by one ulp", {
@@ -181,7 +181,7 @@ test_that("fidelity is equivalent only through known reparameterisations", {
   back <- do.call(new_model, changed)
   expect_error(
     written_fidelity(character(), m, back),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 })
 

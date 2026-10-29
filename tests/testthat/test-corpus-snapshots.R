@@ -2,7 +2,7 @@
 # as read from each format it is written in.
 
 test_that("every corpus entry's representation is stable", {
-  for (id in zupkpmx_corpus()$id) {
+  for (id in zufapmx_corpus()$id) {
     models <- corpus_models(dirname(corpus_file(id, "entry.dcf")), id)
     for (from in names(models)) {
       expect_snapshot({

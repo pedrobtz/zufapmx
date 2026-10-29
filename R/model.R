@@ -45,7 +45,7 @@ new_model <- function(
       observations = observations,
       provenance = provenance
     ),
-    class = "zupkpmx_model"
+    class = "zufapmx_model"
   )
   validate_model(model)
 }
@@ -109,20 +109,20 @@ pmx_ode <- function(model) {
 }
 
 #' @export
-print.zupkpmx_model <- function(x, ...) {
+print.zufapmx_model <- function(x, ...) {
   cat(format(x, ...), sep = "\n")
   invisible(x)
 }
 
 #' @export
-format.zupkpmx_model <- function(x, ...) {
+format.zufapmx_model <- function(x, ...) {
   p <- x$parameters
   estimated <- sum(!is.na(p$estimate))
   attach <- x$random_effects$attach
   obs <- x$observations
 
   c(
-    sprintf("<zupkpmx_model> read from %s", x$provenance$format),
+    sprintf("<zufapmx_model> read from %s", x$provenance$format),
     paste("Structure:", format_structure(x$structure)),
     sprintf(
       "Parameters: %d, %s",
@@ -357,11 +357,11 @@ validate_observations <- function(x) {
 }
 
 model_abort <- function(fmt, ...) {
-  zupkpmx_abort(sprintf(fmt, ...), "model", call = sys.call(-1))
+  zufapmx_abort(sprintf(fmt, ...), "model", call = sys.call(-1))
 }
 
 check_model <- function(x) {
-  if (!inherits(x, "zupkpmx_model")) {
-    model_abort("Expected a zupkpmx model, not %s.", class(x)[[1]])
+  if (!inherits(x, "zufapmx_model")) {
+    model_abort("Expected a zufapmx model, not %s.", class(x)[[1]])
   }
 }

@@ -8,7 +8,7 @@
 
 if (requireNamespace("testthat", quietly = TRUE)) {
   library(testthat)
-  library(zupkpmx)
+  library(zufapmx)
 
-  test_check("zupkpmx")
+  test_check("zufapmx")
 }

@@ -33,9 +33,9 @@ test_that("an ODE corpus model reads into states, statements and derivatives", {
 })
 
 test_that("every corpus model reads", {
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
   for (id in corpus$id) {
-    expect_s3_class(pmx_read_rxode2(corpus_rxode2(id)), "zupkpmx_model")
+    expect_s3_class(pmx_read_rxode2(corpus_rxode2(id)), "zufapmx_model")
   }
 })
 
@@ -190,27 +190,27 @@ test_that("constructs outside the supported set are refused", {
 
   expect_error(
     pmx_read_rxode2(base(quote(x <- sin(cl)))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(x <- ifelse(cl > 1, 1, 2)))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(cp ~ t(sd)))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(y ~ add(sd)))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(alag(gut) <- 1))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(d / dt(central) <- -cl))),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -221,9 +221,9 @@ test_that("a function without ini() or model() is refused", {
         cp <- linCmt()
       })
     }),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
-  expect_error(pmx_read_rxode2("one.cmt"), class = "zupkpmx_model_error")
+  expect_error(pmx_read_rxode2("one.cmt"), class = "zufapmx_model_error")
 })
 
 test_that("metadata, constant ini expressions and prop() + add() read", {
@@ -290,7 +290,7 @@ test_that("a construct outside the table in a derivative is a parse error", {
         cp ~ add(sd)
       })
     }),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 

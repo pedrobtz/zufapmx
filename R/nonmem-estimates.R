@@ -27,7 +27,7 @@ nm_attach_estimates <- function(model, file, source) {
   }
   path <- paths[[source]]
   if (!file.exists(path)) {
-    zupkpmx_abort(sprintf("No %s file at `%s`.", source, path), "model")
+    zufapmx_abort(sprintf("No %s file at `%s`.", source, path), "model")
   }
   if (source == "xml" && !has_zuxml()) {
     engine_error("zuxml", call = NULL)

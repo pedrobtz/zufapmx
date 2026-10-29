@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans.
 
-**Goal:** A `zupkpmx_model` that can be built, validated, inspected and
+**Goal:** A `zufapmx_model` that can be built, validated, inspected and
 printed without any reader.
 
 **Architecture:** Expressions are R language objects (numbers, symbols,
@@ -18,13 +18,13 @@ are the only public way in, so the constructor stays internal.
 
 - Base R only (D8). No exported constructor: §5 exports readers and
   accessors only.
-- Errors through `zupkpmx_abort(message, kind, ...)`; classes
-  `zupkpmx_<kind>_error` inheriting `zupkpmx_error`.
+- Errors through `zufapmx_abort(message, kind, ...)`; classes
+  `zufapmx_<kind>_error` inheriting `zufapmx_error`.
 
 ## Review Focus
 
 - An expression calling a function outside the table (`foo(x)`, `sin`) is
-  rejected with `zupkpmx_model_error` naming the function.
+  rejected with `zufapmx_model_error` naming the function.
 - A non-symmetric or non-square omega block is rejected.
 - A random effect attached to a parameter that does not exist is rejected.
 - A closed-form structure with `ncmt` outside 1–3 is rejected.
@@ -38,7 +38,7 @@ are the only public way in, so the constructor stays internal.
 - `expr_operators`: `+ - * / ^ ( == != < <= > >= & | !`.
 - `expr_check(x)`: `x` is numeric length-1 constant, symbol, or call to an
   operator or table function with valid arguments; else
-  `zupkpmx_model_error`. Returns `x` invisibly.
+  `zufapmx_model_error`. Returns `x` invisibly.
 - `expr_names(x)`: symbols an expression reads.
 - `stmt_check(x)`: `<-` with a symbol on the left and a valid expression on
   the right, or `if` with a valid condition and `{` bodies of statements.
@@ -71,7 +71,7 @@ Components, each validated:
 - `new_model(...)` takes the seven components and validates.
 - `pmx_parameters(m)`, `pmx_omega(m)` (block-diagonal matrix with
   dimnames), `pmx_ode(m)` (derivatives, or `NULL` for a closed form).
-- `print.zupkpmx_model()`: source, structure, parameter count with
+- `print.zufapmx_model()`: source, structure, parameter count with
   estimate status, etas and what they attach to, endpoints and residual
   models.
 - Snapshot tests: `print()` and `str()` of a two-compartment closed-form
@@ -82,7 +82,7 @@ Components, each validated:
 
 - `parse_error(message, file, line, column, seen, expected)`,
   `write_error(message, construct, location, formats)`,
-  `engine_error(message, engine, parent)`; each a `zupkpmx_abort()` with
+  `engine_error(message, engine, parent)`; each a `zufapmx_abort()` with
   those fields. Tests assert class and fields.
 
 ### Task 4: Records

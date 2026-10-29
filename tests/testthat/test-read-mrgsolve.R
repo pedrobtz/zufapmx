@@ -1,14 +1,14 @@
 test_that("every corpus mrgsolve model reads", {
-  for (path in zupkpmx_corpus()$path) {
+  for (path in zufapmx_corpus()$path) {
     expect_s3_class(
       pmx_read_mrgsolve(file.path(path, "model.cpp")),
-      "zupkpmx_model"
+      "zufapmx_model"
     )
   }
 })
 
 test_that("closed-form and ODE models read into their structures", {
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
   closed <- pmx_read_mrgsolve(file.path(
     corpus$path[corpus$id == "twocmt-oral"],
     "model.cpp"
@@ -32,7 +32,7 @@ test_that("closed-form and ODE models read into their structures", {
 test_that("corpus mrgsolve models predict their expected.csv", {
   skip_on_cran()
   skip_if_not_installed("rxode2")
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     model <- pmx_read_mrgsolve(file.path(corpus$path[[i]], "model.cpp"))
@@ -148,7 +148,7 @@ test_that("$NMEXT reads a NONMEM run's estimates as parameters", {
 
 test_that("code outside mrgsolve's documented C++ is refused", {
   refused <- function(lines) {
-    expect_error(read_cpp(lines), class = "zupkpmx_parse_error")
+    expect_error(read_cpp(lines), class = "zufapmx_parse_error")
   }
   base <- cpp_onecmt()
 
@@ -183,7 +183,7 @@ test_that("dosing macros under $PKMODEL use the file's compartment names", {
 
 test_that("dosing macros inside if, or read as variables, are refused", {
   refused <- function(lines) {
-    expect_error(read_cpp(lines), class = "zupkpmx_parse_error")
+    expect_error(read_cpp(lines), class = "zufapmx_parse_error")
   }
 
   refused(cpp_onecmt(main = "if (CL > 1) F_CENT = 0.5;"))
@@ -208,7 +208,7 @@ test_that("the $TABLE prediction is the term in F's place, fully expanded", {
         "double Y = W * EPS(1) + IPRED;"
       )
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -251,7 +251,7 @@ test_that("Y is matched exactly in $TABLE", {
         "double YOBS = IPRED * (1 + EPS(1));"
       )
     )),
-    class = "zupkpmx_parse_error"
+    class = "zufapmx_parse_error"
   )
 })
 
@@ -287,7 +287,7 @@ test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order
   )
 
   writeLines(c("$THETA 1", lines), "model.cpp")
-  expect_error(pmx_read_mrgsolve("model.cpp"), class = "zupkpmx_parse_error")
+  expect_error(pmx_read_mrgsolve("model.cpp"), class = "zufapmx_parse_error")
 })
 
 test_that("$NMXML needs zuxml", {
@@ -298,17 +298,17 @@ test_that("$NMXML needs zuxml", {
   )
   expect_error(
     read_cpp(c(sprintf("$NMXML path = \"%s\"", xml), cpp_onecmt())),
-    class = "zupkpmx_engine_error"
+    class = "zufapmx_engine_error"
   )
 })
 
 test_that("a directory is not a model file", {
   expect_error(
     pmx_read_mrgsolve(withr::local_tempdir()),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
   expect_error(
     pmx_read_nonmem(withr::local_tempdir()),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })

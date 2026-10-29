@@ -15,7 +15,7 @@ the \code{.ext} file, else none. \code{"xml"}, \code{"ext"} and \code{"lst"} rea
 file and fail if it is missing; \code{"none"} reads no estimates.}
 }
 \value{
-A \code{zupkpmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}}.
+A \code{zufapmx_model}; see \link{pmx_inspect} and \code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}}.
 }
 \description{
 Reads a control stream into the package's representation, with final
@@ -33,7 +33,7 @@ comparisons, \code{EXP}, \code{LOG}, \code{LOG10}, \code{SQRT} and \code{ABS}.
 Verbatim Fortran, \verb{$INFN}, \verb{$PRED}, \verb{$MIX}, \verb{$PRIOR}, user subroutines,
 dosing or scale assignments inside \code{IF}, undeclared \code{THETA}/\code{ETA}/\code{EPS}
 indices and anything else outside that subset are refused with an error
-of class \code{zupkpmx_parse_error} naming the file and, where it can, the
+of class \code{zufapmx_parse_error} naming the file and, where it can, the
 line and column.
 
 Recorded as losses of the read: the title, \verb{$SIZES}, data records,
@@ -52,7 +52,7 @@ covariates. The observation is the endpoint \code{Y}.
 \examples{
 path <- system.file(
   "corpus", "twocmt-bolus", "model.ctl",
-  package = "zupkpmx"
+  package = "zufapmx"
 )
 pmx_read_nonmem(path)
 }

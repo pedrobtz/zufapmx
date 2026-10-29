@@ -1,5 +1,5 @@
 test_that("expected.csv has one row per design time and the right columns", {
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     expected <- corpus_expected(corpus$path[[i]])
@@ -18,7 +18,7 @@ test_that("expected.csv has one row per design time and the right columns", {
 test_that("each entry's rxode2 model reproduces its expected.csv", {
   skip_on_cran()
   skip_if_not_installed("rxode2")
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     got <- corpus_solve_entry_rxode2(corpus$path[[i]], corpus$regimen[[i]])
@@ -31,7 +31,7 @@ test_that("each entry's rxode2 model reproduces its expected.csv", {
 test_that("each entry's mrgsolve model reproduces its expected.csv", {
   skip_on_cran()
   skip_if_not_installed("mrgsolve")
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     cpp <- file.path(corpus$path[[i]], "model.cpp")

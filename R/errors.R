@@ -1,10 +1,10 @@
-# Signal an error of class `zupkpmx_<kind>_error`, which also inherits from
-# `zupkpmx_error`, so callers and tests can match on the class.
-zupkpmx_abort <- function(message, kind, call = sys.call(-1), ...) {
+# Signal an error of class `zufapmx_<kind>_error`, which also inherits from
+# `zufapmx_error`, so callers and tests can match on the class.
+zufapmx_abort <- function(message, kind, call = sys.call(-1), ...) {
   stop(structure(
     class = c(
-      paste0("zupkpmx_", kind, "_error"),
-      "zupkpmx_error",
+      paste0("zufapmx_", kind, "_error"),
+      "zufapmx_error",
       "error",
       "condition"
     ),
@@ -31,7 +31,7 @@ parse_error <- function(
       paste0("`", expected, "`", collapse = " or ")
     )
   }
-  zupkpmx_abort(
+  zufapmx_abort(
     sprintf("%s:%d:%d: %s", file, line, column, message),
     "parse",
     call = call,
@@ -44,7 +44,7 @@ parse_error <- function(
 }
 
 write_error <- function(construct, location, formats, call = sys.call(-1)) {
-  zupkpmx_abort(
+  zufapmx_abort(
     sprintf(
       "Cannot write %s (at `%s`). %s",
       construct,
@@ -64,7 +64,7 @@ write_error <- function(construct, location, formats, call = sys.call(-1)) {
 }
 
 engine_error <- function(engine, parent = NULL, call = sys.call(-1)) {
-  zupkpmx_abort(
+  zufapmx_abort(
     if (is.null(parent)) {
       sprintf("The %s engine is not installed.", engine)
     } else {

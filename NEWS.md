@@ -1,8 +1,8 @@
-# zupkpmx 0.0.0.9000
+# zufapmx 0.0.0.9000
 
 * Fidelity is stricter: a write is `"equivalent"` only through the
   reparameterisations writers are known to make, and a translation that
-  reads back as a different model is a `zupkpmx_write_error`.
+  reads back as a different model is a `zufapmx_write_error`.
 
 * Time is one symbol, `t`, read from and written to each format's own
   spelling (NONMEM `TIME`/`T`, mrgsolve `TIME`/`SOLVERTIME`, rxode2
@@ -29,7 +29,7 @@
 * `pmx_parameters()`, `pmx_omega()` and `pmx_ode()` inspect a model, and
   `print()` summarises it.
 
-* `zupkpmx_corpus()` lists the shipped model corpus: one-, two- and
+* `zufapmx_corpus()` lists the shipped model corpus: one-, two- and
   three-compartment closed-form models and a Michaelis-Menten ODE model,
   each written in NONMEM, rxode2 and mrgsolve form with its typical-subject
   predictions.

@@ -1,6 +1,6 @@
 # NONMEM output fixtures
 
-Hand-written for zupkpmx's tests in October 2026; no NONMEM run produced
+Hand-written for zufapmx's tests in October 2026; no NONMEM run produced
 them. They imitate the output formats of NONMEM 7.5 closely enough to
 exercise the readers in `R/nonmem-estimates.R`, with values chosen so that
 each source and each matrix element can be told apart.

@@ -1,6 +1,6 @@
 #' The shipped model corpus
 #'
-#' Lists the models that ship with zupkpmx. Each entry is one model written
+#' Lists the models that ship with zufapmx. Each entry is one model written
 #' in every format that can hold it, with the typical-subject predictions
 #' the formats must agree on. The corpus is the package's test suite and a
 #' set of known-equivalent translations to compare against.
@@ -20,10 +20,10 @@
 #'   }
 #' @export
 #' @examples
-#' corpus <- zupkpmx_corpus()
+#' corpus <- zufapmx_corpus()
 #' corpus[, c("id", "structure", "formats")]
-zupkpmx_corpus <- function() {
-  corpus_read(system.file("corpus", package = "zupkpmx"))
+zufapmx_corpus <- function() {
+  corpus_read(system.file("corpus", package = "zufapmx"))
 }
 
 corpus_fields <- c("Id", "Title", "Structure", "Regimen", "Formats", "Source")
@@ -37,7 +37,7 @@ corpus_files <- c(
 corpus_read <- function(root) {
   dirs <- sort(list.dirs(root, recursive = FALSE))
   if (length(dirs) == 0) {
-    zupkpmx_abort(sprintf("No corpus entries under `%s`.", root), "corpus")
+    zufapmx_abort(sprintf("No corpus entries under `%s`.", root), "corpus")
   }
   do.call(rbind, c(lapply(dirs, corpus_read_entry), make.row.names = FALSE))
 }
@@ -46,7 +46,7 @@ corpus_read_entry <- function(dir) {
   dcf <- read.dcf(file.path(dir, "entry.dcf"))
   missing <- setdiff(corpus_fields, colnames(dcf))
   if (length(missing) > 0) {
-    zupkpmx_abort(
+    zufapmx_abort(
       sprintf(
         "Corpus entry `%s` has no %s field.",
         basename(dir),
@@ -60,7 +60,7 @@ corpus_read_entry <- function(dir) {
   formats <- trimws(formats)
   unknown <- setdiff(formats, names(corpus_files))
   if (length(unknown) > 0) {
-    zupkpmx_abort(
+    zufapmx_abort(
       sprintf(
         "Corpus entry `%s` lists unknown formats: %s.",
         basename(dir),
@@ -71,7 +71,7 @@ corpus_read_entry <- function(dir) {
   }
   absent <- formats[!file.exists(file.path(dir, corpus_files[formats]))]
   if (length(absent) > 0) {
-    zupkpmx_abort(
+    zufapmx_abort(
       sprintf(
         "Corpus entry `%s` lists %s but has no %s.",
         basename(dir),
@@ -98,7 +98,7 @@ corpus_read_entry <- function(dir) {
 corpus_design <- function(regimen) {
   regimens <- c("bolus", "oral", "infusion")
   if (!regimen %in% regimens) {
-    zupkpmx_abort(sprintf("Unknown regimen `%s`.", regimen), "corpus")
+    zufapmx_abort(sprintf("Unknown regimen `%s`.", regimen), "corpus")
   }
   times <- c(0.5, 1, 2, 4, 6, 8, 12, 24)
   data.frame(

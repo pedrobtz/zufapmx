@@ -53,9 +53,9 @@ test_that("pmx_ode() returns the derivatives, or NULL for a closed form", {
 })
 
 test_that("accessors reject anything but a model", {
-  expect_error(pmx_parameters(list()), class = "zupkpmx_model_error")
-  expect_error(pmx_omega(1), class = "zupkpmx_model_error")
-  expect_error(pmx_ode("m"), class = "zupkpmx_model_error")
+  expect_error(pmx_parameters(list()), class = "zufapmx_model_error")
+  expect_error(pmx_omega(1), class = "zufapmx_model_error")
+  expect_error(pmx_ode("m"), class = "zufapmx_model_error")
 })
 
 test_that("an unknown parameter role is an error", {
@@ -65,7 +65,7 @@ test_that("an unknown parameter role is an error", {
 
   expect_error(
     model_with(m, parameters = params),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -76,7 +76,7 @@ test_that("duplicate parameter names are an error", {
 
   expect_error(
     model_with(m, parameters = params),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -87,7 +87,7 @@ test_that("a non-symmetric omega block is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -98,7 +98,7 @@ test_that("a non-square omega block is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -109,7 +109,7 @@ test_that("a random effect attached to an unknown parameter is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -120,7 +120,7 @@ test_that("an attached eta missing from omega is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -131,7 +131,7 @@ test_that("a closed form outside one to three compartments is an error", {
 
   expect_error(
     model_with(m, structure = structure),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -142,7 +142,7 @@ test_that("a closed form naming an unknown canonical parameter is an error", {
 
   expect_error(
     model_with(m, structure = structure),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -153,7 +153,7 @@ test_that("an ODE model needs one derivative per compartment", {
 
   expect_error(
     model_with(m, structure = structure),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -161,14 +161,14 @@ test_that("an invalid expression anywhere in the model is an error", {
   m <- model_onecmt_mm()
   expect_error(
     model_with(m, individual = list(quote(cl <- sin(x)))),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 
   structure <- unclass(m)$structure
   structure$derivatives$depot <- quote(foo(depot))
   expect_error(
     model_with(m, structure = structure),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -176,11 +176,11 @@ test_that("dosing on an unknown compartment or attribute is an error", {
   m <- model_onecmt_mm()
   expect_error(
     model_with(m, dosing = list(gut = list(lag = quote(1)))),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
   expect_error(
     model_with(m, dosing = list(depot = list(delay = quote(1)))),
-    class = "zupkpmx_model_error"
+    class = "zufapmx_model_error"
   )
 })
 
@@ -188,16 +188,16 @@ test_that("an unknown residual model or transform is an error", {
   m <- model_twocmt_oral()
   obs <- unclass(m)$observations
   obs$cp$residual$type <- "student"
-  expect_error(model_with(m, observations = obs), class = "zupkpmx_model_error")
+  expect_error(model_with(m, observations = obs), class = "zufapmx_model_error")
 
   obs <- unclass(m)$observations
   obs$cp$transform <- "logit"
-  expect_error(model_with(m, observations = obs), class = "zupkpmx_model_error")
+  expect_error(model_with(m, observations = obs), class = "zufapmx_model_error")
 })
 
 test_that("a missing component is an error", {
   parts <- unclass(model_twocmt_oral())
   parts["dosing"] <- list(NULL)
 
-  expect_error(do.call(new_model, parts), class = "zupkpmx_model_error")
+  expect_error(do.call(new_model, parts), class = "zufapmx_model_error")
 })

@@ -9,7 +9,7 @@ test_that("nlmixr2lib models round-trip exactly or are refused", {
 
   for (name in names) {
     fun <- suppressMessages(nlmixr2lib::readModelDb(name))
-    model <- tryCatch(pmx_read_rxode2(fun), zupkpmx_parse_error = function(e) {
+    model <- tryCatch(pmx_read_rxode2(fun), zufapmx_parse_error = function(e) {
       NULL
     })
     if (!is.null(model)) {

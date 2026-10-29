@@ -1,5 +1,5 @@
 test_that("corpus control streams round-trip exactly", {
-  for (path in zupkpmx_corpus()$path) {
+  for (path in zufapmx_corpus()$path) {
     w <- pmx_write_nonmem(pmx_read_nonmem(file.path(path, "model.ctl")))
     expect_equal(pmx_fidelity(w), "exact", label = basename(path))
     expect_equal(pmx_losses(w), character(), label = basename(path))
@@ -7,7 +7,7 @@ test_that("corpus control streams round-trip exactly", {
 })
 
 test_that("rxode2 corpus models write as equivalent control streams", {
-  for (id in zupkpmx_corpus()$id) {
+  for (id in zufapmx_corpus()$id) {
     w <- pmx_write_nonmem(corpus_rxode2_model(id))
     expect_equal(pmx_fidelity(w), "equivalent", label = id)
   }
@@ -16,7 +16,7 @@ test_that("rxode2 corpus models write as equivalent control streams", {
 test_that("models round-trip between rxode2 and NONMEM and still predict", {
   skip_on_cran()
   skip_if_not_installed("rxode2")
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     path <- withr::local_tempfile(fileext = ".ctl")
@@ -125,7 +125,7 @@ test_that("constructs NM-TRAN cannot hold are refused", {
   two$observations$cp2 <- two$observations$cp
   expect_error(
     pmx_write_nonmem(do.call(new_model, two)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   pow <- parts
@@ -135,14 +135,14 @@ test_that("constructs NM-TRAN cannot hold are refused", {
   )
   expect_error(
     pmx_write_nonmem(do.call(new_model, pow)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   mx <- parts
   mx$individual[[1]] <- quote(ka <- max(tka, 0.1))
   expect_error(
     pmx_write_nonmem(do.call(new_model, mx)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   clash <- parts
@@ -152,14 +152,14 @@ test_that("constructs NM-TRAN cannot hold are refused", {
   )
   expect_error(
     pmx_write_nonmem(do.call(new_model, clash)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 
   iov <- parts
   iov$random_effects$iov <- list(present = TRUE, occasion = "OCC")
   expect_error(
     pmx_write_nonmem(do.call(new_model, iov)),
-    class = "zupkpmx_write_error"
+    class = "zufapmx_write_error"
   )
 })
 
@@ -194,7 +194,7 @@ test_that("variables PREDPP reserves are renamed", {
 test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
   skip_on_cran()
   skip_if_not_installed("rxode2")
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     path <- withr::local_tempfile(fileext = ".ctl")

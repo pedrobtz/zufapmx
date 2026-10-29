@@ -1,20 +1,20 @@
 
-# zupkpmx
+# zufapmx
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/pedrobtz/zupkpmx/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zupkpmx/actions/workflows/R-CMD-check.yaml)
-[![coverage](https://raw.githubusercontent.com/pedrobtz/zupkpmx/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zupkpmx/actions/workflows/coverage.yaml)
+[![R-CMD-check](https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml)
+[![coverage](https://raw.githubusercontent.com/pedrobtz/zufapmx/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zufapmx/actions/workflows/coverage.yaml)
 <!-- badges: end -->
 
-The goal of zupkpmx is to ...
+The goal of zufapmx is to ...
 
 ## Installation
 
-You can install the development version of zupkpmx from [GitHub](https://github.com/) with:
+You can install the development version of zufapmx from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("pak")
-pak::pak("pedrobtz/zupkpmx")
+pak::pak("pedrobtz/zufapmx")
 ```
 
 ## Example
@@ -22,7 +22,7 @@ pak::pak("pedrobtz/zupkpmx")
 This is a basic example which shows you how to solve a common problem:
 
 ``` r
-library(zupkpmx)
+library(zufapmx)
 ## basic example code
 ```
 

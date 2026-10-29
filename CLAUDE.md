@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`zupkpmx` holds a population PK/PD model as one R object, reads it from
+`zufapmx` holds a population PK/PD model as one R object, reads it from
 NONMEM, rxode2/nlmixr2 and mrgsolve, writes it back to any of the three, and
 proves two models are the same model. `pmx_compare()` simulates both on a
 canonical design, each through its own engine, and reports the worst
@@ -17,7 +17,7 @@ verbatim Fortran, user subroutines or C++ outside mrgsolve's documented
 blocks.
 
 The specification is [`.agents/design.md`](.agents/design.md), adopted from
-[RFC 0046](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0046-zupkpmx-pharmacometric-model-interchange.md).
+[RFC 0046](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0046-zufapmx-pharmacometric-model-interchange.md).
 It outranks this file: `CLAUDE.md` orients, the design doc decides. Its
 decisions marked (C) and its open questions (§15) are still the maintainer's
 to confirm.
@@ -34,7 +34,7 @@ parent issue shows a progress bar such as "6 of 7".
 
 - **One parent issue per target version**, titled with the bare version, for
   example `v0.1.0`. This package's is
-  [#1](https://github.com/pedrobtz/zupkpmx/issues/1).
+  [#1](https://github.com/pedrobtz/zufapmx/issues/1).
 - **One sub-issue per roadmap stage**, titled as the roadmap titles it, for
   example `Stage 3 — R interface`, and linking to that section. The number of
   stages is whatever the roadmap has; there is no fixed scale.
@@ -63,7 +63,7 @@ never before: a `.9000` version above an unreleased `0.1.0` heading is wrong.
 
 Until the first release the R API may change freely. Sibling packages can
 still depend on this one before CRAN does, through `Remotes:` or `LinkingTo:`.
-None does yet; `zupkode` (RFC 0047) plans to use this package's corpus as its
+None does yet; `zufaode` (RFC 0047) plans to use this package's corpus as its
 conformance suite, so a change to the corpus layout affects it. A package
 that others wait on should reach CRAN first.
 
@@ -110,7 +110,7 @@ land; see `.agents/design.md` (§4).
   over `F`.
 - **Readers and writers** ([R/read-rxode2.R](R/read-rxode2.R),
   [R/write-rxode2.R](R/write-rxode2.R)): a reader raises
-  `zupkpmx_parse_error` for anything it does not support, never a model
+  `zufapmx_parse_error` for anything it does not support, never a model
   error; a writer reads its own output back and sets the fidelity
   ([R/written.R](R/written.R)) from whether the representation came back
   identical.
@@ -125,7 +125,7 @@ land; see `.agents/design.md` (§4).
   NONMEM's sigma variances and rxode2's standard-deviation parameters;
   that conversion is why cross-format writes are `equivalent`, not
   `exact`.
-- **Conditions** ([R/errors.R](R/errors.R)): `zupkpmx_abort()` and the §8
+- **Conditions** ([R/errors.R](R/errors.R)): `zufapmx_abort()` and the §8
   constructors `parse_error()`, `write_error()` and `engine_error()`,
   each carrying the fields a caller acts on.
 - **The corpus** ([R/corpus.R](R/corpus.R), `inst/corpus/`): see Testing
@@ -153,7 +153,7 @@ These come from the design's decisions (§13) and hold from the first stage.
 - **Residual error is off in comparisons (D5).** Predictions are compared,
   not noise.
 - **`pmx_compare()` never raises on a failed comparison.** Failure is a
-  value; only missing or failing engines raise `zupkpmx_engine_error`.
+  value; only missing or failing engines raise `zufapmx_engine_error`.
 - **Unsupported code is refused with a position, never guessed (D6).** The
   NM-TRAN subset is what `nonmem2rx` and `nonmem2mrgsolve` translate today.
 - **Siblings on CRAN are used, not re-implemented (D9a):** `zuxml` for
@@ -187,9 +187,9 @@ These come from the design's decisions (§13) and hold from the first stage.
 - **C++ literals carry a decimal point.** `1/2` is integer division in
   C++; the mrgsolve dialect writes `1.0 / 2.0`.
 - **`$PARAM @annotated` descriptions hold bounds.** `[lower, upper]` and
-  `fixed` are zupkpmx's convention; without it every mrgsolve write of a
+  `fixed` are zufapmx's convention; without it every mrgsolve write of a
   bounded model would be `lossy`.
-- **Exported functions are `pmx_*` (D10),** with `zupkpmx_corpus()` the one
+- **Exported functions are `pmx_*` (D10),** with `zufapmx_corpus()` the one
   package-level exception.
 
 ## Testing conventions

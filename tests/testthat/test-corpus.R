@@ -1,5 +1,5 @@
-test_that("zupkpmx_corpus() lists every shipped entry", {
-  corpus <- zupkpmx_corpus()
+test_that("zufapmx_corpus() lists every shipped entry", {
+  corpus <- zufapmx_corpus()
 
   expect_s3_class(corpus, "data.frame")
   expect_named(
@@ -21,7 +21,7 @@ test_that("zupkpmx_corpus() lists every shipped entry", {
 })
 
 test_that("every format an entry lists has its model file", {
-  corpus <- zupkpmx_corpus()
+  corpus <- zufapmx_corpus()
   files <- c(
     nonmem = "model.ctl",
     rxode2 = "model-rxode2.R",
@@ -46,7 +46,7 @@ test_that("an entry with a missing field is an error", {
     file.path(root, "broken", "entry.dcf")
   )
 
-  expect_error(corpus_read(root), class = "zupkpmx_corpus_error")
+  expect_error(corpus_read(root), class = "zufapmx_corpus_error")
 })
 
 test_that("an entry that lists a missing model file is an error", {
@@ -64,5 +64,5 @@ test_that("an entry that lists a missing model file is an error", {
     file.path(root, "nofile", "entry.dcf")
   )
 
-  expect_error(corpus_read(root), class = "zupkpmx_corpus_error")
+  expect_error(corpus_read(root), class = "zufapmx_corpus_error")
 })

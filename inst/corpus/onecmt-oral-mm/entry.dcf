@@ -4,5 +4,5 @@ Title: One-compartment model, first-order absorption, Michaelis-Menten
 Structure: ADVAN13
 Regimen: oral
 Formats: nonmem,rxode2,mrgsolve
-Source: Written for zupkpmx as a general ODE model (PREDPP ADVAN13,
+Source: Written for zufapmx as a general ODE model (PREDPP ADVAN13,
  NONMEM Users Guide, Part VI). MIT.
