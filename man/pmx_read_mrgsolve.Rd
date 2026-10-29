@@ -31,8 +31,10 @@ class \code{zufapmx_parse_error}. \verb{$PKMODEL} may take its parameters from
 \verb{$PARAM} directly or from \verb{$MAIN}.
 
 Recorded as losses of the read: the title, \verb{$PLUGIN}, \verb{$SET}, \verb{$PARAM}
-descriptions, and \verb{$TABLE} outputs \code{Y} does not use. \code{TIME} and
-\code{SOLVERTIME} read as the representation's time, \code{t}. \verb{$NMXML} and
+descriptions, \verb{$PARAM} values written as constant expressions
+(\code{log(2)}), which are evaluated, and \verb{$TABLE} outputs \code{Y} does not use.
+Time is \code{t}: read from \code{SOLVERTIME} in \verb{$ODE} and from \code{TIME} elsewhere;
+the other name is refused, since it is a different time. \verb{$NMXML} and
 \verb{$NMEXT} resolve a relative path against the working directory, or the
 model file's with \code{root = "cppfile"}, as mrgsolve does.
 
@@ -50,6 +52,8 @@ path <- system.file(
 pmx_read_mrgsolve(path)
 }
 \seealso{
+\link{pmx_inspect} for the model's parts.
+
 Other readers:
 \code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}},
 \code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}}

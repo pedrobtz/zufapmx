@@ -44,13 +44,13 @@ corpus_read <- function(root) {
 
 corpus_read_entry <- function(dir) {
   dcf <- read.dcf(file.path(dir, "entry.dcf"))
-  missing <- setdiff(corpus_fields, colnames(dcf))
-  if (length(missing) > 0) {
+  absent <- setdiff(corpus_fields, colnames(dcf))
+  if (length(absent) > 0) {
     zufapmx_abort(
       sprintf(
         "Corpus entry `%s` has no %s field.",
         basename(dir),
-        paste(missing, collapse = ", ")
+        paste(absent, collapse = ", ")
       ),
       "corpus"
     )
@@ -94,7 +94,9 @@ corpus_read_entry <- function(dir) {
 }
 
 # The design of the corpus's expected predictions: one 100-unit dose at
-# time 0 by the entry's regimen, observed at fixed times.
+# time 0 by the entry's regimen, observed at fixed times. Only tests and
+# tools/ call it today; it is here because Stage 7's pmx_design() builds on
+# it, and the corpus files are its output.
 corpus_design <- function(regimen) {
   regimens <- c("bolus", "oral", "infusion")
   if (!regimen %in% regimens) {

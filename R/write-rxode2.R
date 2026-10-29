@@ -8,9 +8,13 @@
 #' lost. Residual error held as sigma variances, as NONMEM holds it, is
 #' written as standard-deviation parameters named after the epsilons.
 #' Variables `linCmt()` would read as parameters are renamed with an `x_`
-#' prefix. Constructs rxode2 cannot hold, such as residual error written as
-#' an expression over epsilons, or an individual parameter that reads the
-#' record's time, stop with an error of class `zufapmx_write_error`.
+#' prefix. `linCmt()` reads its parameters from `model()` only, so a
+#' closed-form parameter held directly as a fixed effect (mrgsolve's
+#' `$PKMODEL` over `$PARAM`) is renamed with a `t` prefix (`tCL`) and
+#' assigned in `model()` (`CL <- tCL`). Constructs rxode2 cannot hold,
+#' such as residual error written as an expression over epsilons, or an
+#' individual parameter that reads the record's time, stop with an error of
+#' class `zufapmx_write_error`.
 #'
 #' @inheritParams pmx_inspect
 #' @return A `zufapmx_written` object: the text as lines, with its fidelity
@@ -49,7 +53,10 @@ pmx_write_rxode2 <- function(model) {
   if (any(!is.na(m$parameters$estimate))) {
     losses <- c(
       losses,
-      "initial values: rxode2's ini() holds one value per parameter, so estimates were written"
+      paste(
+        "initial values: rxode2's ini() holds one value per parameter,",
+        "so estimates were written"
+      )
     )
   }
 
@@ -65,7 +72,7 @@ pmx_write_rxode2 <- function(model) {
   )
 
   back <- read_back(
-    rxode2_read_body(body(eval(parse(text = text))), "written"),
+    rxode2_read_body(body(eval(rxode2_parse_text(text))), "written"),
     "rxode2"
   )
   new_written(
@@ -97,7 +104,7 @@ rxode2_write_sd_from_sigma <- function(m) {
       write_error(
         "a residual model written as an expression over epsilons",
         sprintf("observations$%s$residual", e),
-        formats = c("nonmem", "mrgsolve"),
+        formats = "nonmem",
         call = NULL
       )
     }
@@ -140,14 +147,15 @@ rxode2_write_lincmt_parameters <- function(m) {
   ]
   map <- stats::setNames(renamed, direct)
   m$parameters$name <- map[m$parameters$name] %|NA|% m$parameters$name
-  rename <- function(x) rename_symbols(x, map)
+  # The old names stay, assigned from the new ones, so the closed form and
+  # the predictions keep reading them.
+  m <- model_rename(m, map, observations = FALSE)
   m$individual <- c(
     lapply(seq_along(direct), function(i) {
       call("<-", as.symbol(direct[[i]]), as.symbol(renamed[[i]]))
     }),
-    lapply(m$individual, rename)
+    m$individual
   )
-  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
   m
 }
 
@@ -157,7 +165,7 @@ rxode2_write_lincmt_parameters <- function(m) {
 # rxode2 also reads some stems as prefixes: VPX or VP_ next to V1 "mixes
 # volume styles", and KE or K10 is "ambiguous kel"; a suffix is not enough,
 # while VMAX, CLR or KAPPA are left alone (probed with rxode2 5.1.8).
-lincmt_reserved <- c(
+rxode2_lincmt_reserved <- c(
   "cl",
   "v",
   "vc",
@@ -195,8 +203,7 @@ rxode2_write_free_lincmt <- function(m) {
   }
   vars <- stmt_targets(m$individual)
   lower <- tolower(vars)
-  reads <- lower %in%
-    lincmt_reserved |
+  reads <- (lower %in% rxode2_lincmt_reserved) |
     grepl("^(vp|ke|k10)", lower)
   clash <- vars[reads & !vars %in% m$structure$parameters]
   if (length(clash) == 0) {
@@ -213,14 +220,7 @@ rxode2_write_free_lincmt <- function(m) {
     ],
     clash
   )
-  rename <- function(x) rename_symbols(x, map)
-  m$individual <- lapply(m$individual, rename)
-  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
-  m$observations <- lapply(m$observations, function(o) {
-    o$prediction <- rename(o$prediction)
-    o
-  })
-  m
+  model_rename(m, map)
 }
 
 rxode2_write_ini <- function(m) {
@@ -264,12 +264,12 @@ rxode2_write_values <- function(values, fixed) {
 
 rxode2_write_model <- function(m) {
   s <- m$structure
-  lines <- stmt_lines(m$individual)
+  lines <- rxode2_stmt_lines(m$individual)
 
   if (identical(s$type, "ode")) {
     lines <- c(
       lines,
-      stmt_lines(s$statements),
+      rxode2_stmt_lines(s$statements),
       vapply(
         s$compartments,
         function(cmt) {
@@ -282,19 +282,15 @@ rxode2_write_model <- function(m) {
   }
 
   for (cmt in names(m$dosing)) {
-    for (attr in names(m$dosing[[cmt]])) {
-      value <- expr_line(m$dosing[[cmt]][[attr]])
+    for (field in names(m$dosing[[cmt]])) {
+      value <- expr_line(m$dosing[[cmt]][[field]])
       lines <- c(
         lines,
-        if (attr == "initial") {
+        if (field == "initial") {
           sprintf("%s(0) <- %s", cmt, value)
         } else {
-          fn <- c(
-            lag = "alag",
-            bioavailability = "f",
-            rate = "rate",
-            duration = "dur"
-          )[[attr]]
+          # The first spelling of each attribute is the one written.
+          fn <- invert_names(rxode2_dosing_attributes)[[field]]
           sprintf("%s(%s) <- %s", fn, cmt, value)
         }
       )
@@ -332,12 +328,7 @@ rxode2_write_prediction <- function(s, endpoint, prediction) {
       return(sprintf("%s <- linCmt()", endpoint))
     }
     if (any(all.vars(prediction) %in% closed_compartments(s))) {
-      write_error(
-        "a closed-form prediction other than the central concentration",
-        sprintf("observations$%s", endpoint),
-        formats = character(),
-        call = NULL
-      )
+      closed_prediction_error(endpoint)
     }
   }
   sprintf("%s <- %s", endpoint, expr_line(prediction))
@@ -353,16 +344,33 @@ rxode2_write_residual <- function(residual, endpoint) {
     exponential = sprintf("lnorm(%s)", p[[1]]),
     power = sprintf("pow(%s)", paste(p, collapse = ", ")),
     write_error(
-      sprintf("a residual model of type %s", residual$type),
+      sprintf("the %s residual model", residual$type),
       sprintf("observations$%s$residual", endpoint),
-      formats = "nonmem",
+      formats = residual_formats(residual$type),
       call = NULL
     )
   )
 }
 
-stmt_lines <- function(stmts) {
+rxode2_stmt_lines <- function(stmts) {
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "if")) expr_deparse(x) else expr_line(x)
   }))
+}
+
+# Written text as R code; a syntax error is a refusal of the text.
+rxode2_parse_text <- function(text) {
+  tryCatch(
+    parse(text = text, keep.source = FALSE)[[1]],
+    error = function(e) {
+      parse_error(
+        "written",
+        NA_integer_,
+        NA_integer_,
+        seen = "text",
+        message = conditionMessage(e),
+        call = NULL
+      )
+    }
+  )
 }

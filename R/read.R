@@ -1,5 +1,8 @@
 # Helpers every reader shares: walking R syntax, attaching random effects,
-# inferring parameter roles, and the shapes of closed-form models.
+# inferring parameter roles, tokens and a token stream, the split of ODE
+# code, the observation and its residual form, refusals of dosing names and
+# statements with their record's line, bounds, covariates, and building the
+# model (read_model()).
 
 # A full symmetric matrix from lower-triangle values listed row by row.
 lower_to_full <- function(values) {
@@ -102,13 +105,6 @@ model_parameters_empty <- function() {
     fixed = logical(),
     estimate = numeric()
   )
-}
-
-closed_compartments <- function(structure) {
-  peripheral <- if (structure$ncmt > 1) {
-    paste0("peripheral", seq_len(structure$ncmt - 1))
-  }
-  c(if (isTRUE(structure$depot)) "depot", "central", peripheral)
 }
 
 strip_parens <- function(e) {
@@ -236,12 +232,6 @@ model_compartments <- function(structure) {
   }
 }
 
-# The ADVAN of a closed form with `ncmt` compartments, with or without a
-# depot.
-closed_advan <- function(ncmt, depot) {
-  if (depot) c(2L, 4L, 12L)[[ncmt]] else c(1L, 3L, 11L)[[ncmt]]
-}
-
 # Every statement inside an `if`, at any depth.
 nested_statements <- function(x) {
   if (!is_call(x, "if")) {
@@ -259,6 +249,12 @@ nested_statements <- function(x) {
 # Split ODE code ($DES, $ODE) into structure statements and one derivative
 # per compartment. `derivative_of(x)` names the compartment an assignment
 # differentiates, or returns NULL; it refuses a malformed one itself.
+# A record's name with the line it starts on. Statements are R calls with
+# no positions of their own, so a refusal of one points at its record.
+record_at <- function(name, line) structure(name, line = line)
+
+record_line <- function(record) attr(record, "line") %||% NA_integer_
+
 split_ode <- function(stmts, compartments, derivative_of, file, record) {
   derivatives <- list()
   statements <- list()
@@ -267,7 +263,7 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
       if (is_call(y, "<-") && !is.null(derivative_of(y))) {
         parse_error(
           file,
-          NA_integer_,
+          record_line(record),
           NA_integer_,
           seen = expr_text(y[[2]]),
           message = sprintf(
@@ -285,14 +281,14 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
       derivatives[[cmt]] <- x[[3]]
     }
   }
-  missing <- setdiff(compartments, names(derivatives))
-  if (length(missing) > 0) {
+  absent <- setdiff(compartments, names(derivatives))
+  if (length(absent) > 0) {
     parse_error(
       file,
+      record_line(record),
       NA_integer_,
-      NA_integer_,
-      seen = record,
-      expected = sprintf("a derivative of %s", missing[[1]]),
+      seen = as.vector(record),
+      expected = sprintf("a derivative of %s", absent[[1]]),
       call = NULL
     )
   }
@@ -304,11 +300,23 @@ split_ode <- function(stmts, compartments, derivative_of, file, record) {
   )
 }
 
+y_error <- function(file, record) {
+  parse_error(
+    file,
+    record_line(record),
+    NA_integer_,
+    seen = "Y",
+    expected = sprintf("Y assigned once in %s, outside IF", record),
+    call = NULL
+  )
+}
+
 # The observation from $ERROR or $TABLE: the residual model of Y. Each
 # definition is stored expanded as it stands where it is made, so Y sees
 # the definitions in force where Y is assigned (design §6). `prediction` is
-# NONMEM's F; without one (mrgsolve), the prediction is the term in F's
-# place of a recognised residual form, and anything else is refused.
+# NONMEM's F; without one (mrgsolve), or when Y does not use it, the
+# prediction is the term in F's place of a recognised residual form, and
+# anything else is refused.
 # `outputs` are other names the record makes visible ($CAPTURE).
 read_observation <- function(
   stmts,
@@ -328,7 +336,7 @@ read_observation <- function(
       if (name %in% conditional) {
         parse_error(
           file,
-          NA_integer_,
+          record_line(record),
           NA_integer_,
           seen = name,
           expected = sprintf(
@@ -353,6 +361,9 @@ read_observation <- function(
     if (is_call(x, "<-") && is.symbol(x[[2]])) {
       name <- as.character(x[[2]])
       if (identical(name, "Y")) {
+        if (!is.null(y)) {
+          y_error(file, record)
+        }
         y <- expand(x[[3]], function(n) used <<- union(used, n))
       } else {
         seen <- character()
@@ -361,29 +372,43 @@ read_observation <- function(
         conditional <- setdiff(conditional, name)
       }
     } else {
+      if ("Y" %in% stmt_targets(list(x))) {
+        y_error(file, record)
+      }
       conditional <- union(conditional, stmt_targets(list(x)))
     }
   }
   if (is.null(y)) {
     parse_error(
       file,
+      record_line(record),
       NA_integer_,
-      NA_integer_,
-      seen = record,
+      seen = as.vector(record),
       expected = "Y = ... over EPS(n)",
       call = NULL
     )
   }
 
   form <- residual_form(strip_parens(y), prediction)
+  # A Y that does not use the given prediction (NONMEM's F) names its own,
+  # as in `IPRED = A(2)/V; Y = IPRED*(1+EPS(1))`.
+  derived <- is.null(form) &&
+    !is.null(prediction) &&
+    !any(all.vars(prediction) %in% all.vars(y))
+  if (derived) {
+    form <- residual_form(strip_parens(y), NULL)
+  }
   if (is.null(form)) {
-    if (is.null(prediction)) {
+    if (is.null(prediction) || derived) {
       parse_error(
         file,
-        NA_integer_,
+        record_line(record),
         NA_integer_,
         seen = expr_text(y),
-        expected = "Y as an additive, proportional, combined or exponential model over one prediction",
+        expected = paste(
+          "Y as an additive, proportional, combined or exponential model",
+          "over one prediction"
+        ),
         call = NULL
       )
     }
@@ -477,7 +502,7 @@ check_dosing_names <- function(individual, reserved, file, record) {
       if (!is.null(target) && reserved(target)) {
         parse_error(
           file,
-          NA_integer_,
+          record_line(record),
           NA_integer_,
           seen = target,
           message = sprintf(
@@ -490,14 +515,12 @@ check_dosing_names <- function(individual, reserved, file, record) {
       }
     }
   }
-  reads <- unique(unlist(lapply(individual, function(x) {
-    if (is_call(x, "<-")) all.vars(x[[3]]) else all.vars(x)
-  })))
+  reads <- stmt_reads(individual)
   bad <- reads[vapply(reads, reserved, logical(1))]
   if (length(bad) > 0) {
     parse_error(
       file,
-      NA_integer_,
+      record_line(record),
       NA_integer_,
       seen = bad[[1]],
       message = sprintf(
@@ -531,7 +554,7 @@ read_bounds <- function(values) {
 
 # new_model() for a reader: a model the validator rejects was read from
 # input, so the reader reports it as a parse error of that input.
-read_model <- function(file, ...) {
+read_model <- function(source, ...) {
   parts <- list(...)
   individual <- explicit_zero(parts$individual)
   if (
@@ -540,20 +563,26 @@ read_model <- function(file, ...) {
   ) {
     parts$provenance$losses <- c(
       parts$provenance$losses,
-      "values kept from earlier records by variables assigned only inside IF (D14)"
+      paste(
+        "values kept from earlier records by variables assigned only",
+        "inside IF (D14)"
+      )
     )
     parts$provenance$fidelity <- "lossy"
   }
   parts$individual <- individual
   if (identical(parts$structure$type, "ode")) {
-    parts$structure$statements <- explicit_zero(parts$structure$statements)
+    parts$structure$statements <- explicit_zero(
+      parts$structure$statements,
+      assigned = stmt_targets(parts$individual)
+    )
   }
-  parts$provenance$covariates <- model_covariates(file, parts)
+  parts$provenance$covariates <- model_covariates(source, parts)
   tryCatch(
     do.call(new_model, parts),
     zufapmx_model_error = function(e) {
       parse_error(
-        file,
+        source,
         NA_integer_,
         NA_integer_,
         seen = "the model as read",
@@ -567,9 +596,8 @@ read_model <- function(file, ...) {
 # A variable an `if` assigns before any statement outside it does starts at
 # 0 in every evaluation (D14). Readers make that explicit with `x <- 0`
 # before the `if`, so every writer prints the same model.
-explicit_zero <- function(stmts) {
+explicit_zero <- function(stmts, assigned = character()) {
   out <- list()
-  assigned <- character()
   for (x in stmts) {
     if (is_call(x, "if")) {
       for (v in setdiff(stmt_targets(list(x)), assigned)) {
@@ -587,34 +615,20 @@ explicit_zero <- function(stmts) {
 # Free symbols of a model about to be built: what it reads but does not
 # define. Undeclared THETA, ETA and EPS indices are refused; the rest are
 # covariates, recorded in provenance. `t` is time (D15).
-model_covariates <- function(file, parts) {
-  s <- parts$structure
+model_covariates <- function(source, parts) {
   defined <- c(
-    parts$parameters$name,
-    unlist(lapply(
-      c(parts$random_effects$omega, parts$random_effects$sigma),
-      `[[`,
-      "names"
-    )),
-    model_compartments(s),
-    stmt_targets(parts$individual),
-    stmt_targets(s$statements),
-    "t",
+    model_inputs(parts),
+    stmt_targets(c(parts$individual, parts$structure$statements)),
     "F"
   )
-  exprs <- c(
-    parts$individual,
-    s$statements,
-    s$derivatives,
-    unlist(parts$dosing, recursive = FALSE),
-    lapply(parts$observations, `[[`, "prediction"),
-    lapply(parts$observations, function(o) o$residual$expression)
+  free <- setdiff(
+    unique(unlist(lapply(model_expressions(parts), all.vars))),
+    defined
   )
-  free <- setdiff(unique(unlist(lapply(exprs, all.vars))), defined)
   undeclared <- grep("^(THETA|ETA|EPS)[0-9]+$", free, value = TRUE)
   if (length(undeclared) > 0) {
     parse_error(
-      file,
+      source,
       NA_integer_,
       NA_integer_,
       seen = undeclared[[1]],
@@ -629,13 +643,57 @@ model_covariates <- function(file, parts) {
 renumber_blocks <- function(blocks, prefix) {
   at <- 0
   lapply(blocks, function(b) {
-    names <- paste0(prefix, at + seq_along(b$names))
+    i <- at + seq_along(b$names)
     at <<- at + length(b$names)
-    b$names <- names
-    dimnames(b$matrix) <- list(names, names)
-    if (!is.null(b$estimate)) {
-      dimnames(b$estimate) <- list(names, names)
-    }
-    b
+    name_block(b, paste0(prefix, i))
   })
+}
+
+# A covariance block over `names` from its lower triangle, row by row.
+cov_block <- function(names, values, fixed = FALSE) {
+  m <- lower_to_full(values)
+  dimnames(m) <- list(names, names)
+  list(names = names, matrix = m, fixed = fixed)
+}
+
+# The next `n` names after those of `blocks`: ETA3, ETA4, ...
+next_names <- function(blocks, prefix, n) {
+  paste0(prefix, length(unlist(lapply(blocks, `[[`, "names"))) + seq_len(n))
+}
+
+# A block under new names, its matrices' dimnames included.
+name_block <- function(b, names) {
+  b$names <- names
+  dimnames(b$matrix) <- list(names, names)
+  if (!is.null(b$estimate)) {
+    dimnames(b$estimate) <- list(names, names)
+  }
+  b
+}
+
+# The one argument of `THETA(n)` and its kin, a whole number from 1.
+whole_index <- function(args, name, file, line, column) {
+  if (
+    length(args) != 1 ||
+      !is.numeric(args[[1]]) ||
+      args[[1]] != round(args[[1]]) ||
+      args[[1]] < 1
+  ) {
+    parse_error(
+      file,
+      line,
+      column,
+      seen = name,
+      expected = sprintf("%s(n) with a whole number n", name),
+      call = NULL
+    )
+  }
+  as.integer(args[[1]])
+}
+
+# A spelling table read the other way. Where several spellings share a
+# meaning, the first is kept: it is the one writers print.
+invert_names <- function(x) {
+  out <- stats::setNames(names(x), x)
+  out[!duplicated(names(out))]
 }

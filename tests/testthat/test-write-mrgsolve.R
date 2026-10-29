@@ -33,14 +33,8 @@ test_that("every corpus model writes to every format and back", {
         w <- writers[[to]](models[[from]])
         back <- writers[[from]](readers[[to]](w$text))
         label <- sprintf("%s: %s -> %s -> %s", corpus$id[[i]], from, to, from)
-        expect_true(
-          pmx_fidelity(w) %in% c("exact", "equivalent"),
-          label = label
-        )
-        expect_true(
-          pmx_fidelity(back) %in% c("exact", "equivalent"),
-          label = label
-        )
+        expect_faithful(w, label = label)
+        expect_faithful(back, label = label)
       }
     }
   }
@@ -48,7 +42,7 @@ test_that("every corpus model writes to every format and back", {
 
 test_that("written mrgsolve models simulate to their expected predictions", {
   skip_on_cran()
-  skip_if_not_installed("mrgsolve")
+  skip_if_no_engine("mrgsolve")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -152,9 +146,13 @@ test_that("every dosing attribute round-trips through every writer", {
   })
   dosing <- unclass(m)$dosing
 
-  for (write in list(pmx_write_rxode2, pmx_write_nonmem, pmx_write_mrgsolve)) {
-    w <- write(m)
-    expect_true(pmx_fidelity(w) %in% c("exact", "equivalent"))
+  writers <- list(
+    rxode2 = pmx_write_rxode2,
+    nonmem = pmx_write_nonmem,
+    mrgsolve = pmx_write_mrgsolve
+  )
+  for (to in names(writers)) {
+    expect_faithful(writers[[to]](m), label = to)
   }
   nm <- pmx_write_nonmem(m)$text
   expect_true(all(
@@ -172,7 +170,7 @@ test_that("every dosing attribute round-trips through every writer", {
       mrg
   ))
   back <- read_cpp(mrg)
-  expect_equal(names(unclass(back)$dosing), names(dosing))
+  expect_equal(unclass(back)$dosing, dosing)
 })
 
 test_that("every residual type round-trips through the mrgsolve writer", {
@@ -205,4 +203,90 @@ test_that("written text is stable", {
   expect_snapshot(print(pmx_write_mrgsolve(corpus_rxode2_model(
     "onecmt-oral-mm"
   ))))
+})
+
+test_that("a lossy write is still checked against its source", {
+  m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"), "ext")
+  w <- pmx_write_mrgsolve(m)
+
+  expect_equal(pmx_fidelity(w), "lossy")
+  expect_true("0.084" %in% w$text)
+
+  parts <- unclass(m)
+  wrong <- parts
+  wrong$individual[[2]] <- quote(CL <- THETA2 * exp(ETA1) * 2)
+  back <- do.call(new_model, wrong)
+  expect_error(
+    written_fidelity("initial values", m, back),
+    class = "zufapmx_write_error"
+  )
+})
+
+test_that("no output holds two operators in a row, and ! binds its call", {
+  spelling <- c(cl = "cl", v = "v", wt = "WT")
+  expect_equal(cpp_expr(quote(-(-cl) / v), spelling), "-(-cl) / v")
+  expect_equal(cpp_expr(quote(cl * -2), spelling), "cl * (-2.0)")
+  expect_equal(cpp_expr(quote(!wt == 70), spelling), "!(WT == 70.0)")
+  expect_equal(nm_expr(quote(cl * -2), c(cl = "CL")), "CL * (-2.0)")
+  expect_equal(nm_expr(quote(--cl), c(cl = "CL")), "-(-CL)")
+
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- c(0, 0.1)
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      k <- --cl / v
+      wtf <- 0
+      if (!WT == 70) {
+        wtf <- 1
+      }
+      d / dt(central) <- -k * central * (1 + wtf)
+      cp <- central / v
+      cp ~ prop(sd)
+    })
+  })
+  w <- pmx_write_mrgsolve(m)
+  expect_true("double k = -(-cl) / v;" %in% w$text)
+  expect_true("if (!(WT == 70.0)) {" %in% w$text)
+  expect_faithful(w)
+})
+
+test_that("C++ increment, decrement and compound assignment are refused", {
+  for (main in c(
+    "double K = --CL / V;",
+    "CL--;",
+    "CL += 1;",
+    "double K = CL++;"
+  )) {
+    expect_error(
+      read_cpp(cpp_onecmt(main = main)),
+      class = "zufapmx_parse_error",
+      label = main
+    )
+  }
+})
+
+test_that("names C++ or mrgsolve reserve are refused", {
+  m <- model_onecmt_mm()
+  ind <- c(unclass(m)$individual, list(quote(return <- 1)))
+  err <- expect_error(
+    pmx_write_mrgsolve(model_with(m, individual = ind)),
+    class = "zufapmx_write_error"
+  )
+  expect_equal(err$location, "individual")
+
+  s <- unclass(m)$structure
+  names(s$derivatives)[[2]] <- s$compartments[[2]] <- "exp"
+  s$statements <- list(quote(c2 <- exp / v))
+  obs <- unclass(m)$observations
+  obs[[1]]$prediction <- quote(exp / v)
+  err <- expect_error(
+    pmx_write_mrgsolve(model_with(m, structure = s, observations = obs)),
+    class = "zufapmx_write_error"
+  )
+  expect_equal(err$location, "structure")
 })

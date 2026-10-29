@@ -26,9 +26,10 @@
 #' starts them at 0).
 #'
 #' NONMEM's names are kept, upper case: `THETA(1)` reads as `THETA1`,
-#' `ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. `T` and `TIME` read as the
-#' representation's time, `t`. Free names such as `WT` are recorded as
-#' covariates. The observation is the endpoint `Y`.
+#' `ETA(1)` as `ETA1` and `EPS(1)` as `EPS1`. Time is `t`: read from `T` in
+#' `$DES` and from `TIME` elsewhere; `TIME` in `$DES` is refused. Free names
+#' such as `WT` are recorded as covariates. The observation is the endpoint
+#' `Y`.
 #'
 #' @param file Path to the control stream.
 #' @param estimates Where final estimates come from. `"auto"` reads
@@ -37,6 +38,7 @@
 #'   file and fail if it is missing; `"none"` reads no estimates.
 #' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_nonmem()].
 #' @family readers
+#' @seealso [pmx_inspect] for the model's parts.
 #' @export
 #' @examples
 #' path <- system.file(
@@ -48,68 +50,12 @@ pmx_read_nonmem <- function(
   file,
   estimates = c("auto", "xml", "ext", "lst", "none")
 ) {
-  if (!is.character(estimates) || anyNA(estimates)) {
-    zufapmx_abort("`estimates` must be one of the documented strings.", "model")
-  }
-  estimates <- match.arg(estimates)
-  if (
-    !is.character(file) ||
-      length(file) != 1 ||
-      !file.exists(file) ||
-      dir.exists(file)
-  ) {
-    zufapmx_abort("`file` must be the path of an existing file.", "model")
-  }
+  estimates <- check_choice(estimates)
+  check_file(file)
   model <- nm_read(file)
   nm_attach_estimates(model, file, estimates)
 }
 
-nm_closed <- list(
-  `1` = list(
-    trans = 2L,
-    cmt = "central",
-    central = 1L,
-    names = c(cl = "CL", v = "V")
-  ),
-  `2` = list(
-    trans = 2L,
-    cmt = c("depot", "central"),
-    central = 2L,
-    names = c(cl = "CL", v = "V", ka = "KA")
-  ),
-  `3` = list(
-    trans = 4L,
-    cmt = c("central", "peripheral1"),
-    central = 1L,
-    names = c(cl = "CL", v = "V1", q = "Q", vp = "V2")
-  ),
-  `4` = list(
-    trans = 4L,
-    cmt = c("depot", "central", "peripheral1"),
-    central = 2L,
-    names = c(cl = "CL", v = "V2", q = "Q", vp = "V3", ka = "KA")
-  ),
-  `11` = list(
-    trans = 4L,
-    cmt = c("central", "peripheral1", "peripheral2"),
-    central = 1L,
-    names = c(cl = "CL", v = "V1", q = "Q2", vp = "V2", q2 = "Q3", vp2 = "V3")
-  ),
-  `12` = list(
-    trans = 4L,
-    cmt = c("depot", "central", "peripheral1", "peripheral2"),
-    central = 2L,
-    names = c(
-      cl = "CL",
-      v = "V2",
-      q = "Q3",
-      vp = "V3",
-      q2 = "Q4",
-      vp2 = "V4",
-      ka = "KA"
-    )
-  )
-)
 nm_ode_advans <- c(6L, 8L, 9L, 13L)
 
 nm_lost_records <- c(
@@ -128,17 +74,17 @@ nm_lost_records <- c(
 nm_read <- function(file) {
   stream <- nm_split(readLines(file, warn = FALSE), file)
   records <- stream$records
-  names <- vapply(records, `[[`, character(1), "name")
+  record_names <- vapply(records, `[[`, character(1), "name")
   losses <- if (stream$comments) "comments" else character()
 
   losses <- c(losses, nm_record_losses(records, file))
-  record <- function(name) records[names == name]
+  record <- function(name) records[record_names == name]
   one <- function(name) {
     found <- record(name)
     if (length(found) == 0) {
       parse_error(
         file,
-        NA_integer_,
+        stream$lines,
         NA_integer_,
         seen = "end of file",
         expected = paste0("$", name),
@@ -160,7 +106,7 @@ nm_read <- function(file) {
 
   subroutines <- nm_subroutines(one("SUBROUTINES"), file)
   losses <- union(losses, subroutines$losses)
-  closed <- nm_closed[[as.character(subroutines$advan)]]
+  closed <- closed_forms[[as.character(subroutines$advan)]]
   if (!is.null(closed)) {
     if (length(record("DES")) > 0 || length(record("MODEL")) > 0) {
       r <- c(record("DES"), record("MODEL"))[[1]]
@@ -181,38 +127,30 @@ nm_read <- function(file) {
     defobs <- comp$defobs
   }
   cmt <- function(n, line, column) {
-    if (n < 1 || n > length(compartments)) {
-      parse_error(
-        file,
-        line,
-        column,
-        seen = sprintf("A(%d)", n),
-        expected = sprintf("a compartment from 1 to %d", length(compartments)),
-        call = NULL
-      )
-    }
-    compartments[[n]]
+    nm_compartment(n, compartments, sprintf("A(%d)", n), file, line, column)
   }
 
-  thetas <- nm_inits(record("THETA"), "THETA", file)
+  thetas <- nm_thetas(record("THETA"), file)
   omega <- nm_blocks(record("OMEGA"), "ETA", file)
   sigma <- nm_blocks(record("SIGMA"), "EPS", file)
 
-  pk <- nm_pk(nm_code(one("PK"), file, cmt), compartments, file)
+  at <- function(name) record_at(paste0("$", name), one(name)$line[[1]])
+  pk <- nm_pk(nm_code(one("PK"), file, cmt), compartments, file, at("PK"))
   if (!is.null(closed)) {
-    structure <- nm_closed_structure(
+    structure <- closed_structure(
       subroutines,
       closed,
       stmt_targets(pk$individual),
-      file
+      file,
+      at("PK")
     )
   } else {
     structure <- split_ode(
-      nm_code(one("DES"), file, cmt),
+      nm_code(one("DES"), file, cmt, des = TRUE),
       compartments,
-      nm_derivative(compartments, file),
+      nm_derivative(compartments, file, at("DES")),
       file,
-      "$DES"
+      at("DES")
     )
   }
 
@@ -221,13 +159,14 @@ nm_read <- function(file) {
     compartments,
     defobs,
     !is.null(closed),
-    file
+    file,
+    at("PK")
   )
 
   error <- read_observation(
     nm_code(one("ERROR"), file, cmt),
     file,
-    "$ERROR",
+    at("ERROR"),
     prediction = quote(F)
   )
   losses <- union(losses, error$losses)
@@ -240,7 +179,10 @@ nm_read <- function(file) {
     random_effects = list(
       omega = omega,
       sigma = sigma,
-      attach = attach_etas(unlist(lapply(omega, `[[`, "names")), pk$individual),
+      attach = attach_etas(
+        unlist(lapply(omega, `[[`, "names")),
+        pk$individual
+      ),
       iov = list(present = FALSE, occasion = NA_character_)
     ),
     individual = pk$individual,
@@ -248,7 +190,12 @@ nm_read <- function(file) {
     dosing = pk$dosing,
     observations = list(
       Y = list(
-        prediction = prediction,
+        # F is the scaled compartment; a Y without F names its own.
+        prediction = if (identical(error$prediction, quote(F))) {
+          prediction
+        } else {
+          error$prediction
+        },
         residual = error$residual,
         transform = "none"
       )
@@ -294,8 +241,8 @@ nm_subroutines <- function(r, file) {
   trans <- regmatches(text, regexpr("TRANS[0-9]+", text))
   trans <- if (length(trans) == 0) 1L else as.integer(sub("TRANS", "", trans))
 
-  if (as.character(advan) %in% names(nm_closed)) {
-    if (trans != nm_closed[[as.character(advan)]]$trans) {
+  if (as.character(advan) %in% names(closed_forms)) {
+    if (trans != closed_forms[[as.character(advan)]]$trans) {
       parse_error(
         file,
         r$line[[1]],
@@ -304,7 +251,7 @@ nm_subroutines <- function(r, file) {
         expected = sprintf(
           "ADVAN%d TRANS%d",
           advan,
-          nm_closed[[as.character(advan)]]$trans
+          closed_forms[[as.character(advan)]]$trans
         ),
         call = NULL
       )
@@ -352,56 +299,31 @@ nm_compartments <- function(r, file) {
     inner <- sub("^COMP\\s*=\\s*\\(?", "", g, ignore.case = TRUE)
     strsplit(trimws(gsub("[(),]", " ", inner)), "\\s+")[[1]]
   })
-  names <- vapply(words, `[[`, character(1), 1)
+  comp_names <- vapply(words, `[[`, character(1), 1)
+  # INITIALOFF starts a compartment off, which changes predictions.
+  if (any(vapply(words, function(w) "INITIALOFF" %in% toupper(w[-1]), NA))) {
+    parse_error(
+      file,
+      r$line[[1]],
+      1L,
+      seen = "INITIALOFF",
+      message = sprintf(
+        "not translated: `INITIALOFF` in $MODEL at line %d",
+        r$line[[1]]
+      ),
+      call = NULL
+    )
+  }
   defobs <- which(vapply(
     words,
     function(w) "DEFOBS" %in% toupper(w[-1]),
     logical(1)
   ))
-  list(names = names, defobs = if (length(defobs) == 1) defobs else 1L)
-}
-
-# The variables a closed form's ADVAN parameters are. `names` are the
-# candidates: $PK targets, and for mrgsolve also $PARAM names.
-nm_closed_structure <- function(subroutines, closed, names, file) {
-  targets <- names
-  found <- vapply(
-    closed$names,
-    function(name) {
-      # An exact match first: C++ (mrgsolve) is case-sensitive, and `cl`
-      # next to `CL` must not stand in for it.
-      hit <- c(targets[targets == name], targets[toupper(targets) == name])
-      if (length(hit) == 0) {
-        parse_error(
-          file,
-          NA_integer_,
-          NA_integer_,
-          seen = "$PK",
-          expected = sprintf(
-            "%s for ADVAN%d TRANS%d",
-            name,
-            subroutines$advan,
-            subroutines$trans
-          ),
-          call = NULL
-        )
-      }
-      hit[[1]]
-    },
-    character(1)
-  )
-  list(
-    type = "closed",
-    ncmt = sum(c("v", "vp", "vp2") %in% names(found)),
-    depot = "ka" %in% names(found),
-    parameters = found,
-    advan = subroutines$advan,
-    trans = subroutines$trans
-  )
+  list(names = comp_names, defobs = if (length(defobs) == 1) defobs else 1L)
 }
 
 # $THETA: one row per theta, in order across records.
-nm_inits <- function(records, kind, file) {
+nm_thetas <- function(records, file) {
   items <- nm_init_items(records, file)
   rows <- lapply(seq_along(items), function(i) {
     bounds <- read_bounds(items[[i]]$values)
@@ -416,21 +338,16 @@ nm_inits <- function(records, kind, file) {
       )
     }
     data.frame(
-      name = paste0(kind, i),
+      name = paste0("THETA", i),
       role = "other",
       init = bounds$init,
       lower = bounds$lower,
       upper = bounds$upper,
-      fixed = items[[i]]$fixed
+      fixed = items[[i]]$fixed,
+      estimate = NA_real_
     )
   })
-  out <- if (length(rows) == 0) {
-    model_parameters_empty()[, 1:6]
-  } else {
-    do.call(rbind, rows)
-  }
-  out$estimate <- rep(NA_real_, nrow(out))
-  out
+  if (length(rows) == 0) model_parameters_empty() else do.call(rbind, rows)
 }
 
 # $OMEGA and $SIGMA: blocks named ETA1, ETA2, ... or EPS1, EPS2, ...
@@ -457,9 +374,8 @@ nm_blocks <- function(records, prefix, file) {
         call = NULL
       )
     }
-    size <- regmatches(text, regexec("BLOCK\\s*\\(\\s*([0-9]+)\\s*\\)", text))[[
-      1
-    ]]
+    block_size <- "BLOCK\\s*\\(\\s*([0-9]+)\\s*\\)"
+    size <- regmatches(text, regexec(block_size, text))[[1]]
     r$lines <- gsub(
       "(BLOCK|DIAGONAL)\\s*\\(\\s*[0-9]+\\s*\\)|\\b(VARIANCE|COVARIANCE)\\b",
       " ",
@@ -484,27 +400,17 @@ nm_blocks <- function(records, prefix, file) {
           call = NULL
         )
       }
-      names <- paste0(
-        prefix,
-        length(unlist(lapply(blocks, `[[`, "names"))) + seq_len(n)
-      )
-      m <- lower_to_full(values)
-      dimnames(m) <- list(names, names)
-      blocks[[length(blocks) + 1]] <- list(
-        names = names,
-        matrix = m,
+      blocks[[length(blocks) + 1]] <- cov_block(
+        next_names(blocks, prefix, n),
+        values,
         fixed = any(vapply(items, `[[`, logical(1), "fixed")) ||
           grepl("\\bFIX(ED)?\\b", text)
       )
     } else {
       for (i in seq_along(values)) {
-        name <- paste0(
-          prefix,
-          length(unlist(lapply(blocks, `[[`, "names"))) + 1
-        )
-        blocks[[length(blocks) + 1]] <- list(
-          names = name,
-          matrix = matrix(values[[i]], dimnames = list(name, name)),
+        blocks[[length(blocks) + 1]] <- cov_block(
+          next_names(blocks, prefix, 1),
+          values[[i]],
           fixed = items[[i]]$fixed
         )
       }
@@ -516,81 +422,69 @@ nm_blocks <- function(records, prefix, file) {
 # Initial-value items: `x`, `x FIX`, `(lo, x)`, `(lo, x, hi)`, each with an
 # optional FIX inside or after the parentheses.
 nm_init_items <- function(records, file) {
-  tokens <- list()
-  for (r in records) {
-    for (k in seq_along(r$lines)) {
-      for (tok in nm_tokenize(r$lines[[k]], r$line[[k]], file)) {
-        tok$line <- r$line[[k]]
-        tokens[[length(tokens) + 1]] <- tok
-      }
-    }
-  }
-  i <- 1L
-  peek <- function() if (i <= length(tokens)) tokens[[i]]
-  fail <- function(expected) {
-    tok <- peek()
-    parse_error(
-      file,
-      if (is.null(tok)) NA_integer_ else tok$line,
-      if (is.null(tok)) NA_integer_ else tok$column,
-      seen = if (is.null(tok)) "end of record" else tok$value,
-      expected = expected,
-      call = NULL
+  tokens <- unlist(
+    lapply(records, function(r) {
+      unlist(
+        lapply(seq_along(r$lines), function(k) {
+          nm_tokenize(r$lines[[k]], r$line[[k]], file)
+        }),
+        recursive = FALSE
+      )
+    }),
+    recursive = FALSE
+  )
+  # Running out of items is reported at the last line of the records.
+  s <- token_stream(
+    tokens,
+    file,
+    end = list(
+      value = "end of record",
+      line = max(unlist(lapply(records, `[[`, "line")))
     )
-  }
-  is_fix <- function() {
-    tok <- peek()
-    !is.null(tok) && toupper(tok$value) %in% c("FIX", "FIXED")
-  }
+  )
   number <- function() {
     sign <- 1
-    if (!is.null(peek()) && peek()$value %in% c("-", "+")) {
-      sign <- if (peek()$value == "-") -1 else 1
-      i <<- i + 1L
+    if (s$at(c("-", "+"))) {
+      sign <- if (s$take()$value == "-") -1 else 1
     }
-    tok <- peek()
-    if (is.null(tok)) {
-      fail("a number")
-    }
-    i <<- i + 1L
-    if (tok$type == "number") {
+    tok <- s$peek()
+    if (!is.null(tok) && tok$type == "number") {
+      s$take()
       return(sign * as.numeric(sub("[Dd]", "E", tok$value)))
     }
-    if (toupper(tok$value) == "INF") {
+    if (s$at("INF")) {
+      s$take()
       return(sign * Inf)
     }
-    i <<- i - 1L
-    fail("a number")
+    s$fail("a number")
+  }
+  fix <- function() {
+    if (!s$at(c("FIX", "FIXED"))) {
+      return(FALSE)
+    }
+    s$take()
+    TRUE
   }
   items <- list()
-  while (i <= length(tokens)) {
-    line <- peek()$line
+  while (!s$done()) {
+    line <- s$peek()$line
     fixed <- FALSE
-    if (peek()$value == "(") {
-      i <- i + 1L
+    if (s$at("(")) {
+      s$take()
       values <- number()
-      while (!is.null(peek()) && peek()$value == ",") {
-        i <- i + 1L
+      while (s$at(",")) {
+        s$take()
         values <- c(values, number())
       }
-      if (is_fix()) {
-        fixed <- TRUE
-        i <- i + 1L
-      }
-      if (is.null(peek()) || peek()$value != ")") {
-        fail(")")
-      }
-      i <- i + 1L
+      fixed <- fix()
+      s$take(")")
     } else {
       values <- number()
     }
     if (length(values) > 3) {
-      fail("one to three values")
+      s$fail("one to three values")
     }
-    if (is_fix()) {
-      fixed <- TRUE
-      i <- i + 1L
-    }
+    fixed <- fix() || fixed
     items[[length(items) + 1]] <- list(
       values = values,
       fixed = fixed,
@@ -600,62 +494,70 @@ nm_init_items <- function(records, file) {
   items
 }
 
+
 # $PK: individual statements, scale factors and dosing attributes.
-nm_pk <- function(stmts, compartments, file) {
+nm_pk <- function(stmts, compartments, file, record) {
   dosing <- list()
   scale <- list()
   individual <- list()
-  attrs <- c(ALAG = "lag", F = "bioavailability", R = "rate", D = "duration")
+  attrs <- invert_names(nm_dosing_prefixes)
+  # Scales S<n> and the dosing attributes, numbered by compartment.
+  predpp <- sprintf(
+    "^(S|%s)([0-9]+)$",
+    paste(nm_dosing_prefixes, collapse = "|")
+  )
   check_cmt <- function(n, name) {
-    if (n < 1 || n > length(compartments)) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = name,
-        expected = sprintf("a compartment from 1 to %d", length(compartments)),
-        call = NULL
-      )
+    nm_compartment(n, compartments, name, file, record_line(record))
+  }
+  # Each PREDPP name is assigned once: the reader keeps one value for it.
+  refuse <- function(name, expected) {
+    parse_error(
+      file,
+      record_line(record),
+      NA_integer_,
+      seen = name,
+      expected = expected,
+      call = NULL
+    )
+  }
+  once <- function(cmt, attr, name, value) {
+    if (!is.null(dosing[[cmt]][[attr]])) {
+      refuse(name, sprintf("%s assigned once in $PK", name))
     }
-    compartments[[n]]
+    dosing[[cmt]][[attr]] <<- value
   }
   for (x in stmts) {
     target <- if (is_call(x, "<-")) x[[2]]
     name <- if (is.symbol(target)) as.character(target) else ""
-    m <- regmatches(name, regexec("^(S|ALAG|F|R|D)([0-9]+)$", name))[[1]]
-    if (length(m) == 3) {
+    m <- regmatches(name, regexec(predpp, name))[[1]]
+    if (name %in% c("TSCALE", "XSCALE")) {
+      # They rescale time or amounts inside PREDPP.
+      refuse(name, "a $PK statement zufapmx translates")
+    } else if (length(m) == 3) {
       n <- as.integer(m[[3]])
       if (m[[2]] == "S") {
         check_cmt(n, name)
+        if (!is.null(scale[[as.character(n)]])) {
+          refuse(name, sprintf("%s assigned once in $PK", name))
+        }
         scale[[as.character(n)]] <- x[[3]]
       } else {
-        cmt <- check_cmt(n, name)
-        dosing[[cmt]] <- c(
-          dosing[[cmt]],
-          stats::setNames(list(x[[3]]), attrs[[m[[2]]]])
-        )
+        once(check_cmt(n, name), attrs[[m[[2]]]], name, x[[3]])
       }
     } else if (is_call(target, "A_0")) {
       cmt <- check_cmt(target[[2]], expr_text(target))
-      dosing[[cmt]] <- c(dosing[[cmt]], list(initial = x[[3]]))
+      once(cmt, "initial", expr_text(target), x[[3]])
     } else if (is_call(target, "DADT")) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = expr_text(target),
-        expected = "DADT(n) in $DES",
-        call = NULL
-      )
+      refuse(expr_text(target), "DADT(n) in $DES")
     } else {
       individual[[length(individual) + 1]] <- x
     }
   }
   check_dosing_names(
     individual,
-    function(n) grepl("^(S|ALAG|F|R|D)[0-9]+$|^A_0\\(", n),
+    function(n) grepl(predpp, n) | grepl("^A_0\\(", n),
     file,
-    "$PK"
+    record
   )
   list(
     individual = individual,
@@ -665,33 +567,40 @@ nm_pk <- function(stmts, compartments, file) {
 }
 
 # $DES's DADT(n) names compartment n.
-nm_derivative <- function(compartments, file) {
+nm_derivative <- function(compartments, file, record) {
   function(x) {
     if (!is_call(x[[2]], "DADT")) {
       return(NULL)
     }
-    n <- x[[2]][[2]]
-    if (n < 1 || n > length(compartments)) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = expr_text(x[[2]]),
-        expected = sprintf(
-          "DADT of a compartment from 1 to %d",
-          length(compartments)
-        ),
-        call = NULL
-      )
-    }
-    compartments[[n]]
+    nm_compartment(
+      x[[2]][[2]],
+      compartments,
+      expr_text(x[[2]]),
+      file,
+      record_line(record)
+    )
   }
+}
+
+# Compartment n's name, or a refusal of `seen` naming the range.
+nm_compartment <- function(n, compartments, seen, file, line, column = NA) {
+  if (n < 1 || n > length(compartments)) {
+    parse_error(
+      file,
+      line,
+      as.integer(column),
+      seen = seen,
+      expected = sprintf("a compartment from 1 to %d", length(compartments)),
+      call = NULL
+    )
+  }
+  compartments[[n]]
 }
 
 # Refuse the records the reader does not translate, and name what the
 # others lose: the title, data records, settings, tables, record options.
 nm_record_losses <- function(records, file) {
-  names <- vapply(records, `[[`, character(1), "name")
+  record_names <- vapply(records, `[[`, character(1), "name")
   losses <- character()
   for (r in records) {
     if (r$name %in% c("PRED", "INFN", "MIX", "PRIOR")) {
@@ -711,7 +620,10 @@ nm_record_losses <- function(records, file) {
   }
   losses <- union(
     losses,
-    unique(unname(nm_lost_records[intersect(names, names(nm_lost_records))]))
+    unique(unname(nm_lost_records[intersect(
+      record_names,
+      names(nm_lost_records)
+    )]))
   )
   for (r in records) {
     if (length(r$options) == 1 && r$name %in% c("PK", "DES", "ERROR")) {
@@ -727,7 +639,7 @@ nm_record_losses <- function(records, file) {
 # The prediction F: the observed compartment over its scale. A closed form
 # scales its central compartment; an ODE model the one its S<n> names, or
 # its DEFOBS compartment unscaled.
-nm_prediction <- function(scale, compartments, defobs, closed, file) {
+nm_prediction <- function(scale, compartments, defobs, closed, file, record) {
   scaled <- names(scale)
   if (
     length(scaled) > 1 ||
@@ -735,7 +647,7 @@ nm_prediction <- function(scale, compartments, defobs, closed, file) {
   ) {
     parse_error(
       file,
-      NA_integer_,
+      record_line(record),
       NA_integer_,
       seen = paste0("S", scaled[[length(scaled)]]),
       expected = sprintf("one scale, S%d", defobs),
@@ -743,17 +655,8 @@ nm_prediction <- function(scale, compartments, defobs, closed, file) {
     )
   }
   if (length(scaled) == 1) {
+    # nm_pk() has checked that S<n> names a compartment.
     defobs <- as.integer(scaled)
-    if (defobs < 1 || defobs > length(compartments)) {
-      parse_error(
-        file,
-        NA_integer_,
-        NA_integer_,
-        seen = paste0("S", scaled),
-        expected = "a scale of a compartment",
-        call = NULL
-      )
-    }
   }
   observed <- as.symbol(compartments[[defobs]])
   if (length(scaled) == 1) {

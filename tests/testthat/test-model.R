@@ -8,8 +8,8 @@ test_that("an ODE model prints its summary", {
 })
 
 test_that("the representation's structure is stable", {
-  expect_snapshot(str(unclass(model_twocmt_oral())))
-  expect_snapshot(str(unclass(model_onecmt_mm())))
+  expect_snapshot(str_full(unclass(model_twocmt_oral())))
+  expect_snapshot(str_full(unclass(model_onecmt_mm())))
 })
 
 test_that("pmx_parameters() returns the fixed effects", {
@@ -200,4 +200,157 @@ test_that("a missing component is an error", {
   parts["dosing"] <- list(NULL)
 
   expect_error(do.call(new_model, parts), class = "zufapmx_model_error")
+})
+
+test_that("parameters, random effects, compartments and time are not assigned", {
+  m <- model_onecmt_mm()
+  ind <- unclass(m)$individual
+  for (target in c("tka", "eta.vm", "eps.prop", "central", "t")) {
+    stmts <- c(ind, list(call("<-", as.symbol(target), 1)))
+    expect_error(
+      model_with(m, individual = stmts),
+      class = "zufapmx_model_error",
+      info = target
+    )
+  }
+})
+
+test_that("ODE code may not reassign an individual name", {
+  m <- model_onecmt_mm()
+  s <- unclass(m)$structure
+  s$statements <- c(s$statements, list(quote(vm <- vm / 2)))
+  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
+})
+
+test_that("individual statements may not read compartment amounts (D18)", {
+  m <- model_onecmt_mm()
+  ind <- c(unclass(m)$individual, list(quote(k <- central / 100)))
+  expect_error(model_with(m, individual = ind), class = "zufapmx_model_error")
+})
+
+test_that("a name assigned inside if needs a value before it (D14)", {
+  m <- model_onecmt_mm()
+  ind <- c(
+    unclass(m)$individual,
+    list(quote(
+      if (WT > 70) {
+        f <- 2
+      }
+    ))
+  )
+  expect_error(model_with(m, individual = ind), class = "zufapmx_model_error")
+
+  ind <- c(unclass(m)$individual, list(quote(f <- 1)), ind[length(ind)])
+  expect_s3_class(model_with(m, individual = ind), "zufapmx_model")
+})
+
+test_that("a choice argument outside its documented strings is a model error", {
+  ctl <- corpus_file("onecmt-oral", "model.ctl")
+  m <- model_twocmt_oral()
+  for (bad in list("EXT", "bogus", NA, c("final", "initial", "x"), 1)) {
+    info <- deparse(bad)
+    expect_error(
+      pmx_read_nonmem(ctl, bad),
+      class = "zufapmx_model_error",
+      info = info
+    )
+    expect_error(
+      pmx_write_nonmem(m, bad),
+      class = "zufapmx_model_error",
+      info = info
+    )
+    expect_error(pmx_omega(m, bad), class = "zufapmx_model_error", info = info)
+  }
+  expect_equal(pmx_omega(m, "init"), pmx_omega(m))
+})
+
+test_that("a file argument must name one existing file", {
+  for (bad in list(NA_character_, character(), c("a", "b"), tempdir(), 1)) {
+    info <- deparse(bad)
+    expect_error(
+      pmx_read_nonmem(bad),
+      class = "zufapmx_model_error",
+      info = info
+    )
+    expect_error(
+      pmx_read_mrgsolve(bad),
+      class = "zufapmx_model_error",
+      info = info
+    )
+  }
+})
+
+test_that("an edited model is validated again before use", {
+  m <- model_twocmt_oral()
+  edits <- list(
+    function(x) {
+      x$parameters$fixed[1] <- NA
+      x
+    },
+    function(x) {
+      x$parameters$init[1] <- "1"
+      x
+    },
+    function(x) {
+      x$parameters$init[1] <- NA
+      x
+    },
+    function(x) structure(list(), class = "zufapmx_model")
+  )
+  for (i in seq_along(edits)) {
+    bad <- edits[[i]](m)
+    info <- sprintf("edit %d", i)
+    for (use in list(
+      pmx_write_nonmem,
+      pmx_write_rxode2,
+      pmx_write_mrgsolve,
+      pmx_parameters,
+      format
+    )) {
+      expect_error(use(bad), class = "zufapmx_model_error", info = info)
+    }
+  }
+})
+
+test_that("a model without endpoints is valid but not written to one-endpoint formats", {
+  m <- model_with(model_twocmt_oral(), observations = list())
+  err <- expect_error(pmx_write_nonmem(m), class = "zufapmx_write_error")
+  expect_equal(err$location, "observations")
+})
+
+test_that("the validator refuses malformed components", {
+  m <- model_twocmt_oral()
+  parts <- unclass(m)
+
+  expect_error(
+    model_with(m, parameters = list(name = "a")),
+    class = "zufapmx_model_error"
+  )
+  re <- parts$random_effects
+  re$attach$transform[[1]] <- "boxcox"
+  expect_error(
+    model_with(m, random_effects = re),
+    class = "zufapmx_model_error"
+  )
+  re <- parts$random_effects
+  re$omega[[1]]$estimate <- matrix(1, 1, 1)
+  expect_error(
+    model_with(m, random_effects = re),
+    class = "zufapmx_model_error"
+  )
+  s <- parts$structure
+  s$parameters[["cl"]] <- "clearance"
+  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
+  s <- parts$structure
+  s$type <- "pbpk"
+  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
+})
+
+test_that("readers refuse a missing file", {
+  expect_error(pmx_read_nonmem(tempfile()), class = "zufapmx_model_error")
+  expect_error(pmx_read_mrgsolve(tempfile()), class = "zufapmx_model_error")
+  expect_error(
+    pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"), NA),
+    class = "zufapmx_model_error"
+  )
 })

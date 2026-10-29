@@ -336,3 +336,276 @@ test_that("linCmt() reads NONMEM's numbered names", {
     c(cl = "cl", v = "v", q = "q", vp = "vp", q2 = "q2", vp2 = "vp2")
   )
 })
+
+test_that("statements reassigning a name the ODE code uses move into it", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      k <- cl / v
+      if (time > 10) {
+        k <- k / 2
+      }
+      d / dt(central) <- -k * central
+      cp <- central / v
+      cp ~ add(sd)
+    })
+  })
+  expect_equal(
+    unclass(m)$individual,
+    list(quote(cl <- tcl), quote(v <- tv))
+  )
+  expect_equal(length(unclass(m)$structure$statements), 2)
+
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      k <- cl / v
+      k <- k / (1 + central / 100)
+      d / dt(central) <- -k * central
+      cp <- central / v
+      cp ~ add(sd)
+    })
+  })
+  expect_equal(
+    unclass(m)$structure$statements,
+    list(quote(k <- cl / v), quote(k <- k / (1 + central / 100)))
+  )
+  expect_true(any(grepl("$DES", pmx_write_nonmem(m)$text, fixed = TRUE)))
+})
+
+test_that("an endpoint another statement reads stays a statement", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      emax <- 10
+      ec50 <- 2
+      sd <- 0.1
+      sd2 <- 1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      d / dt(central) <- -cl / v * central
+      cp <- central / v
+      eff <- emax * cp / (ec50 + cp)
+      cp ~ add(sd)
+      eff ~ add(sd2)
+    })
+  })
+  obs <- unclass(m)$observations
+  expect_equal(obs$cp$prediction, quote(cp))
+  expect_equal(obs$eff$prediction, quote(emax * cp / (ec50 + cp)))
+  expect_equal(unclass(m)$structure$statements, list(quote(cp <- central / v)))
+  expect_equal(pmx_fidelity(pmx_write_rxode2(m)), "exact")
+})
+
+test_that("a parameter reassigned in model() is refused", {
+  expect_error(
+    pmx_read_rxode2(function() {
+      ini({
+        cl <- 4
+        v <- 50
+        eta.cl ~ 0.09
+        sd <- 0.1
+      })
+      model({
+        cl <- cl * exp(eta.cl)
+        cp <- linCmt()
+        cp ~ add(sd)
+      })
+    }),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("a linCmt() endpoint that is reassigned or read is refused", {
+  expect_error(
+    pmx_read_rxode2(function() {
+      ini({
+        tcl <- 4
+        tv <- 50
+        sd <- 0.1
+      })
+      model({
+        cl <- tcl
+        v <- tv
+        cp <- linCmt()
+        cp <- cp * 2
+        cp ~ add(sd)
+      })
+    }),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("ini() takes = and combined2(), and refuses combined1()", {
+  reads <- function(residual) {
+    f <- function() NULL
+    body(f) <- call(
+      "{",
+      quote(ini({
+        tcl <- 4
+        tv <- 50
+        a <- 0.1
+        b <- 0.2
+      })),
+      call(
+        "model",
+        call(
+          "{",
+          quote(cl <- tcl),
+          quote(v <- tv),
+          quote(cp <- linCmt()),
+          call("~", quote(cp), residual)
+        )
+      )
+    )
+    pmx_read_rxode2(f)
+  }
+  m <- reads(quote(add(a) + prop(b) + combined2()))
+  expect_equal(pmx_parameters(m)$name[[1]], "tcl")
+  expect_equal(unclass(m)$observations$cp$residual$type, "combined")
+  expect_error(
+    reads(quote(add(a) + prop(b) + combined1())),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("an ini() value cannot run code", {
+  marker <- withr::local_tempfile()
+  f <- function() NULL
+  body(f) <- call(
+    "{",
+    call(
+      "ini",
+      call(
+        "{",
+        call("<-", quote(tcl), call("file.create", marker)),
+        quote(tv <- 50),
+        quote(sd <- 0.1)
+      )
+    ),
+    quote(model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ add(sd)
+    }))
+  )
+  expect_error(pmx_read_rxode2(f), class = "zufapmx_parse_error")
+  expect_false(file.exists(marker))
+})
+
+test_that("residual error parameters must be ini() parameters", {
+  expect_error(
+    pmx_read_rxode2(function() {
+      ini({
+        tcl <- 1
+      })
+      model({
+        cl <- tcl
+        v <- 1
+        cp <- linCmt()
+        cp ~ prop(prop.sd)
+      })
+    }),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("rxode2 statements that read time belong to the ODE structure", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tk <- 0.1
+      sd <- 0.1
+    })
+    model({
+      k <- tk * exp(-0.1 * time)
+      d / dt(central) <- -k * central
+      cp <- central
+      cp ~ add(sd)
+    })
+  })
+  expect_equal(
+    unclass(m)$structure$statements,
+    list(quote(k <- tk * exp(-0.1 * t)))
+  )
+  expect_true(any(grepl("SOLVERTIME", pmx_write_mrgsolve(m)$text)))
+  expect_true(any(grepl("$DES", pmx_write_nonmem(m)$text, fixed = TRUE)))
+})
+
+test_that("rxode2 models are refused for the constructs they lack", {
+  model <- function(stmts, ini = list(quote(sd <- 0.1))) {
+    f <- function() NULL
+    body(f) <- call(
+      "{",
+      call("ini", as.call(c(as.symbol("{"), ini))),
+      call("model", as.call(c(as.symbol("{"), stmts)))
+    )
+    f
+  }
+  expect_error(
+    pmx_read_rxode2(model(list(
+      quote(cl <- 1),
+      quote(cp <- linCmt()),
+      quote(cp ~ add(sd))
+    ))),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    pmx_read_rxode2(model(list(quote(cp <- 1), quote(cp ~ add(sd))))),
+    class = "zufapmx_parse_error"
+  )
+
+  lnorm <- pmx_read_rxode2(model(list(
+    quote(d / dt(a) <- -a),
+    quote(cp <- a),
+    quote(cp ~ lnorm(sd))
+  )))
+  expect_equal(unclass(lnorm)$observations$cp$residual$type, "exponential")
+  pow <- pmx_read_rxode2(model(
+    list(quote(d / dt(a) <- -a), quote(cp <- a), quote(cp ~ pow(sd, e))),
+    ini = list(quote(sd <- 0.1), quote(e <- 1))
+  ))
+  expect_equal(
+    unclass(pow)$observations$cp$residual,
+    list(type = "power", parameters = c("sd", "e"))
+  )
+})
+
+test_that("initial values need one to three values in bound order", {
+  ini_model <- function(value) {
+    f <- function() NULL
+    body(f) <- call(
+      "{",
+      call("ini", call("{", call("<-", quote(tcl), value), quote(sd <- 0.1))),
+      quote(model({
+        cl <- tcl
+        v <- 1
+        cp <- linCmt()
+        cp ~ add(sd)
+      }))
+    )
+    f
+  }
+  for (value in list(quote(c(0, 4, 10, 99)), quote(c(10, 5)), quote(c()))) {
+    expect_error(
+      pmx_read_rxode2(ini_model(value)),
+      class = "zufapmx_parse_error",
+      label = deparse(value)
+    )
+  }
+})

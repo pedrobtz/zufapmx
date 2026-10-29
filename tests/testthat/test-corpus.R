@@ -66,3 +66,25 @@ test_that("an entry that lists a missing model file is an error", {
 
   expect_error(corpus_read(root), class = "zufapmx_corpus_error")
 })
+
+test_that("the corpus reader refuses an empty root, unknown formats and regimens", {
+  expect_error(
+    corpus_read(withr::local_tempdir()),
+    class = "zufapmx_corpus_error"
+  )
+  root <- withr::local_tempdir()
+  dir.create(file.path(root, "x"))
+  writeLines(
+    c(
+      "Id: x",
+      "Title: t",
+      "Structure: s",
+      "Regimen: oral",
+      "Formats: pumas",
+      "Source: s"
+    ),
+    file.path(root, "x", "entry.dcf")
+  )
+  expect_error(corpus_read(root), class = "zufapmx_corpus_error")
+  expect_error(corpus_design("subcutaneous"), class = "zufapmx_corpus_error")
+})

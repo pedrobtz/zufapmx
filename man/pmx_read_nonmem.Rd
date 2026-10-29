@@ -45,9 +45,10 @@ records for variables assigned only inside \code{IF} (the representation
 starts them at 0).
 
 NONMEM's names are kept, upper case: \code{THETA(1)} reads as \code{THETA1},
-\code{ETA(1)} as \code{ETA1} and \code{EPS(1)} as \code{EPS1}. \code{T} and \code{TIME} read as the
-representation's time, \code{t}. Free names such as \code{WT} are recorded as
-covariates. The observation is the endpoint \code{Y}.
+\code{ETA(1)} as \code{ETA1} and \code{EPS(1)} as \code{EPS1}. Time is \code{t}: read from \code{T} in
+\verb{$DES} and from \code{TIME} elsewhere; \code{TIME} in \verb{$DES} is refused. Free names
+such as \code{WT} are recorded as covariates. The observation is the endpoint
+\code{Y}.
 }
 \examples{
 path <- system.file(
@@ -57,6 +58,8 @@ path <- system.file(
 pmx_read_nonmem(path)
 }
 \seealso{
+\link{pmx_inspect} for the model's parts.
+
 Other readers:
 \code{\link[=pmx_read_mrgsolve]{pmx_read_mrgsolve()}},
 \code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}}

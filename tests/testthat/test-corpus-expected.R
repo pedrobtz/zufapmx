@@ -10,14 +10,18 @@ test_that("expected.csv has one row per design time and the right columns", {
       label = corpus$id[[i]]
     )
     expect_true(all(expected$endpoint == "cp"), label = corpus$id[[i]])
-    expect_equal(expected$time, corpus_times(corpus$regimen[[i]]))
+    expect_equal(
+      expected$time,
+      corpus_times(corpus$regimen[[i]]),
+      label = corpus$id[[i]]
+    )
     expect_true(all(expected$pred > 0), label = corpus$id[[i]])
   }
 })
 
 test_that("each entry's rxode2 model reproduces its expected.csv", {
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -30,7 +34,7 @@ test_that("each entry's rxode2 model reproduces its expected.csv", {
 
 test_that("each entry's mrgsolve model reproduces its expected.csv", {
   skip_on_cran()
-  skip_if_not_installed("mrgsolve")
+  skip_if_no_engine("mrgsolve")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -46,5 +50,6 @@ test_that("a missing or short output never counts as agreement", {
   expect_equal(corpus_max_rel_dev(NULL, c(1, 2)), Inf)
   expect_equal(corpus_max_rel_dev(1, c(1, 1)), Inf)
   expect_equal(corpus_max_rel_dev(c(1, NA), c(1, 2)), Inf)
+  expect_equal(corpus_max_rel_dev(numeric(), numeric()), Inf)
   expect_equal(corpus_max_rel_dev(c(1, 2), c(1, 2)), 0)
 })

@@ -127,3 +127,16 @@ model_with <- function(model, ...) {
   parts[names(list(...))] <- list(...)
   do.call(new_model, parts)
 }
+
+# str() without truncation: every element, every character, and 15
+# significant digits (17 would show the last-place differences R's decimal
+# parser makes without long double).
+str_full <- function(x) {
+  str(
+    x,
+    vec.len = Inf,
+    list.len = Inf,
+    nchar.max = 10000,
+    digits.d = 15
+  )
+}

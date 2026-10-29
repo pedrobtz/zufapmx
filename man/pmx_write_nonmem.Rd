@@ -30,8 +30,9 @@ ODE model as \code{ADVAN13} with \verb{$MODEL} and \verb{$DES}. Residual error h
 standard deviations, as rxode2 holds it, is written as \verb{$SIGMA}
 variances: the same model, parameterised as NONMEM parameterises it.
 
-\verb{$INPUT} and \verb{$DATA} are placeholders to point at a dataset, and no
-\verb{$ESTIMATION} is written: the representation holds neither.
+\verb{$INPUT} and \verb{$DATA} are placeholders to point at a dataset: \verb{$INPUT}
+lists the standard data items and the model's covariates. No
+\verb{$ESTIMATION} is written: the representation holds none.
 }
 \examples{
 path <- system.file(
@@ -43,6 +44,7 @@ pmx_write_nonmem(pmx_read_rxode2(fun))
 }
 \seealso{
 Other writers:
+\code{\link[=pmx_fidelity]{pmx_fidelity()}},
 \code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}},
 \code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}
 }

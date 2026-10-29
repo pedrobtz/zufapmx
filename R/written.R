@@ -25,6 +25,7 @@ new_written <- function(text, format, fidelity, losses) {
 #' @param written The result of a `pmx_write_*()` function.
 #' @return `pmx_fidelity()`: a string. `pmx_losses()`: a character vector,
 #'   empty when nothing was lost.
+#' @family writers
 #' @export
 #' @examples
 #' path <- system.file(
@@ -75,19 +76,27 @@ as.character.zufapmx_written <- function(x, ...) {
 
 # Fidelity of a write, from the losses the writer recorded and whether its
 # output reads back to the same representation.
-written_fidelity <- function(losses, model, back) {
-  if (length(losses) > 0) {
-    return("lossy")
-  }
-  if (same_content(model_content(back), model_content(model))) {
-    return("exact")
+written_fidelity <- function(
+  losses,
+  model,
+  back,
+  values = "final",
+  fixed_blocks = TRUE
+) {
+  # What the writer meant to write: estimates in place of initial values
+  # (or not), and blocks without their fixed flags where the format cannot
+  # hold them. Declared losses are applied to the source before comparing,
+  # so a lossy write is still checked (design D9).
+  intended <- as_written(model, values, fixed_blocks)
+  if (same_content(model_content(back), model_content(intended))) {
+    return(if (length(losses) > 0) "lossy" else "exact")
   }
   # Equivalent only through the reparameterisations writers are known to
   # make (normalise_model()); anything else is a translation error.
-  a <- normalise_model(model)
+  a <- normalise_model(intended)
   b <- normalise_model(back)
   if (same_content(a, b)) {
-    return("equivalent")
+    return(if (length(losses) > 0) "lossy" else "equivalent")
   }
   differs <- names(a)[
     !vapply(names(a), function(n) same_content(a[[n]], b[[n]]), logical(1))
@@ -100,6 +109,33 @@ written_fidelity <- function(losses, model, back) {
   )
 }
 
+# A model as a writer writes it: with `values = "final"` its estimates
+# become its initial values; with `"initial"` its estimates are dropped.
+# `fixed_blocks = FALSE` drops the fixed flags of omega and sigma blocks.
+as_written <- function(model, values, fixed_blocks) {
+  m <- unclass(model)
+  p <- m$parameters
+  if (values == "final") {
+    has <- !is.na(p$estimate)
+    p$init[has] <- p$estimate[has]
+  }
+  p$estimate <- NA_real_
+  m$parameters <- p
+  block <- function(b) {
+    if (values == "final" && !is.null(b$estimate)) {
+      b$matrix <- b$estimate
+    }
+    b$estimate <- NULL
+    if (!fixed_blocks) {
+      b$fixed <- FALSE
+    }
+    b
+  }
+  m$random_effects$omega <- lapply(m$random_effects$omega, block)
+  m$random_effects$sigma <- lapply(m$random_effects$sigma, block)
+  structure(m, class = class(model))
+}
+
 # A model with the reparameterisations writers make undone, for comparing
 # a translation with its source: residual error as sigma variances,
 # aliases (`V2 <- V`) substituted away, parentheses dropped, and every name
@@ -110,7 +146,9 @@ written_fidelity <- function(losses, model, back) {
 # statements, so they are left out.
 normalise_model <- function(model) {
   m <- unclass(model)
-  m <- tryCatch(nm_sigma_from_sd(m), zufapmx_write_error = function(e) m)
+  # A model whose residual error has no sigma form (an SD parameter used
+  # elsewhere) is compared as it stands; both sides then keep their SDs.
+  m <- tryCatch(sigma_from_sd(m), zufapmx_write_error = function(e) m)
   m <- drop_aliases(m)
 
   closed <- identical(m$structure$type, "closed")
@@ -135,13 +173,13 @@ normalise_model <- function(model) {
     unique(unlist(lapply(model_expressions(m), all.vars))),
     c(names(map), "t", "F")
   )
-  map <- c(
-    map,
-    stats::setNames(
-      toupper(gsub(".", "_", covariates, fixed = TRUE)),
-      covariates
-    )
-  )
+  folded <- nm_spell(covariates)
+  if (anyDuplicated(folded)) {
+    # `wt` and `WT` are two covariates here: folding would merge them, so a
+    # writer that does must fail the comparison.
+    folded <- covariates
+  }
+  map <- c(map, stats::setNames(folded, covariates))
   rename <- function(x) strip_parens(rename_symbols(x, map))
   block <- function(b) {
     b$names <- unname(map[b$names])
@@ -196,26 +234,22 @@ normalise_model <- function(model) {
   )
 }
 
-# Every expression of a model: statements, derivatives, dosing, predictions.
-model_expressions <- function(m) {
-  c(
-    m$individual,
-    m$structure$statements,
-    m$structure$derivatives,
-    unlist(m$dosing, recursive = FALSE),
-    lapply(m$observations, `[[`, "prediction"),
-    lapply(m$observations, function(o) o$residual$expression)
-  )
-}
-
 # Substitute aliases away: a top-level `A <- B`, B a name, makes A another
 # name for B in every later expression. Writers add such statements for
-# names a target requires (an ADVAN's V2, a renamed variable).
+# names a target requires (an ADVAN's V2, a renamed variable). Neither
+# name may be assigned again: after `A <- B; B <- 3`, A is not B.
 drop_aliases <- function(m) {
+  stmts <- c(m$individual, m$structure$statements)
   map <- character()
   keep <- list()
-  for (x in m$individual) {
-    if (is_call(x, "<-") && is.symbol(x[[3]])) {
+  for (i in seq_along(m$individual)) {
+    x <- m$individual[[i]]
+    later <- stmt_targets(stmts[-seq_len(i)])
+    if (
+      is_call(x, "<-") &&
+        is.symbol(x[[3]]) &&
+        !any(c(as.character(x[[2]]), as.character(x[[3]])) %in% later)
+    ) {
       map[[as.character(x[[2]])]] <- map[as.character(x[[3]])] %|NA|%
         as.character(x[[3]])
       next
@@ -226,28 +260,14 @@ drop_aliases <- function(m) {
     return(m)
   }
   m$individual <- keep
-  rename <- function(x) rename_symbols(x, map)
-  s <- m$structure
-  if (identical(s$type, "closed")) {
-    s$parameters <- vapply(
-      s$parameters,
+  if (identical(m$structure$type, "closed")) {
+    m$structure$parameters <- vapply(
+      m$structure$parameters,
       function(v) map[v] %|NA|% v,
       character(1)
     )
-  } else {
-    s$statements <- lapply(s$statements, rename)
-    s$derivatives <- lapply(s$derivatives, rename)
   }
-  m$structure <- s
-  m$dosing <- lapply(m$dosing, function(d) lapply(d, rename))
-  m$observations <- lapply(m$observations, function(o) {
-    o$prediction <- rename(o$prediction)
-    if (!is.null(o$residual$expression)) {
-      o$residual$expression <- rename(o$residual$expression)
-    }
-    o
-  })
-  m
+  model_rename(m, map, individual = FALSE)
 }
 
 # Identical, except that numbers may differ by a few units in the last

@@ -74,7 +74,7 @@ test_that("block IF, ELSE IF and ELSE nest", {
 test_that("DADT and A_0 are statement targets", {
   expect_equal(
     nm_parse_lines(c("DADT(1) = -KA*A(1)", "A_0(2) = 10")),
-    list(quote(DADT(1L) <- -KA * DEPOT), quote(A_0(2L) <- 10))
+    list(quote(DADT(1) <- -KA * DEPOT), quote(A_0(2) <- 10))
   )
 })
 
@@ -163,4 +163,59 @@ test_that("record names need three letters, and an ambiguous one says so", {
     class = "zufapmx_parse_error"
   )
   expect_equal(err$seen, "$SI")
+})
+
+test_that("nothing but ENDIF follows a plain ELSE", {
+  expect_error(
+    nm_parse_lines(c(
+      "IF (KA.GT.1) THEN",
+      "Q = 1",
+      "ELSE",
+      "Q = 2",
+      "ELSE IF (KA.GT.0) THEN",
+      "Q = 3",
+      "ENDIF"
+    )),
+    class = "zufapmx_parse_error"
+  )
+  expect_error(
+    nm_parse_lines(c(
+      "IF (KA.GT.1) THEN",
+      "Q = 1",
+      "ELSE",
+      "Q = 2",
+      "ELSE",
+      "Q = 3",
+      "ENDIF"
+    )),
+    class = "zufapmx_parse_error"
+  )
+})
+
+test_that("compartment indices are whole numbers", {
+  expect_error(nm_parse_lines("DADT(1.7) = 0"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("A_0(1.0) = 0"), class = "zufapmx_parse_error")
+})
+
+test_that("abbreviated code is refused with its position", {
+  err <- expect_error(
+    nm_parse_lines(c("X = 1", "ELSE")),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$line, 2L)
+  err <- expect_error(
+    nm_parse_lines("X = THETA(Y)"),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$seen, "THETA")
+  err <- expect_error(
+    nm_parse_lines("FOO(1) = 2"),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(err$seen, "FOO")
+  err <- expect_error(
+    read_ctl(ctl_onecmt(pk = "X = A(5)")),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(c(err$line, err$column), c(8L, 5L))
 })

@@ -90,6 +90,8 @@ corpus_oracle_nonmem2rx <- function(path, regimen) {
 }
 
 corpus_oracle_amp_sim <- function(path, regimen) {
+  # amp.sim also writes a _control.r script into the working directory.
+  withr::local_dir(withr::local_tempdir())
   out <- withr::local_tempfile(pattern = "amp")
   suppressMessages(amp.sim::convert_nonmem(
     file.path(path, "model.ctl"),
@@ -103,10 +105,14 @@ corpus_oracle_amp_sim <- function(path, regimen) {
 }
 
 # The largest relative deviation of `got` from `expected`. A missing output
-# (NULL), a wrong length or a non-finite value is Inf, never a pass:
-# max(numeric(0)) is -Inf, and recycling hides a short result.
+# (NULL), a wrong length, no values at all or a non-finite value is Inf,
+# never a pass: max(numeric(0)) is -Inf, and recycling hides a short result.
 corpus_max_rel_dev <- function(got, expected) {
-  if (length(got) != length(expected) || !all(is.finite(got))) {
+  if (
+    length(expected) == 0 ||
+      length(got) != length(expected) ||
+      !all(is.finite(got))
+  ) {
     return(Inf)
   }
   max(abs(got - expected) / abs(expected))
@@ -197,4 +203,14 @@ corpus_models <- function(path, id) {
 # A file of a corpus entry, by id rather than by position.
 corpus_file <- function(id, file) {
   system.file("corpus", id, file, package = "zufapmx", mustWork = TRUE)
+}
+
+# A write that kept the model: exact or equivalent, reporting what it was.
+expect_faithful <- function(written, label = "the write") {
+  fidelity <- pmx_fidelity(written)
+  expect(
+    fidelity %in% c("exact", "equivalent"),
+    sprintf("%s is %s, not exact or equivalent.", label, fidelity)
+  )
+  invisible(written)
 }

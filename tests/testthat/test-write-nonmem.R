@@ -15,7 +15,7 @@ test_that("rxode2 corpus models write as equivalent control streams", {
 
 test_that("models round-trip between rxode2 and NONMEM and still predict", {
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -27,10 +27,7 @@ test_that("models round-trip between rxode2 and NONMEM and still predict", {
     to_nm <- pmx_write_nonmem(rx)
     writeLines(to_nm$text, path)
     back <- pmx_write_rxode2(pmx_read_nonmem(path))
-    expect_true(
-      pmx_fidelity(back) %in% c("exact", "equivalent"),
-      label = corpus$id[[i]]
-    )
+    expect_faithful(back, label = corpus$id[[i]])
     got <- corpus_solve_rxode2(
       eval(parse(text = back$text)),
       corpus$regimen[[i]],
@@ -43,10 +40,7 @@ test_that("models round-trip between rxode2 and NONMEM and still predict", {
     to_rx <- pmx_write_rxode2(nm)
     again <- pmx_write_nonmem(pmx_read_rxode2(eval(parse(text = to_rx$text))))
     expect_equal(pmx_fidelity(to_rx), "equivalent", label = corpus$id[[i]])
-    expect_true(
-      pmx_fidelity(again) %in% c("exact", "equivalent"),
-      label = corpus$id[[i]]
-    )
+    expect_faithful(again, label = corpus$id[[i]])
   }
 })
 
@@ -193,7 +187,7 @@ test_that("variables PREDPP reserves are renamed", {
 
 test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
   skip_on_cran()
-  skip_if_not_installed("rxode2")
+  skip_if_no_engine("rxode2")
   corpus <- zufapmx_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -222,4 +216,118 @@ test_that("written text is stable", {
   expect_snapshot(print(pmx_write_nonmem(corpus_rxode2_model(
     "onecmt-oral-mm"
   ))))
+})
+
+test_that("$INPUT lists the covariates", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl * (wt / 70)^0.75
+      v <- tv * crcl
+      cp <- linCmt()
+      cp ~ add(sd)
+    })
+  })
+  expect_true(
+    "$INPUT ID TIME EVID AMT RATE CMT DV WT CRCL" %in% pmx_write_nonmem(m)$text
+  )
+})
+
+test_that("bounds on a residual standard deviation are a loss in $SIGMA", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- c(0, 0.1, 1)
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ add(sd)
+    })
+  })
+  for (w in list(pmx_write_nonmem(m), pmx_write_mrgsolve(m))) {
+    expect_equal(pmx_fidelity(w), "lossy", info = w$format)
+    expect_match(
+      pmx_losses(w),
+      "bounds of residual standard deviations: sd",
+      info = w$format
+    )
+  }
+})
+
+test_that("a residual standard deviation is written as its variance", {
+  parts <- unclass(pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.2
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ prop(sd)
+    })
+  }))
+  parts$parameters$estimate <- c(4.4, 55, 0.3)
+  m <- do.call(new_model, parts)
+  expect_true("$SIGMA 0.09" %in% pmx_write_nonmem(m)$text)
+  expect_true("$SIGMA 0.04" %in% pmx_write_nonmem(m, "initial")$text)
+})
+
+test_that("a residual parameter that is not a fixed effect is refused", {
+  parts <- unclass(model_twocmt_oral())
+  parts$observations$cp$residual$parameters <- "nope"
+  parts$random_effects$sigma <- list()
+  err <- expect_error(
+    pmx_write_nonmem(do.call(new_model, parts)),
+    class = "zufapmx_write_error"
+  )
+  expect_equal(err$location, "observations$cp$residual")
+  expect_equal(err$formats, character())
+})
+
+test_that("a model without random effects writes to every format", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ add(sd)
+    })
+  })
+  expect_equal(pmx_fidelity(pmx_write_rxode2(m)), "exact")
+  expect_equal(pmx_fidelity(pmx_write_nonmem(m)), "equivalent")
+  expect_equal(pmx_fidelity(pmx_write_mrgsolve(m)), "equivalent")
+  expect_false(any(grepl("^\\$OMEGA", pmx_write_nonmem(m)$text)))
+})
+
+test_that("writer refusals name the construct and where to take it", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- 4
+      tv <- 50
+      sd <- 0.1
+      pw <- 0.5
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+      cp ~ pow(sd, pw)
+    })
+  })
+  expect_snapshot(pmx_write_nonmem(m), error = TRUE)
+  expect_snapshot(pmx_write_mrgsolve(m), error = TRUE)
 })

@@ -1,8 +1,12 @@
 # Print an expression tree in another language's syntax. A dialect gives
 # the operator spellings, the function names, how to write a number, and
 # whether powers are an operator or a function (C++'s pow()). Parentheses
-# are added where the target's precedence needs them; the precedence of
-# R, Fortran and C++ agrees for every operator in the table.
+# are added where the target's precedence needs them. The precedence of R,
+# Fortran and C++ agrees for the binary operators in the table; two cases
+# are made safe for every dialect by parenthesising: the operand of `!`
+# when it is a call (C++'s `!` binds tighter than `==`), and a unary
+# operand next to another operator, so no output holds two operators in a
+# row (`--x` is C++'s decrement; Fortran forbids `X * -2`).
 
 expr_precedence <- function(x) {
   if (!is.call(x)) {
@@ -30,6 +34,10 @@ expr_precedence <- function(x) {
   )
 }
 
+is_unary <- function(x) {
+  is.call(x) && length(x) == 2 && as.character(x[[1]]) %in% c("-", "+")
+}
+
 expr_print <- function(x, spelling, dialect) {
   refuse <- function(what) {
     write_error(what, "expression", formats = dialect$formats, call = NULL)
@@ -54,10 +62,13 @@ expr_print <- function(x, spelling, dialect) {
     return(paste0("(", expr_print(x[[2]], spelling, dialect), ")"))
   }
   if (op == "!") {
-    return(paste0(dialect$not, wrap(x[[2]], expr_precedence(x[[2]]) < p)))
+    return(paste0(
+      dialect$not,
+      wrap(x[[2]], is.call(x[[2]]) && !is_call(x[[2]], "("))
+    ))
   }
   if (op %in% c("-", "+") && length(x) == 2) {
-    return(paste0(op, wrap(x[[2]], expr_precedence(x[[2]]) < p)))
+    return(paste0(op, wrap(x[[2]], expr_precedence(x[[2]]) <= p)))
   }
   if (op == "^" && !is.null(dialect$power)) {
     return(sprintf(
@@ -73,7 +84,10 @@ expr_print <- function(x, spelling, dialect) {
     return(paste(
       wrap(x[[2]], left < p || (op == "^" && left <= p)),
       dialect$operators[[op]],
-      wrap(x[[3]], right < p || (op %in% c("-", "/") && right == p))
+      wrap(
+        x[[3]],
+        right < p || (op %in% c("-", "/") && right == p) || is_unary(x[[3]])
+      )
     ))
   }
   if (!op %in% names(dialect$functions)) {

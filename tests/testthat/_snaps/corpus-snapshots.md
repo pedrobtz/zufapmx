@@ -5,7 +5,7 @@
     Output
       onecmt-oral read from mrgsolve 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	3 obs. of  7 variables:
@@ -67,6 +67,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        title ($PROB)
 
 ---
 
@@ -75,7 +80,7 @@
     Output
       onecmt-oral read from nonmem 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	3 obs. of  7 variables:
@@ -137,6 +142,14 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        comments
+        title ($PROBLEM)
+        data records ($INPUT, $DATA)
+        estimation settings ($ESTIMATION, $COVARIANCE)
 
 ---
 
@@ -145,7 +158,7 @@
     Output
       onecmt-oral read from rxode2 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	4 obs. of  7 variables:
@@ -200,6 +213,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "prop.sd"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        
 
 ---
 
@@ -208,12 +226,12 @@
     Output
       onecmt-oral-lag read from mrgsolve 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	5 obs. of  7 variables:
-        ..$ name    : chr [1:5] "TVKA" "TVCL" "TVV" "TVLAG" ...
-        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" ...
+        ..$ name    : chr [1:5] "TVKA" "TVCL" "TVV" "TVLAG" "TVF"
+        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" "other"
         ..$ init    : num [1:5] 1 4 50 0.25 0.6
         ..$ lower   : num [1:5] -Inf -Inf -Inf -Inf -Inf
         ..$ upper   : num [1:5] Inf Inf Inf Inf Inf
@@ -273,6 +291,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        title ($PROB)
 
 ---
 
@@ -281,12 +304,12 @@
     Output
       onecmt-oral-lag read from nonmem 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	5 obs. of  7 variables:
-        ..$ name    : chr [1:5] "THETA1" "THETA2" "THETA3" "THETA4" ...
-        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" ...
+        ..$ name    : chr [1:5] "THETA1" "THETA2" "THETA3" "THETA4" "THETA5"
+        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" "other"
         ..$ init    : num [1:5] 1 4 50 0.25 0.6
         ..$ lower   : num [1:5] 0 0 0 0 0
         ..$ upper   : num [1:5] Inf Inf Inf Inf 1
@@ -346,6 +369,14 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        comments
+        title ($PROBLEM)
+        data records ($INPUT, $DATA)
+        estimation settings ($ESTIMATION, $COVARIANCE)
 
 ---
 
@@ -354,15 +385,15 @@
     Output
       onecmt-oral-lag read from rxode2 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	6 obs. of  7 variables:
-        ..$ name    : chr [1:6] "tka" "tcl" "tv" "tlag" ...
-        ..$ role    : chr [1:6] "ka" "clearance" "volume" "other" ...
+        ..$ name    : chr [1:6] "tka" "tcl" "tv" "tlag" "tf" "prop.sd"
+        ..$ role    : chr [1:6] "ka" "clearance" "volume" "other" "other" "other"
         ..$ init    : num [1:6] 1 4 50 0.25 0.6 0.2
-        ..$ lower   : num [1:6] 0 0 0 0 0 ...
-        ..$ upper   : num [1:6] Inf Inf Inf Inf 1 ...
+        ..$ lower   : num [1:6] 0 0 0 0 0 -Inf
+        ..$ upper   : num [1:6] Inf Inf Inf Inf 1 Inf
         ..$ fixed   : logi [1:6] FALSE FALSE FALSE FALSE FALSE FALSE
         ..$ estimate: num [1:6] NA NA NA NA NA NA
        $ random_effects:List of 4
@@ -412,6 +443,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "prop.sd"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        
 
 ---
 
@@ -420,7 +456,7 @@
     Output
       onecmt-oral-mm read from mrgsolve 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	4 obs. of  7 variables:
@@ -483,6 +519,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        title ($PROB)
 
 ---
 
@@ -491,7 +532,7 @@
     Output
       onecmt-oral-mm read from nonmem 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	4 obs. of  7 variables:
@@ -554,6 +595,15 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        comments
+        title ($PROBLEM)
+        data records ($INPUT, $DATA)
+        estimation settings ($ESTIMATION, $COVARIANCE)
+        ODE solver (ADVAN13)
 
 ---
 
@@ -562,12 +612,12 @@
     Output
       onecmt-oral-mm read from rxode2 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	5 obs. of  7 variables:
-        ..$ name    : chr [1:5] "tka" "tvm" "tkm" "tv" ...
-        ..$ role    : chr [1:5] "other" "other" "other" "other" ...
+        ..$ name    : chr [1:5] "tka" "tvm" "tkm" "tv" "prop.sd"
+        ..$ role    : chr [1:5] "other" "other" "other" "other" "other"
         ..$ init    : num [1:5] 1 20 2 50 0.2
         ..$ lower   : num [1:5] 0 0 0 0 -Inf
         ..$ upper   : num [1:5] Inf Inf Inf Inf Inf
@@ -618,6 +668,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "prop.sd"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        
 
 ---
 
@@ -626,15 +681,15 @@
     Output
       threecmt-infusion read from mrgsolve 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	6 obs. of  7 variables:
-        ..$ name    : chr [1:6] "TVCL" "TVV1" "TVQ2" "TVV2" ...
-        ..$ role    : chr [1:6] "clearance" "volume" "other" "volume" ...
+        ..$ name    : chr [1:6] "TVCL" "TVV1" "TVQ2" "TVV2" "TVQ3" "TVV3"
+        ..$ role    : chr [1:6] "clearance" "volume" "other" "volume" "other" "volume"
         ..$ init    : num [1:6] 4 10 2 20 0.5 40
-        ..$ lower   : num [1:6] -Inf -Inf -Inf -Inf -Inf ...
-        ..$ upper   : num [1:6] Inf Inf Inf Inf Inf ...
+        ..$ lower   : num [1:6] -Inf -Inf -Inf -Inf -Inf -Inf
+        ..$ upper   : num [1:6] Inf Inf Inf Inf Inf Inf
         ..$ fixed   : logi [1:6] FALSE FALSE FALSE FALSE FALSE FALSE
         ..$ estimate: num [1:6] NA NA NA NA NA NA
        $ random_effects:List of 4
@@ -679,8 +734,8 @@
         ..$ type      : chr "closed"
         ..$ ncmt      : int 3
         ..$ depot     : logi FALSE
-        ..$ parameters: Named chr [1:6] "CL" "V1" "Q2" "V2" ...
-        .. ..- attr(*, "names")= chr [1:6] "cl" "v" "q" "vp" ...
+        ..$ parameters: Named chr [1:6] "CL" "V1" "Q2" "V2" "Q3" "V3"
+        .. ..- attr(*, "names")= chr [1:6] "cl" "v" "q" "vp" "q2" "vp2"
         ..$ advan     : int 11
         ..$ trans     : int 4
        $ dosing        : list()
@@ -691,6 +746,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        title ($PROB)
 
 ---
 
@@ -699,15 +759,15 @@
     Output
       threecmt-infusion read from nonmem 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	6 obs. of  7 variables:
-        ..$ name    : chr [1:6] "THETA1" "THETA2" "THETA3" "THETA4" ...
-        ..$ role    : chr [1:6] "clearance" "volume" "other" "volume" ...
+        ..$ name    : chr [1:6] "THETA1" "THETA2" "THETA3" "THETA4" "THETA5" "THETA6"
+        ..$ role    : chr [1:6] "clearance" "volume" "other" "volume" "other" "volume"
         ..$ init    : num [1:6] 4 10 2 20 0.5 40
         ..$ lower   : num [1:6] 0 0 0 0 0 0
-        ..$ upper   : num [1:6] Inf Inf Inf Inf Inf ...
+        ..$ upper   : num [1:6] Inf Inf Inf Inf Inf Inf
         ..$ fixed   : logi [1:6] FALSE FALSE FALSE FALSE FALSE FALSE
         ..$ estimate: num [1:6] NA NA NA NA NA NA
        $ random_effects:List of 4
@@ -752,8 +812,8 @@
         ..$ type      : chr "closed"
         ..$ ncmt      : int 3
         ..$ depot     : logi FALSE
-        ..$ parameters: Named chr [1:6] "CL" "V1" "Q2" "V2" ...
-        .. ..- attr(*, "names")= chr [1:6] "cl" "v" "q" "vp" ...
+        ..$ parameters: Named chr [1:6] "CL" "V1" "Q2" "V2" "Q3" "V3"
+        .. ..- attr(*, "names")= chr [1:6] "cl" "v" "q" "vp" "q2" "vp2"
         ..$ advan     : int 11
         ..$ trans     : int 4
        $ dosing        : list()
@@ -764,6 +824,14 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        comments
+        title ($PROBLEM)
+        data records ($INPUT, $DATA)
+        estimation settings ($ESTIMATION, $COVARIANCE)
 
 ---
 
@@ -772,16 +840,16 @@
     Output
       threecmt-infusion read from rxode2 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	7 obs. of  7 variables:
-        ..$ name    : chr [1:7] "tcl" "tv" "tq" "tvp" ...
-        ..$ role    : chr [1:7] "clearance" "volume" "other" "volume" ...
+        ..$ name    : chr [1:7] "tcl" "tv" "tq" "tvp" "tq2" "tvp2" "prop.sd"
+        ..$ role    : chr [1:7] "clearance" "volume" "other" "volume" "other" "volume" "other"
         ..$ init    : num [1:7] 4 10 2 20 0.5 40 0.2
-        ..$ lower   : num [1:7] 0 0 0 0 0 ...
-        ..$ upper   : num [1:7] Inf Inf Inf Inf Inf ...
-        ..$ fixed   : logi [1:7] FALSE FALSE FALSE FALSE FALSE FALSE ...
+        ..$ lower   : num [1:7] 0 0 0 0 0 0 -Inf
+        ..$ upper   : num [1:7] Inf Inf Inf Inf Inf Inf Inf
+        ..$ fixed   : logi [1:7] FALSE FALSE FALSE FALSE FALSE FALSE FALSE
         ..$ estimate: num [1:7] NA NA NA NA NA NA NA
        $ random_effects:List of 4
         ..$ omega :List of 2
@@ -818,8 +886,8 @@
         ..$ type      : chr "closed"
         ..$ ncmt      : int 3
         ..$ depot     : logi FALSE
-        ..$ parameters: Named chr [1:6] "cl" "v" "q" "vp" ...
-        .. ..- attr(*, "names")= chr [1:6] "cl" "v" "q" "vp" ...
+        ..$ parameters: Named chr [1:6] "cl" "v" "q" "vp" "q2" "vp2"
+        .. ..- attr(*, "names")= chr [1:6] "cl" "v" "q" "vp" "q2" "vp2"
         ..$ advan     : int 11
         ..$ trans     : int 4
        $ dosing        : list()
@@ -830,6 +898,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "prop.sd"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        
 
 ---
 
@@ -838,7 +911,7 @@
     Output
       twocmt-bolus read from mrgsolve 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	4 obs. of  7 variables:
@@ -901,6 +974,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        title ($PROB)
 
 ---
 
@@ -909,7 +987,7 @@
     Output
       twocmt-bolus read from nonmem 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	4 obs. of  7 variables:
@@ -972,6 +1050,14 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        comments
+        title ($PROBLEM)
+        data records ($INPUT, $DATA)
+        estimation settings ($ESTIMATION, $COVARIANCE)
 
 ---
 
@@ -980,12 +1066,12 @@
     Output
       twocmt-bolus read from rxode2 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	5 obs. of  7 variables:
-        ..$ name    : chr [1:5] "tcl" "tv" "tq" "tvp" ...
-        ..$ role    : chr [1:5] "clearance" "volume" "other" "volume" ...
+        ..$ name    : chr [1:5] "tcl" "tv" "tq" "tvp" "prop.sd"
+        ..$ role    : chr [1:5] "clearance" "volume" "other" "volume" "other"
         ..$ init    : num [1:5] 4 20 2 40 0.2
         ..$ lower   : num [1:5] 0 0 0 0 -Inf
         ..$ upper   : num [1:5] Inf Inf Inf Inf Inf
@@ -1036,6 +1122,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "prop.sd"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        
 
 ---
 
@@ -1044,12 +1135,12 @@
     Output
       twocmt-oral read from mrgsolve 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	5 obs. of  7 variables:
-        ..$ name    : chr [1:5] "TVKA" "TVCL" "TVV2" "TVQ" ...
-        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" ...
+        ..$ name    : chr [1:5] "TVKA" "TVCL" "TVV2" "TVQ" "TVV3"
+        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" "volume"
         ..$ init    : num [1:5] 1 4 20 2 40
         ..$ lower   : num [1:5] -Inf -Inf -Inf -Inf -Inf
         ..$ upper   : num [1:5] Inf Inf Inf Inf Inf
@@ -1096,8 +1187,8 @@
         ..$ type      : chr "closed"
         ..$ ncmt      : int 2
         ..$ depot     : logi TRUE
-        ..$ parameters: Named chr [1:5] "CL" "V2" "Q" "V3" ...
-        .. ..- attr(*, "names")= chr [1:5] "cl" "v" "q" "vp" ...
+        ..$ parameters: Named chr [1:5] "CL" "V2" "Q" "V3" "KA"
+        .. ..- attr(*, "names")= chr [1:5] "cl" "v" "q" "vp" "ka"
         ..$ advan     : int 4
         ..$ trans     : int 4
        $ dosing        : list()
@@ -1108,6 +1199,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        title ($PROB)
 
 ---
 
@@ -1116,12 +1212,12 @@
     Output
       twocmt-oral read from nonmem 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	5 obs. of  7 variables:
-        ..$ name    : chr [1:5] "THETA1" "THETA2" "THETA3" "THETA4" ...
-        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" ...
+        ..$ name    : chr [1:5] "THETA1" "THETA2" "THETA3" "THETA4" "THETA5"
+        ..$ role    : chr [1:5] "ka" "clearance" "volume" "other" "volume"
         ..$ init    : num [1:5] 1 4 20 2 40
         ..$ lower   : num [1:5] 0 0 0 0 0
         ..$ upper   : num [1:5] Inf Inf Inf Inf Inf
@@ -1168,8 +1264,8 @@
         ..$ type      : chr "closed"
         ..$ ncmt      : int 2
         ..$ depot     : logi TRUE
-        ..$ parameters: Named chr [1:5] "CL" "V2" "Q" "V3" ...
-        .. ..- attr(*, "names")= chr [1:5] "cl" "v" "q" "vp" ...
+        ..$ parameters: Named chr [1:5] "CL" "V2" "Q" "V3" "KA"
+        .. ..- attr(*, "names")= chr [1:5] "cl" "v" "q" "vp" "ka"
         ..$ advan     : int 4
         ..$ trans     : int 4
        $ dosing        : list()
@@ -1180,6 +1276,14 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "EPS1"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        comments
+        title ($PROBLEM)
+        data records ($INPUT, $DATA)
+        estimation settings ($ESTIMATION, $COVARIANCE)
 
 ---
 
@@ -1188,15 +1292,15 @@
     Output
       twocmt-oral read from rxode2 
     Code
-      str(model_content(models[[from]]))
+      str_full(model_content(models[[from]]))
     Output
       List of 6
        $ parameters    :'data.frame':	6 obs. of  7 variables:
-        ..$ name    : chr [1:6] "tka" "tcl" "tv" "tq" ...
-        ..$ role    : chr [1:6] "ka" "clearance" "volume" "other" ...
+        ..$ name    : chr [1:6] "tka" "tcl" "tv" "tq" "tvp" "prop.sd"
+        ..$ role    : chr [1:6] "ka" "clearance" "volume" "other" "volume" "other"
         ..$ init    : num [1:6] 1 4 20 2 40 0.2
-        ..$ lower   : num [1:6] 0 0 0 0 0 ...
-        ..$ upper   : num [1:6] Inf Inf Inf Inf Inf ...
+        ..$ lower   : num [1:6] 0 0 0 0 0 -Inf
+        ..$ upper   : num [1:6] Inf Inf Inf Inf Inf Inf
         ..$ fixed   : logi [1:6] FALSE FALSE FALSE FALSE FALSE FALSE
         ..$ estimate: num [1:6] NA NA NA NA NA NA
        $ random_effects:List of 4
@@ -1233,8 +1337,8 @@
         ..$ type      : chr "closed"
         ..$ ncmt      : int 2
         ..$ depot     : logi TRUE
-        ..$ parameters: Named chr [1:5] "cl" "v" "q" "vp" ...
-        .. ..- attr(*, "names")= chr [1:5] "cl" "v" "q" "vp" ...
+        ..$ parameters: Named chr [1:5] "cl" "v" "q" "vp" "ka"
+        .. ..- attr(*, "names")= chr [1:5] "cl" "v" "q" "vp" "ka"
         ..$ advan     : int 4
         ..$ trans     : int 4
        $ dosing        : list()
@@ -1245,6 +1349,11 @@
         .. .. ..$ type      : chr "proportional"
         .. .. ..$ parameters: chr "prop.sd"
         .. ..$ transform : chr "none"
+    Code
+      cat("losses:", unclass(models[[from]])$provenance$losses, sep = "\n  ")
+    Output
+      losses:
+        
 
 # a lossy write prints what it lost
 

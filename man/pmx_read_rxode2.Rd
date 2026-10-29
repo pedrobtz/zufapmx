@@ -53,6 +53,8 @@ one_cmt <- function() {
 pmx_read_rxode2(one_cmt)
 }
 \seealso{
+\link{pmx_inspect} for the model's parts.
+
 Other readers:
 \code{\link[=pmx_read_mrgsolve]{pmx_read_mrgsolve()}},
 \code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}}

@@ -22,6 +22,7 @@
 #' @param model A model function, as written for rxode2 or nlmixr2.
 #' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_rxode2()].
 #' @family readers
+#' @seealso [pmx_inspect] for the model's parts.
 #' @export
 #' @examples
 #' one_cmt <- function() {
@@ -49,10 +50,14 @@ pmx_read_rxode2 <- function(model) {
   rxode2_read_body(body(model), source)
 }
 
-rxode2_read_body <- function(body, source) {
-  body <- strip_srcref(body)
+rxode2_read_body <- function(code_body, source) {
+  code_body <- strip_srcref(code_body)
   reader <- rxode2_read_context(source)
-  blocks <- if (is_call(body, "{")) as.list(body)[-1] else list(body)
+  blocks <- if (is_call(code_body, "{")) {
+    as.list(code_body)[-1]
+  } else {
+    list(code_body)
+  }
 
   ini <- NULL
   model <- NULL
@@ -74,7 +79,7 @@ rxode2_read_body <- function(body, source) {
     }
   }
   if (is.null(ini) || is.null(model)) {
-    reader$refuse(body, "both `ini({})` and `model({})`")
+    reader$refuse(code_body, "both `ini({})` and `model({})`")
   }
 
   ini <- rxode2_read_ini(stmt_body(ini), reader)
@@ -93,10 +98,10 @@ rxode2_read_body <- function(body, source) {
       )
     }
   }
-  attach <- attach_etas(ini$etas, parts$individual)
-  structure <- parts$structure
+  attached <- attach_etas(ini$etas, parts$individual)
+  shape <- parts$structure
   parameters <- ini$parameters
-  parameters$role <- infer_roles(parameters$name, parts$individual, structure)
+  parameters$role <- infer_roles(parameters$name, parts$individual, shape)
 
   read_model(
     source,
@@ -104,11 +109,11 @@ rxode2_read_body <- function(body, source) {
     random_effects = list(
       omega = ini$omega,
       sigma = list(),
-      attach = attach,
+      attach = attached,
       iov = list(present = FALSE, occasion = NA_character_)
     ),
     individual = parts$individual,
-    structure = structure,
+    structure = shape,
     dosing = parts$dosing,
     observations = parts$observations,
     provenance = list(
@@ -169,7 +174,7 @@ rxode2_read_ini <- function(stmts, reader) {
   for (x in stmts) {
     if (is_call(x, "label")) {
       reader$lose("labels")
-    } else if (is_call(x, "<-") && is.symbol(x[[2]])) {
+    } else if ((is_call(x, "<-") || is_call(x, "=")) && is.symbol(x[[2]])) {
       value <- rxode2_read_value(x[[3]], reader)
       bounds <- read_bounds(value$values)
       if (is.null(bounds)) {
@@ -185,14 +190,21 @@ rxode2_read_ini <- function(stmts, reader) {
         estimate = NA_real_
       )
     } else if (is_call(x, "~")) {
-      names <- all.vars(x[[2]])
+      eta_names <- all.vars(x[[2]])
       value <- rxode2_read_value(x[[3]], reader)
       if (!is.symbol(x[[2]]) && !is_call(x[[2]], "+")) {
         reader$refuse(x, "a random effect name or a sum of names")
       }
-      omega[[length(omega) + 1]] <- list(
-        names = names,
-        matrix = rxode2_read_block(names, value$values, x, reader),
+      n <- length(eta_names)
+      if (length(value$values) != n * (n + 1) / 2) {
+        reader$refuse(
+          x,
+          sprintf("%d values for a block of %d", n * (n + 1) / 2, n)
+        )
+      }
+      omega[[length(omega) + 1]] <- cov_block(
+        eta_names,
+        value$values,
         fixed = value$fixed
       )
     } else {
@@ -236,18 +248,9 @@ rxode2_read_number <- function(x, reader) {
     return(-rxode2_read_number(x[[2]], reader))
   }
   # A constant expression such as `log(90)` is evaluated; its text is lost.
-  if (is.call(x) && length(all.vars(x)) == 0) {
-    ok <- tryCatch(
-      {
-        expr_check(x)
-        TRUE
-      },
-      zufapmx_model_error = function(e) FALSE
-    )
-    if (ok) {
-      reader$lose("initial values written as expressions, evaluated")
-      return(eval(x, baseenv()))
-    }
+  if (is.call(x) && is_constant_expr(x)) {
+    reader$lose("initial values written as expressions, evaluated")
+    return(eval(x, baseenv()))
   }
   reader$refuse(x, "a number or a constant expression of the function table")
 }
@@ -263,22 +266,11 @@ rxode2_read_is_metadata <- function(x) {
     all(vapply(as.list(x)[-1], rxode2_read_is_metadata, logical(1)))
 }
 
-# A block's values are its lower triangle, row by row.
-rxode2_read_block <- function(names, values, x, reader) {
-  n <- length(names)
-  if (length(values) != n * (n + 1) / 2) {
-    reader$refuse(x, sprintf("%d values for a block of %d", n * (n + 1) / 2, n))
-  }
-  m <- lower_to_full(values)
-  dimnames(m) <- list(names, names)
-  m
-}
-
 # linCmt() names its parameters in one of two styles: rxode2's (cl, v or
 # vc, q, vp, q2, vp2) or NONMEM's numbered TRANS4 names, where the central
 # volume is V1 without a depot or V2 with one, and the volumes and
 # clearances after it are numbered on (V2/V3/V4, Q2/Q3/Q4).
-lincmt_aliases <- function(lower) {
+rxode2_lincmt_aliases <- function(lower) {
   if ("v1" %in% lower) {
     return(list(
       cl = "cl",
@@ -346,7 +338,7 @@ rxode2_read_model <- function(stmts, reader) {
       # `depot(0) <- e` names it as the call.
       initial <- is.numeric(x[[2]][[2]])
       cmt <- as.character(x[[2]][[if (initial) 1 else 2]])
-      attr <- if (initial) {
+      field <- if (initial) {
         "initial"
       } else {
         rxode2_dosing_attributes[[as.character(x[[2]][[1]])]]
@@ -354,7 +346,7 @@ rxode2_read_model <- function(stmts, reader) {
       if (is.null(dosing[[cmt]])) {
         dosing[[cmt]] <- list()
       }
-      dosing[[cmt]][[attr]] <- reader$check(x[[3]], x)
+      dosing[[cmt]][[field]] <- reader$check(x[[3]], x)
     } else if (is_call(x, "<-") && is_call(x[[3]], "linCmt")) {
       lincmt <- as.character(x[[2]])
     } else if (is_call(x, "<-") || is_call(x, "if")) {
@@ -381,21 +373,40 @@ rxode2_read_model <- function(stmts, reader) {
     function(x) if (is_call(x, "<-")) as.character(x[[2]]) else "",
     character(1)
   )
-  is_prediction <- (targets %in% endpoints) &
+  # It is taken out as the prediction only when nothing reads the endpoint
+  # and no `if` reassigns it; otherwise the assignments stay statements and
+  # the prediction is the endpoint itself.
+  read_elsewhere <- stmt_reads(assigns)
+  conditional <- unlist(lapply(
+    Filter(function(x) is_call(x, "if"), assigns),
+    function(x) stmt_targets(list(x))
+  ))
+  kept <- endpoints[endpoints %in% c(read_elsewhere, conditional)]
+  if (!is.null(lincmt) && lincmt %in% c(kept, targets)) {
+    reader$refuse(
+      as.symbol(lincmt),
+      "a linCmt() endpoint that no other statement assigns or reads"
+    )
+  }
+  is_prediction <- (targets %in% setdiff(endpoints, kept)) &
     !duplicated(targets, fromLast = TRUE)
   predictions <- lapply(assigns[is_prediction], `[[`, 3)
   names(predictions) <- targets[is_prediction]
   rest <- assigns[!is_prediction]
 
+  for (e in kept) {
+    predictions[[e]] <- as.symbol(e)
+  }
+
   parts <- rxode2_read_structure(rest, lincmt, derivatives, reader)
   individual <- parts$individual
-  structure <- parts$structure
-  compartments <- model_compartments(structure)
+  shape <- parts$structure
+  compartments <- model_compartments(shape)
   if (!is.null(lincmt)) {
     predictions[[lincmt]] <- call(
       "/",
       quote(central),
-      as.symbol(structure$parameters[["v"]])
+      as.symbol(shape$parameters[["v"]])
     )
   }
 
@@ -403,10 +414,10 @@ rxode2_read_model <- function(stmts, reader) {
   for (e in intersect(setdiff(endpoints, names(predictions)), compartments)) {
     predictions[[e]] <- as.symbol(e)
   }
-  missing <- setdiff(endpoints, names(predictions))
-  if (length(missing) > 0) {
+  absent <- setdiff(endpoints, names(predictions))
+  if (length(absent) > 0) {
     reader$refuse(
-      as.symbol(missing[[1]]),
+      as.symbol(absent[[1]]),
       "a prediction assigned to every endpoint"
     )
   }
@@ -429,7 +440,7 @@ rxode2_read_model <- function(stmts, reader) {
 
   list(
     individual = individual,
-    structure = structure,
+    structure = shape,
     dosing = dosing[intersect(compartments, names(dosing))],
     observations = observations
   )
@@ -473,6 +484,14 @@ rxode2_read_residual <- function(x, stmt, reader) {
   if (!is.null(p <- one(x, "pow"))) {
     return(list(type = "power", parameters = p))
   }
+  # `add() + prop()` adds variances, rxode2's default, which
+  # `combined2()` names; `combined1()` adds standard deviations, which the
+  # representation does not hold.
+  if (
+    is_call(x, "+") && length(x) == 3 && identical(x[[3]], quote(combined2()))
+  ) {
+    x <- x[[2]]
+  }
   if (is_call(x, "+") && length(x) == 3) {
     a <- one(x[[2]], "add") %||% one(x[[3]], "add")
     p <- one(x[[3]], "prop") %||% one(x[[2]], "prop")
@@ -488,7 +507,7 @@ rxode2_read_residual <- function(x, stmt, reader) {
 
 rxode2_read_lincmt <- function(targets, reader) {
   lower <- tolower(targets)
-  found <- lapply(lincmt_aliases(lower), function(alias) {
+  found <- lapply(rxode2_lincmt_aliases(lower), function(alias) {
     hit <- targets[lower %in% alias]
     if (length(hit) > 0) hit[[1]]
   })
@@ -515,8 +534,7 @@ rxode2_read_lincmt <- function(targets, reader) {
 }
 
 # Split model() statements between individual parameters and the
-# structure: a linCmt() closed form, or ODEs whose statements are those that
-# read a compartment amount, time, or a name another such statement assigns.
+# structure: a linCmt() closed form, or ODE code.
 rxode2_read_structure <- function(rest, lincmt, derivatives, reader) {
   if (!is.null(lincmt)) {
     for (x in rest) {
@@ -525,28 +543,32 @@ rxode2_read_structure <- function(rest, lincmt, derivatives, reader) {
       }
     }
     individual <- rest
-    structure <- rxode2_read_lincmt(stmt_targets(individual), reader)
+    shape <- rxode2_read_lincmt(stmt_targets(individual), reader)
   } else {
-    # A statement belongs to the structure when it reads a compartment
-    # amount, or a name another structure statement assigns.
+    # A statement belongs to the structure when it reads or assigns a
+    # compartment amount, time (continuous in rxode2, D15), or a name a
+    # structure statement assigns; and a name the structure assigns is
+    # assigned only there, since ODE code re-runs at every solver step.
+    # Repeat until nothing moves, keeping the statements' order.
     compartments <- names(derivatives)
-    # Time is continuous in rxode2: statements reading it are part of the
-    # ODE structure, not individual parameters (D15).
-    state <- c(compartments, "t")
     in_structure <- logical(length(rest))
-    for (i in seq_along(rest)) {
-      reads <- if (is_call(rest[[i]], "<-")) {
-        all.vars(rest[[i]][[3]])
-      } else {
-        all.vars(rest[[i]])
+    repeat {
+      state <- c(compartments, "t", stmt_targets(rest[in_structure]))
+      moves <- !in_structure &
+        vapply(
+          rest,
+          function(x) {
+            any(c(stmt_reads(list(x)), stmt_targets(list(x))) %in% state)
+          },
+          logical(1)
+        )
+      if (!any(moves)) {
+        break
       }
-      if (any(reads %in% state)) {
-        in_structure[[i]] <- TRUE
-        state <- c(state, stmt_targets(rest[i]))
-      }
+      in_structure <- in_structure | moves
     }
     individual <- rest[!in_structure]
-    structure <- list(
+    shape <- list(
       type = "ode",
       compartments = compartments,
       statements = rest[in_structure],
@@ -554,5 +576,5 @@ rxode2_read_structure <- function(rest, lincmt, derivatives, reader) {
     )
   }
 
-  list(individual = individual, structure = structure)
+  list(individual = individual, structure = shape)
 }

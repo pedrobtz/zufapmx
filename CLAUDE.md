@@ -118,8 +118,15 @@ land; see `.agents/design.md` (§4).
   [R/read-mrgsolve.R](R/read-mrgsolve.R),
   [R/write-mrgsolve.R](R/write-mrgsolve.R)): blocks and a C++ subset
   parser; `$PKMODEL` uses NONMEM's names, so closed forms share
-  `nm_closed`. Expressions print through dialects
-  ([R/print-expr.R](R/print-expr.R)): NM-TRAN and C++.
+  `closed_forms` ([R/closed.R](R/closed.R)). Expressions print through
+  dialects ([R/print-expr.R](R/print-expr.R)): NM-TRAN and C++.
+- **Names.** Format code is prefixed `nm_`, `mrg_` or `cpp_`, and
+  `rxode2_read_`/`rxode2_write_`; code more than one format uses has a
+  neutral name in a shared file (`closed_forms`, `sigma_from_sd()`,
+  `model_rename()`). `check_*()` validates an argument, `validate_*()` a
+  model component, `expr_check()`/`stmt_check()` an expression, and the
+  condition constructors are `*_error()`. Each format keeps one table per
+  spelling (`nm_dosing_prefixes`), read inverted by `invert_names()`.
 - **Writers** ([R/write-rxode2.R](R/write-rxode2.R),
   [R/write-nonmem.R](R/write-nonmem.R)) convert residual error between
   NONMEM's sigma variances and rxode2's standard-deviation parameters;
@@ -170,7 +177,7 @@ These come from the design's decisions (§13) and hold from the first stage.
   `equivalent` instead of `exact`.
 - **`linCmt()` has two naming styles.** rxode2's (`cl`, `v`, `q`, `vp`) and
   NONMEM's numbered `TRANS4` names, where `V2` is the central volume when
-  there is a depot. `lincmt_aliases()` tells them apart; reading `V2` as a
+  there is a depot. `rxode2_lincmt_aliases()` tells them apart; reading `V2` as a
   peripheral volume refused every NONMEM-read closed form written back.
 - **Read `run.xml` with an encoding override.** NONMEM declares
   `encoding="ASCII"`, which zuxml (expat) rejects
@@ -189,6 +196,17 @@ These come from the design's decisions (§13) and hold from the first stage.
 - **`$PARAM @annotated` descriptions hold bounds.** `[lower, upper]` and
   `fixed` are zufapmx's convention; without it every mrgsolve write of a
   bounded model would be `lossy`.
+- **Who assigns and reads what (D14, D18).** The validator refuses
+  assignments to parameters, random effects, compartments and time; ODE
+  code reassigning an individual name; individual statements reading an
+  amount; and a name an `if` assigns without a value before it. A reader
+  that meets one of these refuses it or, for rxode2, moves statements into
+  the ODE code; writers rely on all four.
+- **Each record reads its own time (D15).** `TIME` in `$DES` or `$ODE` and
+  `SOLVERTIME` outside `$ODE` are refused; `T` outside `$DES` is a NONMEM
+  variable.
+- **A statement's refusal points at its record** through `record_at()`:
+  statements carry no positions of their own.
 - **Exported functions are `pmx_*` (D10),** with `zufapmx_corpus()` the one
   package-level exception.
 
@@ -217,7 +235,14 @@ These come from the design's decisions (§13) and hold from the first stage.
   simulates the typical subject of a corpus entry through rxode2, mrgsolve
   or an oracle at fixed tight tolerances, and `corpus_max_rel_dev()`
   measures agreement. The `tools/` scripts source it, so the corpus files,
-  the scripts and the tests share one implementation.
+  the scripts and the tests share one implementation. `expect_refused()`
+  asserts a refusal's class, `seen` and line; `expect_faithful()` a write
+  that is exact or equivalent; `str_full()` snapshots a representation
+  untruncated.
+- **Skip engines with `skip_if_no_engine()`,** not
+  `skip_if_not_installed()`. CI sets `ZUFAPMX_REQUIRE_ENGINES=true`, so a
+  runner leg where an engine failed to install fails instead of skipping.
+- **One test file per module**, named after the R file it tests.
 - **Keep the suite inside the CRAN time budget.** No runtime recorded yet.
 
 ## Definition of done
