@@ -62,3 +62,19 @@ test_that("a writer whose text does not read back raises a write error", {
     class = "zufapmx_write_error"
   )
 })
+
+test_that("same_content() compares attributes as a set, like identical()", {
+  a <- data.frame(x = c(1, 2), y = c("a", "b"))
+  b <- structure(
+    list(x = c(1, 2), y = c("a", "b")),
+    row.names = c(NA, -2L),
+    class = "data.frame"
+  )
+  expect_identical(a, b)
+  expect_false(identical(names(attributes(a)), names(attributes(b))))
+
+  expect_true(same_content(a, b))
+  expect_true(same_content(list(p = a), list(p = b)))
+  b$x[[2]] <- 3
+  expect_false(same_content(a, b))
+})

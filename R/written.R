@@ -277,7 +277,7 @@ drop_aliases <- function(m) {
 same_content <- function(a, b) {
   if (is.double(a) && is.double(b)) {
     return(
-      identical(attributes(a), attributes(b)) &&
+      same_attributes(a, b) &&
         identical(is.na(a), is.na(b)) &&
         all(
           a == b | abs(a - b) <= 4 * .Machine$double.eps * pmax(abs(a), abs(b)),
@@ -296,17 +296,23 @@ same_content <- function(a, b) {
     if (is.symbol(a)) {
       return(identical(a, b))
     }
-    if (
-      !identical(
-        attributes(a)[setdiff(names(attributes(a)), "names")],
-        attributes(b)[setdiff(names(attributes(b)), "names")]
-      )
-    ) {
+    if (!same_attributes(a, b, except = "names")) {
       return(FALSE)
     }
     return(all(mapply(same_content, as.list(a), as.list(b))))
   }
   identical(a, b)
+}
+
+# Attributes as a set, as identical() compares them: a data frame built
+# by data.frame() and one built by structure() order theirs differently.
+same_attributes <- function(a, b, except = character()) {
+  ordered <- function(x) {
+    x <- attributes(x)
+    x <- x[setdiff(names(x), except)]
+    if (length(x) == 0) list() else x[order(names(x))]
+  }
+  identical(ordered(a), ordered(b))
 }
 
 # Everything but provenance, which records where a model came from rather
