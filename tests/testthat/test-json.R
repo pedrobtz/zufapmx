@@ -175,3 +175,45 @@ test_that("a model without an endpoint round-trips through JSON", {
 
   expect_identical(json_round_trip(m), m)
 })
+
+test_that("non-ASCII names survive JSON in any locale", {
+  skip_if_no_engine("zujson")
+  model_named <- function(name) {
+    f <- function() {
+      ini({
+        tcl <- c(0, 4)
+        tv <- c(0, 10)
+      })
+      model({
+        cl <- tcl * (WT / 70)
+        v <- tv
+        cp <- linCmt()
+      })
+    }
+    b <- body(f)
+    b[[3]][[2]][[2]][[3]][[3]][[2]][[2]] <- as.name(name)
+    body(f) <- b
+    pmx_read_rxode2(f)
+  }
+
+  # Outside a UTF-8 locale R itself turns the name into `po<U+00EF>ds`;
+  # either way the JSON must give back the same model.
+  # The raw UTF-8 bytes, as a function sourced from a UTF-8 file in a C
+  # locale names it.
+  bytes <- rawToChar(as.raw(c(0x70, 0x6f, 0xc3, 0xaf, 0x64, 0x73)))
+  for (locale in c("C", "en_US.UTF-8")) {
+    withr::local_locale(c(LC_CTYPE = locale))
+    for (name in c("po\u00efds", bytes)) {
+      m <- model_named(name)
+      expect_length(unclass(m)$provenance$covariates, 1)
+      expect_identical(json_round_trip(m), m, label = locale)
+      # A name that is a JSON key: the endpoint.
+      # As a reader holds it: through a symbol, so in the native encoding.
+      native <- as.character(as.name(name))
+      e <- unclass(model_onecmt_mm())
+      names(e$observations) <- native
+      e <- do.call(new_model, e)
+      expect_identical(json_round_trip(e), e, label = paste(locale, "key"))
+    }
+  }
+})

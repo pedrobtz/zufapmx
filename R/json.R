@@ -45,7 +45,7 @@ pmx_write_json <- function(model, file = NULL, pretty = TRUE) {
     zufapmx_abort("`pretty` must be TRUE or FALSE.", "model")
   }
   json_require()
-  text <- zujson::json_write(json_model(model), pretty = pretty)
+  text <- zujson::json_write(json_utf8(json_model(model)), pretty = pretty)
   if (is.null(file)) {
     return(text)
   }
@@ -159,6 +159,26 @@ json_model <- function(model) {
   )
 }
 
+# Every string and name marked UTF-8 where its bytes are UTF-8. Outside a
+# UTF-8 locale R holds a non-ASCII name as unmarked bytes, which a writer
+# would convert from the native encoding and mangle.
+json_utf8 <- function(x) {
+  mark <- function(v) {
+    ok <- !is.na(v) & validUTF8(v)
+    Encoding(v[ok]) <- "UTF-8"
+    v
+  }
+  if (is.character(x)) {
+    x <- mark(x)
+  } else if (is.list(x)) {
+    x[] <- lapply(x, json_utf8)
+  }
+  if (!is.null(names(x))) {
+    names(x) <- mark(names(x))
+  }
+  x
+}
+
 # An empty named list writes as `{}`, not `[]`.
 json_object <- function(x) {
   if (length(x) == 0) structure(list(), names = character()) else x
@@ -194,18 +214,37 @@ json_expr <- function(x) {
   if (is.numeric(x) && length(x) == 1 && is.null(attributes(x))) {
     return(json_num(x))
   }
-  text <- paste(deparse(x, width.cutoff = 500L), collapse = "\n")
+  # deparse() escapes a non-ASCII name as bytes outside a UTF-8 locale, so
+  # such names go through ASCII placeholders and come back backquoted.
+  names <- all.names(x)
+  wide <- unique(names[!grepl("^[ -~]*$", names)])
+  placeholders <- sprintf("zufapmx_name_%d_", seq_along(wide))
+  y <- rename_symbols(x, stats::setNames(placeholders, wide))
+  print_text <- function(control) {
+    text <- paste(
+      deparse(y, width.cutoff = 500L, control = control),
+      collapse = "\n"
+    )
+    for (i in seq_along(wide)) {
+      text <- gsub(
+        placeholders[[i]],
+        paste0("`", wide[[i]], "`"),
+        text,
+        fixed = TRUE
+      )
+    }
+    # The names' own bytes, marked UTF-8 when they are: converting would
+    # read a C locale's bytes as Latin-1.
+    if (validUTF8(text)) {
+      Encoding(text) <- "UTF-8"
+    }
+    text
+  }
+  text <- print_text(c("keepNA", "keepInteger", "niceNames", "showAttributes"))
   # Exactly: same_content() allows a few ulps, and a constant such as
   # 0.30000000000000004 prints as 0.3 in 15 digits.
   if (!identical(str2lang(text), x)) {
-    text <- paste(
-      deparse(
-        x,
-        width.cutoff = 500L,
-        control = c("keepNA", "keepInteger", "niceNames", "digits17")
-      ),
-      collapse = "\n"
-    )
+    text <- print_text(c("keepNA", "keepInteger", "niceNames", "digits17"))
   }
   text
 }
@@ -213,6 +252,7 @@ json_expr <- function(x) {
 # ---- reading ---------------------------------------------------------------
 
 json_unmodel <- function(x, file) {
+  x <- json_native_all(x)
   if (!is.list(x) || !identical(x$zufapmx, "model")) {
     json_error(file, "not a zufapmx model (no `\"zufapmx\": \"model\"`)")
   }
@@ -359,6 +399,8 @@ json_unexpr <- function(x) {
   ) {
     return(json_nums(list(x)))
   }
+  # Bytes as they are (json_native()): outside a UTF-8 locale the parser
+  # would turn a UTF-8 name into `<U+00EF>`.
   text <- json_string(x)
   out <- tryCatch(
     str2lang(text),
@@ -378,6 +420,29 @@ json_string <- function(x) {
   x <- json_scalar(x)
   if (!is.character(x)) {
     model_abort("Expected a string, not %s.", json_describe(x))
+  }
+  json_native(x)
+}
+
+# json_native() on every string and name of a parsed document: object keys
+# become list names (endpoints, compartments), which name symbols too.
+json_native_all <- function(x) {
+  if (is.character(x)) {
+    x <- json_native(x)
+  } else if (is.list(x)) {
+    x[] <- lapply(x, json_native_all)
+  }
+  if (!is.null(names(x))) {
+    names(x) <- json_native(names(x))
+  }
+  x
+}
+
+# Outside a UTF-8 locale, R holds a non-ASCII name as its bytes; reading
+# the JSON's UTF-8 as those bytes gives back the name that was written.
+json_native <- function(x) {
+  if (!isTRUE(l10n_info()[["UTF-8"]])) {
+    Encoding(x) <- "unknown"
   }
   x
 }
