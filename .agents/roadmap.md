@@ -25,7 +25,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zufapmx/issues/8) | [#23](https://github.com/pedrobtz/zufapmx/pull/23) | 2026-10-28 |
 | 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zufapmx/issues/9) | [#127](https://github.com/pedrobtz/zufapmx/pull/127) | 2026-11-12 |
 | 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zufapmx/issues/10) | [#131](https://github.com/pedrobtz/zufapmx/pull/131) | 2026-11-12 |
-| 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zufapmx/issues/11) | | 2026-11-12 |
+| 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zufapmx/issues/11) | [#133](https://github.com/pedrobtz/zufapmx/pull/133) | 2026-11-12 |
 | 10 | [Full CI](#stage-10--full-ci) | full | [#12](https://github.com/pedrobtz/zufapmx/issues/12) | | |
 | 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#13](https://github.com/pedrobtz/zufapmx/issues/13) | | |
 
