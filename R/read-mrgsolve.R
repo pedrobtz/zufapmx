@@ -13,7 +13,7 @@
 #' `F_CMT`, `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything else,
 #' including `$GLOBAL`, `$PREAMBLE`, the `nm-vars` plugin, `int`
 #' declarations and integer division (`3/4`), is refused with an error of
-#' class `zufapmx_parse_error`. `$PKMODEL` may take its parameters from
+#' class `zupmxio_parse_error`. `$PKMODEL` may take its parameters from
 #' `$PARAM` directly or from `$MAIN`.
 #'
 #' Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
@@ -31,14 +31,14 @@
 #' them.
 #'
 #' @param file Path to the model file.
-#' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_mrgsolve()].
+#' @return A `zupmxio_model`; see [pmx_inspect] and [pmx_write_mrgsolve()].
 #' @family readers
 #' @seealso [pmx_inspect] for the model's parts.
 #' @export
 #' @examples
 #' path <- system.file(
 #'   "corpus", "twocmt-bolus", "model.cpp",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' pmx_read_mrgsolve(path)
 pmx_read_mrgsolve <- function(file) {
@@ -303,7 +303,7 @@ mrg_plugins <- function(blocks, file) {
 }
 
 # One `@annotated` $PARAM line, `name : value : text`, as a parameter row;
-# NULL for a blank line. Bounds and `fixed` in the text are zufapmx's
+# NULL for a blank line. Bounds and `fixed` in the text are zupmxio's
 # convention; any other text is a lost description.
 mrg_annotated_param <- function(line, at, file) {
   line <- trimws(line)

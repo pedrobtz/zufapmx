@@ -60,7 +60,7 @@ cell <- function(oracle, entry, expected) {
   sprintf("%s %.0e", if (dev <= tol) "agrees" else "differs", dev)
 }
 
-corpus <- zufapmx_corpus()
+corpus <- zupmxio_corpus()
 rows <- lapply(seq_len(nrow(corpus)), function(i) {
   entry <- corpus[i, ]
   expected <- corpus_expected(entry$path)$pred

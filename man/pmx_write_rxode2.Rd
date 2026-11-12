@@ -10,7 +10,7 @@ pmx_write_rxode2(model)
 \item{model}{A model read by one of the \verb{pmx_read_*()} functions.}
 }
 \value{
-A \code{zufapmx_written} object: the text as lines, with its fidelity
+A \code{zupmxio_written} object: the text as lines, with its fidelity
 and losses (see \code{\link[=pmx_fidelity]{pmx_fidelity()}}). \code{format()} and \code{as.character()}
 give the text.
 }
@@ -30,12 +30,12 @@ closed-form parameter held directly as a fixed effect (mrgsolve's
 assigned in \code{model()} (\code{CL <- tCL}). Constructs rxode2 cannot hold,
 such as residual error written as an expression over epsilons, or an
 individual parameter that reads the record's time, stop with an error of
-class \code{zufapmx_write_error}.
+class \code{zupmxio_write_error}.
 }
 \examples{
 path <- system.file(
   "corpus", "onecmt-oral-mm", "model-rxode2.R",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 fun <- eval(parse(path))
 pmx_write_rxode2(pmx_read_rxode2(fun))

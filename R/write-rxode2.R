@@ -14,10 +14,10 @@
 #' assigned in `model()` (`CL <- tCL`). Constructs rxode2 cannot hold,
 #' such as residual error written as an expression over epsilons, or an
 #' individual parameter that reads the record's time, stop with an error of
-#' class `zufapmx_write_error`.
+#' class `zupmxio_write_error`.
 #'
 #' @inheritParams pmx_inspect
-#' @return A `zufapmx_written` object: the text as lines, with its fidelity
+#' @return A `zupmxio_written` object: the text as lines, with its fidelity
 #'   and losses (see [pmx_fidelity()]). `format()` and `as.character()`
 #'   give the text.
 #' @family writers
@@ -25,7 +25,7 @@
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral-mm", "model-rxode2.R",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' fun <- eval(parse(path))
 #' pmx_write_rxode2(pmx_read_rxode2(fun))

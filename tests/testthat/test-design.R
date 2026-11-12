@@ -1,7 +1,7 @@
 test_that("the default design holds every regimen for 21 subjects", {
   d <- pmx_design()
 
-  expect_s3_class(d, "zufapmx_design")
+  expect_s3_class(d, "zupmxio_design")
   expect_equal(d$regimens, c("single", "infusion", "multiple", "ss"))
   expect_equal(d$n, 20L)
   expect_equal(d$cmt, 1L)
@@ -41,7 +41,7 @@ test_that("n counts the subjects besides the typical one, up to 10000", {
   expect_equal(unique(pmx_design(n = 0)$events$id), 1L)
   expect_equal(pmx_design(n = 9999, regimens = "ss")$n, 9999L)
   expect_equal(pmx_design(n = 10000, regimens = "ss")$n, 10000L)
-  expect_error(pmx_design(n = 10001), class = "zufapmx_model_error")
+  expect_error(pmx_design(n = 10001), class = "zupmxio_model_error")
 })
 
 test_that("pmx_design() refuses malformed arguments", {
@@ -81,7 +81,7 @@ test_that("pmx_design() refuses malformed arguments", {
   for (args in bad) {
     expect_error(
       do.call(pmx_design, args),
-      class = "zufapmx_model_error",
+      class = "zupmxio_model_error",
       label = deparse(args)
     )
   }

@@ -9,7 +9,7 @@
 #'
 #' * A written rxode2 or mrgsolve model runs as written, on its own
 #'   format's engine. That is the text under test.
-#' * A model, or a written NONMEM model, is written by zufapmx to an engine
+#' * A model, or a written NONMEM model, is written by zupmxio to an engine
 #'   and runs there: its source format's engine when that is rxode2 or
 #'   mrgsolve, and rxode2 otherwise.
 #'
@@ -47,7 +47,7 @@
 #' @param engines `NULL` to choose engines as described above, or a
 #'   character vector of two engines, `"rxode2"` or `"mrgsolve"`, for `a`
 #'   and `b`. `NA` in either place chooses that side's engine as usual.
-#' @return A `zufapmx_comparison`, a list with:
+#' @return A `zupmxio_comparison`, a list with:
 #'   \describe{
 #'     \item{pass}{`TRUE` when every prediction agrees.}
 #'     \item{reason}{Why the models could not be compared point by point,
@@ -73,7 +73,7 @@
 #' @examplesIf requireNamespace("rxode2", quietly = TRUE)
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model.ctl",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' model <- pmx_read_nonmem(path)
 #' # Check the NONMEM writer. Both sides run on rxode2, since NONMEM is not
@@ -97,11 +97,11 @@ pmx_compare <- function(
   engines <- check_engines(engines)
 
   tables <- c(
-    a = inherits(a, "zufapmx_tables"),
-    b = inherits(b, "zufapmx_tables")
+    a = inherits(a, "zupmxio_tables"),
+    b = inherits(b, "zupmxio_tables")
   )
   if (all(tables)) {
-    zufapmx_abort(
+    zupmxio_abort(
       "`a` and `b` are both tables; compare tables with a model.",
       "model"
     )
@@ -147,7 +147,7 @@ pmx_compare <- function(
         atol = atol
       )
     ),
-    class = "zufapmx_comparison"
+    class = "zupmxio_comparison"
   )
 }
 
@@ -177,7 +177,7 @@ table_side <- function(t) {
 compare_tables <- function(t, side, at, tol, atol) {
   m <- unclass(side$model)
   if (length(m$observations) != 1) {
-    zufapmx_abort(
+    zupmxio_abort(
       "pmx_compare() compares models with one endpoint.",
       "model",
       call = NULL
@@ -187,7 +187,7 @@ compare_tables <- function(t, side, at, tol, atol) {
   compartments <- model_compartments(m$structure)
   bad <- !r$cmt %in% seq_along(compartments)
   if (any(bad)) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf(
         "A table record names compartment %s, but the model has %d.",
         format(r$cmt[bad][[1]]),
@@ -214,7 +214,7 @@ compare_tables <- function(t, side, at, tol, atol) {
   for (cov in covariates) {
     col <- extra[toupper(extra) == toupper(cov)]
     if (length(col) == 0) {
-      zufapmx_abort(
+      zupmxio_abort(
         sprintf(
           "The tables have no column for the covariate `%s`.",
           cov
@@ -267,7 +267,7 @@ compare_sides <- function(sides, design, tol, atol) {
   models <- lapply(sides, function(s) unclass(s$model))
   for (m in models) {
     if (length(m$observations) != 1) {
-      zufapmx_abort(
+      zupmxio_abort(
         "pmx_compare() compares models with one endpoint.",
         "model",
         call = NULL
@@ -335,7 +335,7 @@ compare_failure <- function(reason) {
 compare_covariates <- function(names, values) {
   at <- match(toupper(names), toupper(names(values)))
   if (anyNA(at)) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf(
         "The design has no value for the covariate%s %s; add %s to `covariates`.",
         if (sum(is.na(at)) > 1) "s" else "",
@@ -373,7 +373,7 @@ omega_root <- function(omega) {
   }
   e <- eigen(omega, symmetric = TRUE)
   if (any(e$values < -sqrt(.Machine$double.eps) * max(abs(e$values), 1))) {
-    zufapmx_abort(
+    zupmxio_abort(
       "A model's omega is not positive semi-definite.",
       "model",
       call = NULL
@@ -413,7 +413,7 @@ compare_skip <- function(models, regimen, cmt) {
   for (m in models) {
     compartments <- model_compartments(m$structure)
     if (cmt > length(compartments)) {
-      zufapmx_abort(
+      zupmxio_abort(
         sprintf(
           "The design doses compartment %d, but a model has %d.",
           cmt,
@@ -509,9 +509,9 @@ compare_worst <- function(p, atol) {
 }
 
 #' @export
-print.zufapmx_comparison <- function(x, ...) {
+print.zupmxio_comparison <- function(x, ...) {
   cat(sprintf(
-    "<zufapmx comparison> %s\n",
+    "<zupmxio comparison> %s\n",
     if (x$pass) "pass" else "FAIL"
   ))
   for (s in c("a", "b")) {
@@ -565,17 +565,17 @@ print.zufapmx_comparison <- function(x, ...) {
 }
 
 check_comparable <- function(x, name) {
-  if (inherits(x, "zufapmx_tables")) {
+  if (inherits(x, "zupmxio_tables")) {
     return(invisible())
   }
-  if (inherits(x, "zufapmx_model")) {
+  if (inherits(x, "zupmxio_model")) {
     validate_model(x)
     return(invisible())
   }
-  if (inherits(x, "zufapmx_written")) {
+  if (inherits(x, "zupmxio_written")) {
     return(invisible())
   }
-  zufapmx_abort(
+  zupmxio_abort(
     sprintf(
       paste(
         "`%s` must be a model from pmx_read_*() or pmx_write_*(), or",
@@ -597,7 +597,7 @@ check_tolerance <- function(x, positive, name = deparse(substitute(x))) {
       x < 0 ||
       (positive && x == 0)
   ) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf(
         "`%s` must be a %s number.",
         name,
@@ -618,7 +618,7 @@ check_engines <- function(engines) {
       length(engines) != 2 ||
       !all(is.na(engines) | engines %in% engine_names)
   ) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf(
         "`engines` must be NULL or two of %s or NA, for `a` and `b`.",
         paste0("\"", engine_names, "\"", collapse = ", ")

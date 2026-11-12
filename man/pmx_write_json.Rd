@@ -19,15 +19,15 @@ return the text. For \code{pmx_read_json()}, the path of a JSON file.}
 }
 \value{
 \code{pmx_write_json()}: the JSON text, invisibly when \code{file} is
-given. \code{pmx_read_json()}: a model. A file that is not a zufapmx JSON
-model is a \code{zufapmx_parse_error}.
+given. \code{pmx_read_json()}: a model. A file that is not a zupmxio JSON
+model is a \code{zupmxio_parse_error}.
 }
 \description{
 \code{pmx_write_json()} writes the representation as a JSON document and
 \code{pmx_read_json()} reads one back. The document holds the model's seven
 components as data, so a model read from JSON is the model that was
 written: the same parameters, statements, provenance and all. It is
-zufapmx's own representation, not a file standard (design D3).
+zupmxio's own representation, not a file standard (design D3).
 }
 \details{
 Statements and expressions are R code in strings (\code{"cl <- tcl * exp(eta.cl)"}), constants are numbers. JSON has no infinity, so
@@ -36,13 +36,13 @@ is \code{null}. Numbers are written in the fewest digits that read back
 exactly.
 
 Both functions need the zujson package, and raise an error of class
-\code{zufapmx_engine_error} without it.
+\code{zupmxio_engine_error} without it.
 }
 \examples{
 \dontshow{if (requireNamespace("zujson", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 path <- system.file(
   "corpus", "onecmt-oral", "model.ctl",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 model <- pmx_read_nonmem(path)
 file <- tempfile(fileext = ".json")

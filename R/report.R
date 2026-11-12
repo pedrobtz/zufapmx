@@ -15,7 +15,7 @@
 #' @examplesIf requireNamespace("rxode2", quietly = TRUE)
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model.ctl",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' model <- pmx_read_nonmem(path)
 #' cmp <- pmx_compare(
@@ -27,8 +27,8 @@
 #' pmx_report(cmp, file)
 #' cat(readLines(file, n = 12), sep = "\n")
 pmx_report <- function(comparison, file = NULL, max_points = 20) {
-  if (!inherits(comparison, "zufapmx_comparison")) {
-    zufapmx_abort(
+  if (!inherits(comparison, "zupmxio_comparison")) {
+    zupmxio_abort(
       sprintf(
         "`comparison` must be a comparison from pmx_compare(), not %s.",
         class(comparison)[[1]]
@@ -40,7 +40,7 @@ pmx_report <- function(comparison, file = NULL, max_points = 20) {
     !is.null(file) &&
       (!is.character(file) || length(file) != 1 || is.na(file) || !nzchar(file))
   ) {
-    zufapmx_abort("`file` must be a path or NULL.", "model")
+    zupmxio_abort("`file` must be a path or NULL.", "model")
   }
   check_count(max_points, 0, .Machine$integer.max)
 

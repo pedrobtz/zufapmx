@@ -29,7 +29,7 @@ character vector of two engines, \code{"rxode2"} or \code{"mrgsolve"}, for \code
 and \code{b}. \code{NA} in either place chooses that side's engine as usual.}
 }
 \value{
-A \code{zufapmx_comparison}, a list with:
+A \code{zupmxio_comparison}, a list with:
 \describe{
 \item{pass}{\code{TRUE} when every prediction agrees.}
 \item{reason}{Why the models could not be compared point by point,
@@ -61,7 +61,7 @@ Each side runs on an engine (rxode2 or mrgsolve):
 \itemize{
 \item A written rxode2 or mrgsolve model runs as written, on its own
 format's engine. That is the text under test.
-\item A model, or a written NONMEM model, is written by zufapmx to an engine
+\item A model, or a written NONMEM model, is written by zupmxio to an engine
 and runs there: its source format's engine when that is rxode2 or
 mrgsolve, and rxode2 otherwise.
 }
@@ -97,7 +97,7 @@ with a \code{reason} and no predictions.
 \dontshow{if (requireNamespace("rxode2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 path <- system.file(
   "corpus", "onecmt-oral", "model.ctl",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 model <- pmx_read_nonmem(path)
 # Check the NONMEM writer. Both sides run on rxode2, since NONMEM is not

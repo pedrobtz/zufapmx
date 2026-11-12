@@ -1,5 +1,5 @@
 # zufuzz harness for the nonmem reader (design §9). Run from the package root
-# with zufapmx installed:
+# with zupmxio installed:
 #
 #   Rscript tools/fuzz/nonmem.R <inputs...>           # replay inputs, no engine
 #   afl-fuzz -i tools/fuzz/corpus/nonmem -o out -- Rscript tools/fuzz/nonmem.R
@@ -11,7 +11,7 @@
 
 library(zufuzz)
 source("tests/testthat/helper-fuzz.R")
-instrument_package("zufapmx")
+instrument_package("zupmxio")
 
 test_one_input <- function(data) fuzz_target(data, "nonmem")
 

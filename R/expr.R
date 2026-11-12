@@ -39,12 +39,12 @@ expr_check <- function(x) {
   }
   if (is.numeric(x)) {
     if (length(x) != 1 || is.na(x)) {
-      zufapmx_abort("A constant must be one number.", "model")
+      zupmxio_abort("A constant must be one number.", "model")
     }
     return(invisible(x))
   }
   if (!is.call(x) || !is.symbol(x[[1]])) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf("`%s` is not an expression.", expr_text(x)),
       "model"
     )
@@ -53,14 +53,14 @@ expr_check <- function(x) {
   fn <- as.character(x[[1]])
   arity <- c(expr_operators, expr_functions)[[fn, exact = TRUE]]
   if (is.null(arity)) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf("`%s()` is not in the function table.", fn),
       "model"
     )
   }
   args <- as.list(x)[-1]
   if (!length(args) %in% arity) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf(
         "`%s()` takes %s arguments, not %d.",
         fn,
@@ -77,7 +77,7 @@ expr_check <- function(x) {
 stmt_check <- function(x) {
   if (is.call(x) && identical(x[[1]], as.symbol("<-"))) {
     if (!is.symbol(x[[2]])) {
-      zufapmx_abort(
+      zupmxio_abort(
         sprintf("`%s` does not assign to a name.", expr_text(x)),
         "model"
       )
@@ -92,7 +92,7 @@ stmt_check <- function(x) {
     }
     return(invisible(x))
   }
-  zufapmx_abort(
+  zupmxio_abort(
     sprintf("`%s` is not an assignment or an `if` statement.", expr_text(x)),
     "model"
   )
@@ -142,6 +142,6 @@ is_constant_expr <- function(x) {
         expr_check(x)
         TRUE
       },
-      zufapmx_model_error = function(e) FALSE
+      zupmxio_model_error = function(e) FALSE
     )
 }

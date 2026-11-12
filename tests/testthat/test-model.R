@@ -53,9 +53,9 @@ test_that("pmx_ode() returns the derivatives, or NULL for a closed form", {
 })
 
 test_that("accessors reject anything but a model", {
-  expect_error(pmx_parameters(list()), class = "zufapmx_model_error")
-  expect_error(pmx_omega(1), class = "zufapmx_model_error")
-  expect_error(pmx_ode("m"), class = "zufapmx_model_error")
+  expect_error(pmx_parameters(list()), class = "zupmxio_model_error")
+  expect_error(pmx_omega(1), class = "zupmxio_model_error")
+  expect_error(pmx_ode("m"), class = "zupmxio_model_error")
 })
 
 test_that("an unknown parameter role is an error", {
@@ -65,7 +65,7 @@ test_that("an unknown parameter role is an error", {
 
   expect_error(
     model_with(m, parameters = params),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -76,7 +76,7 @@ test_that("duplicate parameter names are an error", {
 
   expect_error(
     model_with(m, parameters = params),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -87,7 +87,7 @@ test_that("a non-symmetric omega block is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -98,7 +98,7 @@ test_that("a non-square omega block is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -109,7 +109,7 @@ test_that("a random effect attached to an unknown parameter is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -120,7 +120,7 @@ test_that("an attached eta missing from omega is an error", {
 
   expect_error(
     model_with(m, random_effects = re),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -131,7 +131,7 @@ test_that("a closed form outside one to three compartments is an error", {
 
   expect_error(
     model_with(m, structure = structure),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -142,7 +142,7 @@ test_that("a closed form naming an unknown canonical parameter is an error", {
 
   expect_error(
     model_with(m, structure = structure),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -153,7 +153,7 @@ test_that("an ODE model needs one derivative per compartment", {
 
   expect_error(
     model_with(m, structure = structure),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -161,14 +161,14 @@ test_that("an invalid expression anywhere in the model is an error", {
   m <- model_onecmt_mm()
   expect_error(
     model_with(m, individual = list(quote(cl <- sin(x)))),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 
   structure <- unclass(m)$structure
   structure$derivatives$depot <- quote(foo(depot))
   expect_error(
     model_with(m, structure = structure),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -176,11 +176,11 @@ test_that("dosing on an unknown compartment or attribute is an error", {
   m <- model_onecmt_mm()
   expect_error(
     model_with(m, dosing = list(gut = list(lag = quote(1)))),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
   expect_error(
     model_with(m, dosing = list(depot = list(delay = quote(1)))),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -188,18 +188,18 @@ test_that("an unknown residual model or transform is an error", {
   m <- model_twocmt_oral()
   obs <- unclass(m)$observations
   obs$cp$residual$type <- "student"
-  expect_error(model_with(m, observations = obs), class = "zufapmx_model_error")
+  expect_error(model_with(m, observations = obs), class = "zupmxio_model_error")
 
   obs <- unclass(m)$observations
   obs$cp$transform <- "logit"
-  expect_error(model_with(m, observations = obs), class = "zufapmx_model_error")
+  expect_error(model_with(m, observations = obs), class = "zupmxio_model_error")
 })
 
 test_that("a missing component is an error", {
   parts <- unclass(model_twocmt_oral())
   parts["dosing"] <- list(NULL)
 
-  expect_error(do.call(new_model, parts), class = "zufapmx_model_error")
+  expect_error(do.call(new_model, parts), class = "zupmxio_model_error")
 })
 
 test_that("parameters, random effects, compartments and time are not assigned", {
@@ -209,7 +209,7 @@ test_that("parameters, random effects, compartments and time are not assigned", 
     stmts <- c(ind, list(call("<-", as.symbol(target), 1)))
     expect_error(
       model_with(m, individual = stmts),
-      class = "zufapmx_model_error",
+      class = "zupmxio_model_error",
       info = target
     )
   }
@@ -219,13 +219,13 @@ test_that("ODE code may not reassign an individual name", {
   m <- model_onecmt_mm()
   s <- unclass(m)$structure
   s$statements <- c(s$statements, list(quote(vm <- vm / 2)))
-  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
+  expect_error(model_with(m, structure = s), class = "zupmxio_model_error")
 })
 
 test_that("individual statements may not read compartment amounts (D18)", {
   m <- model_onecmt_mm()
   ind <- c(unclass(m)$individual, list(quote(k <- central / 100)))
-  expect_error(model_with(m, individual = ind), class = "zufapmx_model_error")
+  expect_error(model_with(m, individual = ind), class = "zupmxio_model_error")
 })
 
 test_that("a name assigned inside if needs a value before it (D14)", {
@@ -238,10 +238,10 @@ test_that("a name assigned inside if needs a value before it (D14)", {
       }
     ))
   )
-  expect_error(model_with(m, individual = ind), class = "zufapmx_model_error")
+  expect_error(model_with(m, individual = ind), class = "zupmxio_model_error")
 
   ind <- c(unclass(m)$individual, list(quote(f <- 1)), ind[length(ind)])
-  expect_s3_class(model_with(m, individual = ind), "zufapmx_model")
+  expect_s3_class(model_with(m, individual = ind), "zupmxio_model")
 })
 
 test_that("a choice argument outside its documented strings is a model error", {
@@ -251,15 +251,15 @@ test_that("a choice argument outside its documented strings is a model error", {
     info <- deparse(bad)
     expect_error(
       pmx_read_nonmem(ctl, bad),
-      class = "zufapmx_model_error",
+      class = "zupmxio_model_error",
       info = info
     )
     expect_error(
       pmx_write_nonmem(m, bad),
-      class = "zufapmx_model_error",
+      class = "zupmxio_model_error",
       info = info
     )
-    expect_error(pmx_omega(m, bad), class = "zufapmx_model_error", info = info)
+    expect_error(pmx_omega(m, bad), class = "zupmxio_model_error", info = info)
   }
   expect_equal(pmx_omega(m, "init"), pmx_omega(m))
 })
@@ -269,12 +269,12 @@ test_that("a file argument must name one existing file", {
     info <- deparse(bad)
     expect_error(
       pmx_read_nonmem(bad),
-      class = "zufapmx_model_error",
+      class = "zupmxio_model_error",
       info = info
     )
     expect_error(
       pmx_read_mrgsolve(bad),
-      class = "zufapmx_model_error",
+      class = "zupmxio_model_error",
       info = info
     )
   }
@@ -295,7 +295,7 @@ test_that("an edited model is validated again before use", {
       x$parameters$init[1] <- NA
       x
     },
-    function(x) structure(list(), class = "zufapmx_model")
+    function(x) structure(list(), class = "zupmxio_model")
   )
   for (i in seq_along(edits)) {
     bad <- edits[[i]](m)
@@ -307,14 +307,14 @@ test_that("an edited model is validated again before use", {
       pmx_parameters,
       format
     )) {
-      expect_error(use(bad), class = "zufapmx_model_error", info = info)
+      expect_error(use(bad), class = "zupmxio_model_error", info = info)
     }
   }
 })
 
 test_that("a model without endpoints is valid but not written to one-endpoint formats", {
   m <- model_with(model_twocmt_oral(), observations = list())
-  err <- expect_error(pmx_write_nonmem(m), class = "zufapmx_write_error")
+  err <- expect_error(pmx_write_nonmem(m), class = "zupmxio_write_error")
   expect_equal(err$location, "observations")
 })
 
@@ -324,33 +324,33 @@ test_that("the validator refuses malformed components", {
 
   expect_error(
     model_with(m, parameters = list(name = "a")),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
   re <- parts$random_effects
   re$attach$transform[[1]] <- "boxcox"
   expect_error(
     model_with(m, random_effects = re),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
   re <- parts$random_effects
   re$omega[[1]]$estimate <- matrix(1, 1, 1)
   expect_error(
     model_with(m, random_effects = re),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
   s <- parts$structure
   s$parameters[["cl"]] <- "clearance"
-  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
+  expect_error(model_with(m, structure = s), class = "zupmxio_model_error")
   s <- parts$structure
   s$type <- "pbpk"
-  expect_error(model_with(m, structure = s), class = "zufapmx_model_error")
+  expect_error(model_with(m, structure = s), class = "zupmxio_model_error")
 })
 
 test_that("readers refuse a missing file", {
-  expect_error(pmx_read_nonmem(tempfile()), class = "zufapmx_model_error")
-  expect_error(pmx_read_mrgsolve(tempfile()), class = "zufapmx_model_error")
+  expect_error(pmx_read_nonmem(tempfile()), class = "zupmxio_model_error")
+  expect_error(pmx_read_mrgsolve(tempfile()), class = "zupmxio_model_error")
   expect_error(
     pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"), NA),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })

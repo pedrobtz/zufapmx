@@ -4,7 +4,7 @@
 #' `pmx_read_json()` reads one back. The document holds the model's seven
 #' components as data, so a model read from JSON is the model that was
 #' written: the same parameters, statements, provenance and all. It is
-#' zufapmx's own representation, not a file standard (design D3).
+#' zupmxio's own representation, not a file standard (design D3).
 #'
 #' Statements and expressions are R code in strings (`"cl <- tcl *
 #' exp(eta.cl)"`), constants are numbers. JSON has no infinity, so
@@ -13,21 +13,21 @@
 #' exactly.
 #'
 #' Both functions need the zujson package, and raise an error of class
-#' `zufapmx_engine_error` without it.
+#' `zupmxio_engine_error` without it.
 #'
 #' @inheritParams pmx_inspect
 #' @param file For `pmx_write_json()`, the path to write, or `NULL` to only
 #'   return the text. For `pmx_read_json()`, the path of a JSON file.
 #' @param pretty Whether to indent the JSON.
 #' @return `pmx_write_json()`: the JSON text, invisibly when `file` is
-#'   given. `pmx_read_json()`: a model. A file that is not a zufapmx JSON
-#'   model is a `zufapmx_parse_error`.
+#'   given. `pmx_read_json()`: a model. A file that is not a zupmxio JSON
+#'   model is a `zupmxio_parse_error`.
 #' @family readers
 #' @export
 #' @examplesIf requireNamespace("zujson", quietly = TRUE)
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model.ctl",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' model <- pmx_read_nonmem(path)
 #' file <- tempfile(fileext = ".json")
@@ -39,10 +39,10 @@ pmx_write_json <- function(model, file = NULL, pretty = TRUE) {
     !is.null(file) &&
       (!is.character(file) || length(file) != 1 || is.na(file) || !nzchar(file))
   ) {
-    zufapmx_abort("`file` must be a path or NULL.", "model")
+    zupmxio_abort("`file` must be a path or NULL.", "model")
   }
   if (!is.logical(pretty) || length(pretty) != 1 || is.na(pretty)) {
-    zufapmx_abort("`pretty` must be TRUE or FALSE.", "model")
+    zupmxio_abort("`pretty` must be TRUE or FALSE.", "model")
   }
   json_require()
   text <- zujson::json_write(json_utf8(json_model(model)), pretty = pretty)
@@ -66,7 +66,7 @@ pmx_read_json <- function(file) {
   )
   model <- tryCatch(
     json_unmodel(x, file),
-    zufapmx_model_error = function(e) json_error(file, conditionMessage(e))
+    zupmxio_model_error = function(e) json_error(file, conditionMessage(e))
   )
   model
 }
@@ -97,7 +97,7 @@ json_model <- function(model) {
   re <- m$random_effects
   s <- m$structure
   list(
-    zufapmx = "model",
+    zupmxio = "model",
     version = json_version,
     parameters = lapply(seq_len(nrow(m$parameters)), function(i) {
       p <- m$parameters[i, ]
@@ -218,7 +218,7 @@ json_expr <- function(x) {
   # such names go through ASCII placeholders and come back backquoted.
   names <- all.names(x)
   wide <- unique(names[!grepl("^[ -~]*$", names)])
-  placeholders <- sprintf("zufapmx_name_%d_", seq_along(wide))
+  placeholders <- sprintf("zupmxio_name_%d_", seq_along(wide))
   y <- rename_symbols(x, stats::setNames(placeholders, wide))
   print_text <- function(control) {
     text <- paste(
@@ -253,15 +253,15 @@ json_expr <- function(x) {
 
 json_unmodel <- function(x, file) {
   x <- json_native_all(x)
-  if (!is.list(x) || !identical(x$zufapmx, "model")) {
-    json_error(file, "not a zufapmx model (no `\"zufapmx\": \"model\"`)")
+  if (!is.list(x) || !identical(x$zupmxio, "model")) {
+    json_error(file, "not a zupmxio model (no `\"zupmxio\": \"model\"`)")
   }
-  version <- tryCatch(json_int(x$version), zufapmx_model_error = function(e) NA)
+  version <- tryCatch(json_int(x$version), zupmxio_model_error = function(e) NA)
   if (!identical(version, json_version)) {
     json_error(
       file,
       sprintf(
-        "a zufapmx model of version %s; this zufapmx reads version %d",
+        "a zupmxio model of version %s; this zupmxio reads version %d",
         format(json_scalar(x$version)),
         json_version
       )

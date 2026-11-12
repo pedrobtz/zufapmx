@@ -52,7 +52,7 @@ cat(sprintf(
   median_ms(pmx_read_nonmem(path))
 ))
 
-corpus <- zufapmx_corpus()
+corpus <- zupmxio_corpus()
 read_corpus <- function() {
   for (p in corpus$path) {
     pmx_read_nonmem(file.path(p, "model.ctl"))
@@ -72,7 +72,7 @@ cat(sprintf(
 # pmx_compare() overhead: the engines' results are recorded on a first run
 # and replayed instantly on the timed runs, so what is timed is everything
 # but the simulations.
-ns <- asNamespace("zufapmx")
+ns <- asNamespace("zupmxio")
 m <- pmx_read_nonmem(file.path(
   corpus$path[corpus$id == "twocmt-oral"],
   "model.ctl"

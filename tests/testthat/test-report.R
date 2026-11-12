@@ -87,25 +87,25 @@ test_that("pmx_report() refuses malformed arguments", {
   m <- read_ctl(ctl_advan1())
   cmp <- pmx_compare(m, m, pmx_design(n = 0, regimens = "single"))
 
-  expect_error(pmx_report(list()), class = "zufapmx_model_error")
-  expect_error(pmx_report(cmp, file = 1), class = "zufapmx_model_error")
+  expect_error(pmx_report(list()), class = "zupmxio_model_error")
+  expect_error(pmx_report(cmp, file = 1), class = "zupmxio_model_error")
   expect_error(
     pmx_report(cmp, file = NA_character_),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
-  expect_error(pmx_report(cmp, file = ""), class = "zufapmx_model_error")
+  expect_error(pmx_report(cmp, file = ""), class = "zupmxio_model_error")
   expect_error(
     pmx_report(cmp, file = c("a", "b")),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
-  expect_error(pmx_report(cmp, max_points = -1), class = "zufapmx_model_error")
-  expect_error(pmx_report(cmp, max_points = 1.5), class = "zufapmx_model_error")
-  expect_error(pmx_report(cmp, max_points = Inf), class = "zufapmx_model_error")
+  expect_error(pmx_report(cmp, max_points = -1), class = "zupmxio_model_error")
+  expect_error(pmx_report(cmp, max_points = 1.5), class = "zupmxio_model_error")
+  expect_error(pmx_report(cmp, max_points = Inf), class = "zupmxio_model_error")
   expect_error(
     pmx_report(cmp, max_points = .Machine$integer.max + 1),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
-  expect_error(pmx_report(cmp, max_points = NA), class = "zufapmx_model_error")
+  expect_error(pmx_report(cmp, max_points = NA), class = "zupmxio_model_error")
 })
 
 test_that("a report reads as it did", {

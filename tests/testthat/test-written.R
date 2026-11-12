@@ -59,7 +59,7 @@ test_that("a writer whose text does not read back raises a write error", {
 
   expect_error(
     pmx_write_rxode2(model_with(m, parameters = p, individual = ind)),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
 })
 

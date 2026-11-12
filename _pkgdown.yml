@@ -1,4 +1,4 @@
-url: https://pedrobtz.github.io/zufapmx/
+url: https://pedrobtz.github.io/zupmxio/
 template:
   bootstrap: 5
 
@@ -32,7 +32,7 @@ reference:
   - pmx_inspect
 - title: Model corpus
   contents:
-  - zufapmx_corpus
+  - zupmxio_corpus
 
 articles:
 - title: Articles
