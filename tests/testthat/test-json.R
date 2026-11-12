@@ -219,7 +219,9 @@ test_that("non-ASCII names survive JSON in any locale", {
       })
     }
     b <- body(f)
-    b[[3]][[2]][[2]][[3]][[3]][[2]][[2]] <- as.name(name)
+    # In a C locale R warns that it cannot translate the name, and makes
+    # it `po<U+00EF>ds`; the round trip is what is tested here.
+    b[[3]][[2]][[2]][[3]][[3]][[2]][[2]] <- suppressWarnings(as.name(name))
     body(f) <- b
     pmx_read_rxode2(f)
   }
@@ -237,7 +239,7 @@ test_that("non-ASCII names survive JSON in any locale", {
       expect_identical(json_round_trip(m), m, label = locale)
       # A name that is a JSON key: the endpoint.
       # As a reader holds it: through a symbol, so in the native encoding.
-      native <- as.character(as.name(name))
+      native <- as.character(suppressWarnings(as.name(name)))
       e <- unclass(model_onecmt_mm())
       names(e$observations) <- native
       e <- do.call(new_model, e)
