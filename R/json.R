@@ -258,22 +258,27 @@ json_unmodel <- function(x, file) {
       derivatives = lapply(structure_x$derivatives, json_unexpr)
     )
   }
-  observations <- lapply(x$observations, function(o) {
-    r <- o$residual
-    list(
-      prediction = json_unexpr(o$prediction),
-      residual = c(
-        list(
-          type = json_string(r$type),
-          parameters = json_strings(r$parameters)
+  # Readers build an empty list() when a model has no endpoint.
+  observations <- if (length(x$observations) == 0) {
+    list()
+  } else {
+    lapply(x$observations, function(o) {
+      r <- o$residual
+      list(
+        prediction = json_unexpr(o$prediction),
+        residual = c(
+          list(
+            type = json_string(r$type),
+            parameters = json_strings(r$parameters)
+          ),
+          if (!is.null(r$expression)) {
+            list(expression = json_unexpr(r$expression))
+          }
         ),
-        if (!is.null(r$expression)) {
-          list(expression = json_unexpr(r$expression))
-        }
-      ),
-      transform = json_string(o$transform)
-    )
-  })
+        transform = json_string(o$transform)
+      )
+    })
+  }
   provenance <- lapply(x$provenance, function(v) {
     if (is.null(v)) NA_character_ else json_strings(v)
   })

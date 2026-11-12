@@ -163,3 +163,21 @@ test_that("the JSON functions refuse malformed arguments", {
   )
   expect_error(pmx_read_json(c("a", "b")), class = "zufapmx_model_error")
 })
+
+test_that("a model without an endpoint round-trips through JSON", {
+  skip_if_no_engine("zujson")
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- c(0, 4)
+      tv <- c(0, 10)
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      cp <- linCmt()
+    })
+  })
+  expect_length(unclass(m)$observations, 0)
+
+  expect_identical(json_round_trip(m), m)
+})
