@@ -210,7 +210,7 @@ compare_tables <- function(t, side, at, tol, atol) {
     ss = r$ss
   )
   covariates <- m$provenance$covariates
-  extra <- setdiff(names(r), c(names(data), "pred"))
+  extra <- setdiff(names(r), c(names(data), "pred", "resolution"))
   for (cov in covariates) {
     col <- extra[toupper(extra) == toupper(cov)]
     if (length(col) == 0) {
@@ -242,7 +242,7 @@ compare_tables <- function(t, side, at, tol, atol) {
     if (at == "a") model else table,
     tol,
     atol,
-    resolution = table_resolution(table, t$digits)
+    resolution = obs$resolution * (1 + 1e-9)
   )
   list(
     pass = nrow(points) > 0 && all(points$pass),
@@ -253,15 +253,6 @@ compare_tables <- function(t, side, at, tol, atol) {
   )
 }
 
-# Half a unit in the last printed digit of each table value: a prediction
-# that rounds to the table's value agrees with it.
-table_resolution <- function(x, digits) {
-  if (is.na(digits)) {
-    return(rep(0, length(x)))
-  }
-  e <- ifelse(x == 0 | !is.finite(x), 0, floor(log10(abs(x))))
-  0.5 * 10^(e - digits + 1) * (1 + 1e-9)
-}
 
 compare_sides <- function(sides, design, tol, atol) {
   models <- lapply(sides, function(s) unclass(s$model))

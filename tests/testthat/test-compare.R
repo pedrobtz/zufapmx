@@ -535,10 +535,9 @@ test_that("tables carry their subjects, covariates and repeated times", {
 
 test_that("a point agrees when the model rounds to the table's value", {
   expect_equal(
-    table_resolution(c(1.2345, -0.012345, 0), 5),
-    c(5e-5, 5e-7, 5e-5) * (1 + 1e-9)
+    table_resolution(c("1.2345E+00", "-1.2345E-02", "0.0000E+00", "12", "NaN")),
+    c(5e-5, 5e-7, 5e-5, 0.5, NA)
   )
-  expect_equal(table_resolution(1, NA), 0)
   obs <- data.frame(id = 1L, time = 1:3)
 
   p <- compare_points(
@@ -548,7 +547,7 @@ test_that("a point agrees when the model rounds to the table's value", {
     c(1.23455, 1.2344501, 1.234551),
     1e-7,
     0,
-    resolution = table_resolution(rep(1.2345, 3), 5)
+    resolution = table_resolution(rep("1.2345E+00", 3)) * (1 + 1e-9)
   )
 
   expect_equal(p$pass, c(TRUE, TRUE, FALSE))
@@ -593,4 +592,27 @@ test_that("a comparison with tables prints and reports its source", {
     cmp
     writeLines(utils::head(pmx_report(cmp), 32))
   })
+})
+
+test_that("a fixed-format small value does not loosen the other points (#147)", {
+  local_fake_engines(rxode2 = function(time, id) {
+    c(1.2070368, 1.5582794, 1.5387683, 2e-7)[time]
+  })
+  file <- withr::local_tempfile(fileext = ".tab")
+  writeLines(
+    c(
+      "ID TIME AMT EVID PRED",
+      "1 0 100 1 0",
+      "1 1 0 0 1.6070368",
+      "1 2 0 0 1.9582794",
+      "1 3 0 0 1.9387683",
+      "1 4 0 0 0.0000002"
+    ),
+    file
+  )
+
+  cmp <- pmx_compare(pmx_read_tables(file), read_ctl(ctl_advan1()))
+
+  expect_false(cmp$pass)
+  expect_equal(cmp$predictions$pass, c(FALSE, FALSE, FALSE, TRUE))
 })

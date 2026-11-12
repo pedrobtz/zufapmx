@@ -24,8 +24,9 @@
 #' The prediction column should be `PRED`, NONMEM's population prediction:
 #' the comparison simulates the model's typical subject, every random
 #' effect at zero (design Q1). NONMEM prints a fixed number of significant
-#' digits, 5 by default; the reader records it, and the comparison accepts
-#' a prediction that rounds to the table's value.
+#' digits, 5 by default; the reader records each value's precision, and
+#' the comparison accepts a prediction that rounds to that value. Fortran's
+#' exponent forms (`1.2D+00`, `1.2345-100`) are read too.
 #'
 #' Tables are read with the zucsv package when it is installed, and with
 #' base R otherwise; both give the same result.
@@ -34,9 +35,11 @@
 #' @param prediction The name of the prediction column.
 #' @return A `zupmxio_tables` object: a list with `records`, a data frame
 #'   with columns `id`, `time`, `evid`, `amt`, `cmt`, `rate`, `ii`, `addl`,
-#'   `ss` and `pred` followed by the table's other columns under their own
-#'   names; `prediction`, the column read as `pred`; `digits`, the
-#'   significant digits of the prediction column; and `files`.
+#'   `ss`, `pred` and `resolution` (half a unit in the last place each
+#'   prediction is printed to), followed by the table's other columns under
+#'   their own names; `prediction`, the column read as `pred`; `digits`, the
+#'   fewest significant digits a non-zero prediction is printed with; and
+#'   `files`.
 #' @family readers
 #' @seealso [pmx_compare()] compares a model with the tables.
 #' @export
@@ -77,6 +80,7 @@ pmx_read_tables <- function(file, prediction = "PRED") {
     columns <- table_join(columns, tables[[k]]$data, file[[1]], file[[k]])
   }
   digits <- unlist(lapply(tables, `[[`, "digits"))
+  resolution <- unlist(lapply(tables, `[[`, "resolution"))
   if (length(digits) == 0) {
     parse_error(
       file[[1]],
@@ -89,7 +93,7 @@ pmx_read_tables <- function(file, prediction = "PRED") {
   }
   structure(
     list(
-      records = table_records(columns, prediction, file[[1]]),
+      records = table_records(columns, prediction, resolution, file[[1]]),
       prediction = prediction,
       digits = min(digits),
       files = normalizePath(file)
@@ -167,7 +171,7 @@ table_read_one <- function(file, prediction) {
       call = NULL
     )
   }
-  body <- fields(lines[-1])
+  body <- table_exponents(fields(lines[-1]))
   width <- lengths(regmatches(body, gregexpr(",", body, fixed = TRUE))) + 1L
   bad <- which(width != length(header))
   if (length(bad) > 0) {
@@ -186,6 +190,7 @@ table_read_one <- function(file, prediction) {
   data <- table_parse(c(paste(header, collapse = ","), body), types, file)
   names(data) <- header
   digits <- NULL
+  resolution <- NULL
   if (!is.na(pred)) {
     text <- data[[pred]]
     data[[pred]] <- suppressWarnings(as.numeric(text))
@@ -204,6 +209,7 @@ table_read_one <- function(file, prediction) {
       )
     }
     digits <- table_digits(text)
+    resolution <- table_resolution(text)
   }
   # Only the prediction may be missing; NONMEM writes no NA otherwise.
   for (k in setdiff(seq_along(data), pred)) {
@@ -219,7 +225,7 @@ table_read_one <- function(file, prediction) {
       )
     }
   }
-  list(data = data, digits = digits)
+  list(data = data, digits = digits, resolution = resolution)
 }
 
 # The cleaned text as a data frame: zucsv when installed, base R otherwise.
@@ -271,6 +277,36 @@ table_digits <- function(text) {
   min(nchar(mantissa))
 }
 
+# Fortran's exponent forms as R reads them: `1.2345D+00` and a 3-digit
+# exponent without its letter, `1.2345-100`.
+table_exponents <- function(body) {
+  body <- gsub("([0-9.])[dD]([-+]?[0-9])", "\\1E\\2", body)
+  gsub(
+    "(^|,)([-+]?[0-9]*\\.?[0-9]+)([-+][0-9]{3})(?=,|$)",
+    "\\1\\2E\\3",
+    body,
+    perl = TRUE
+  )
+}
+
+# Half a unit in the last printed place of each value: a prediction that
+# rounds to the printed value agrees with it. Each value has its own
+# (#147): `0.0000002` and `1.2345E+00` are printed to different places.
+table_resolution <- function(text) {
+  text <- toupper(trimws(text))
+  mantissa <- sub("E.*$", "", text)
+  exponent <- suppressWarnings(as.numeric(sub("^[^E]*E?", "", text)))
+  exponent[is.na(exponent)] <- 0
+  decimals <- ifelse(
+    grepl(".", mantissa, fixed = TRUE),
+    nchar(sub("^[^.]*\\.", "", mantissa)),
+    0
+  )
+  out <- 0.5 * 10^(exponent - decimals)
+  out[!is.finite(suppressWarnings(as.numeric(text)))] <- NA_real_
+  out
+}
+
 table_join <- function(a, b, file_a, file_b) {
   if (length(a[[1]]) != length(b[[1]])) {
     parse_error(
@@ -320,7 +356,7 @@ table_standard <- c(
 # The records as the engines take them: the standard columns in lower case,
 # NONMEM's defaults where a column is absent, and the rest under their own
 # names.
-table_records <- function(columns, prediction, file) {
+table_records <- function(columns, prediction, resolution, file) {
   upper <- toupper(names(columns))
   col <- function(name, default) {
     i <- match(name, upper)
@@ -405,7 +441,8 @@ table_records <- function(columns, prediction, file) {
     ii = col("II", 0),
     addl = col("ADDL", 0),
     ss = col("SS", 0),
-    pred = columns[[match(toupper(prediction), upper)]]
+    pred = columns[[match(toupper(prediction), upper)]],
+    resolution = resolution
   )
   # A column whose name clashes with a standard one (PRED beside an IPRED
   # prediction) is left out rather than overwrite it.
