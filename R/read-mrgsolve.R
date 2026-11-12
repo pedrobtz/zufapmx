@@ -806,6 +806,17 @@ mrg_main <- function(stmts, compartments, rename, file, record) {
   macro_pattern <- paste(mrg_dosing_macros, collapse = "|")
   file_names <- c(names(rename), setdiff(compartments, rename))
   to_model <- function(cmt) rename[cmt] %|NA|% cmt
+  macro_or_init <- sprintf(
+    "^(%s)_(%s)$|^(%s)_0$",
+    macro_pattern,
+    paste(file_names, collapse = "|"),
+    paste(file_names, collapse = "|")
+  )
+  refuse_later_reads(
+    stmts,
+    function(x) grepl(macro_or_init, as.character(x[[2]])),
+    later_read_error(file, record)
+  )
   for (x in stmts) {
     target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
     m <- regmatches(

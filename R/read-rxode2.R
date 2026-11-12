@@ -321,6 +321,20 @@ rxode2_read_model <- function(stmts, reader) {
   assigns <- list()
   lincmt <- NULL
 
+  refuse_later_reads(
+    stmts,
+    function(x) rxode2_read_is_ddt(x[[2]]) || rxode2_read_is_dosing(x[[2]]),
+    function(name, x) {
+      reader$refuse(
+        as.symbol(name),
+        sprintf(
+          "no assignment of `%s` after `%s` reads it",
+          name,
+          expr_text(x[[2]])
+        )
+      )
+    }
+  )
   for (x in stmts) {
     if (is_call(x, "~")) {
       if (!is.symbol(x[[2]])) {
@@ -376,7 +390,13 @@ rxode2_read_model <- function(stmts, reader) {
   # It is taken out as the prediction only when nothing reads the endpoint
   # and no `if` reassigns it; otherwise the assignments stay statements and
   # the prediction is the endpoint itself.
-  read_elsewhere <- stmt_reads(assigns)
+  # Derivatives and dosing attributes read it too: `d/dt(effect)` over the
+  # concentration keeps the concentration a statement (#146).
+  read_elsewhere <- c(
+    stmt_reads(assigns),
+    unlist(lapply(derivatives, all.vars)),
+    unlist(lapply(dosing, function(d) lapply(d, all.vars)))
+  )
   conditional <- unlist(lapply(
     Filter(function(x) is_call(x, "if"), assigns),
     function(x) stmt_targets(list(x))

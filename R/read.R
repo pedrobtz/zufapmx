@@ -273,7 +273,54 @@ record_at <- function(name, line) structure(name, line = line)
 
 record_line <- function(record) attr(record, "line") %||% NA_integer_
 
+# A derivative, a dosing attribute, a scale or an initial amount takes the
+# value its names have where it is assigned, in every format. The
+# representation holds it apart from the statements, so a later assignment
+# of a name it reads would change its meaning; such a model is refused
+# (#146). `captured(x)` says whether statement `x` is one; `fail(name, x)`
+# raises the refusal.
+refuse_later_reads <- function(stmts, captured, fail) {
+  is_captured <- vapply(
+    stmts,
+    function(x) is_call(x, "<-") && isTRUE(captured(x)),
+    logical(1)
+  )
+  for (i in which(is_captured)) {
+    later <- stmts[seq_along(stmts) > i & !is_captured]
+    # Assignments only: rxode2's `~` and `label()` lines assign nothing.
+    later <- Filter(function(y) is_call(y, "<-") || is_call(y, "if"), later)
+    hit <- intersect(all.vars(stmts[[i]][[3]]), stmt_targets(later))
+    if (length(hit) > 0) {
+      fail(hit[[1]], stmts[[i]])
+    }
+  }
+}
+
+# A refusal of a reassignment after a capture, in a record of a file.
+later_read_error <- function(file, record) {
+  function(name, x) {
+    parse_error(
+      file,
+      record_line(record),
+      NA_integer_,
+      seen = name,
+      message = sprintf(
+        "not translated: `%s` is assigned after `%s` reads it in %s",
+        name,
+        expr_text(x[[2]]),
+        record
+      ),
+      call = NULL
+    )
+  }
+}
+
 split_ode <- function(stmts, compartments, derivative_of, file, record) {
+  refuse_later_reads(
+    stmts,
+    function(x) !is.null(derivative_of(x)),
+    later_read_error(file, record)
+  )
   derivatives <- list()
   statements <- list()
   for (x in stmts) {

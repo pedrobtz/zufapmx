@@ -609,3 +609,83 @@ test_that("initial values need one to three values in bound order", {
     )
   }
 })
+
+test_that("a name reassigned after d/dt() or a dosing attribute reads it is refused (#146)", {
+  ode <- function() {
+    ini({
+      tcl <- c(0, 1)
+      tv <- c(0, 10)
+    })
+    model({
+      k <- tcl / tv
+      d / dt(central) <- -k * central
+      k <- 100
+      cp <- central / tv
+    })
+  }
+  expect_error(pmx_read_rxode2(ode), class = "zupmxio_parse_error")
+  err <- tryCatch(pmx_read_rxode2(ode), error = function(e) e)
+  expect_equal(err$seen, "k")
+  dose <- function() {
+    ini({
+      tcl <- c(0, 1)
+      tv <- c(0, 10)
+    })
+    model({
+      fb <- 0.5
+      f(central) <- fb
+      fb <- 1
+      d / dt(central) <- -tcl / tv * central
+      cp <- central / tv
+    })
+  }
+  err <- tryCatch(pmx_read_rxode2(dose), error = function(e) e)
+  expect_s3_class(err, "zupmxio_parse_error")
+  expect_equal(err$seen, "fb")
+})
+
+test_that("an endpoint a derivative reads stays a statement (#146)", {
+  fun <- function() {
+    ini({
+      tka <- c(0, 1)
+      tv <- c(0, 10)
+      tkel <- c(0, 0.5)
+      prop.sd <- 0.2
+    })
+    model({
+      ka <- tka
+      v <- tv
+      kel <- tkel
+      d / dt(depot) <- -ka * depot
+      d / dt(central) <- ka * depot - kel * central
+      cp <- central / v
+      d / dt(effect) <- 1 - cp - 0.1 * effect
+      cp ~ prop(prop.sd)
+    })
+  }
+  m <- pmx_read_rxode2(fun)
+
+  expect_true("cp" %in% stmt_targets(unclass(m)$structure$statements))
+  w <- pmx_write_rxode2(m)
+  expect_equal(pmx_fidelity(w), "exact")
+  # The derivative reads cp after cp is assigned, as in the source.
+  text <- w$text
+  expect_lt(
+    grep("cp <- central/v", text, fixed = TRUE),
+    grep("d/dt(effect)", text, fixed = TRUE)
+  )
+
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  effect <- function(f) {
+    sim <- suppressMessages(rxode2::rxSolve(
+      f,
+      rxode2::et(amt = 100, cmt = "depot") |> rxode2::et(c(1, 4, 12)),
+      returnType = "data.frame",
+      atol = 1e-12,
+      rtol = 1e-10
+    ))
+    sim$effect
+  }
+  expect_equal(effect(as_rxode2_function(m)), effect(fun), tolerance = 1e-8)
+})

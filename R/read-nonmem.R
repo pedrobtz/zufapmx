@@ -526,6 +526,13 @@ nm_pk <- function(stmts, compartments, file, record) {
     }
     dosing[[cmt]][[attr]] <<- value
   }
+  refuse_later_reads(
+    stmts,
+    function(x) {
+      is.symbol(x[[2]]) && grepl(predpp, as.character(x[[2]]))
+    },
+    later_read_error(file, record)
+  )
   for (x in stmts) {
     target <- if (is_call(x, "<-")) x[[2]]
     name <- if (is.symbol(target)) as.character(target) else ""

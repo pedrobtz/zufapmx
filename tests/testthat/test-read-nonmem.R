@@ -491,3 +491,33 @@ test_that("undeclared or fractional THETA and ETA indices are refused", {
     class = "zupmxio_parse_error"
   )
 })
+
+test_that("a name reassigned after a derivative, dosing attribute or scale reads it is refused (#146)", {
+  des <- c(
+    "$PROBLEM order",
+    "$SUBROUTINES ADVAN13 TOL=9",
+    "$MODEL COMP=(CENT, DEFDOSE, DEFOBS)",
+    "$PK",
+    "CL = THETA(1)",
+    "V = THETA(2)",
+    "S1 = V",
+    "$DES",
+    "K = CL / V",
+    "DADT(1) = -K * A(1)",
+    "K = 100",
+    "$ERROR",
+    "Y = F * (1 + EPS(1))",
+    "$THETA (0, 1) (0, 10)",
+    "$SIGMA 0.04"
+  )
+  expect_refused(read_ctl(des), seen = "K")
+  expect_refused(
+    read_ctl(ctl_onecmt(pk = c("FB = 0.5", "F1 = FB", "FB = 1"))),
+    seen = "FB"
+  )
+  expect_refused(read_ctl(ctl_onecmt(pk = "V = 2 * V")), seen = "V")
+  expect_s3_class(
+    read_ctl(ctl_onecmt(pk = c("FB = 0.5", "FB = 1", "F1 = FB"))),
+    "zupmxio_model"
+  )
+})

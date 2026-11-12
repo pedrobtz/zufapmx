@@ -643,3 +643,38 @@ test_that("C++ tokens keep their order, type and column", {
   )
   expect_equal(c(err$line, err$column), c(5L, 7L))
 })
+
+test_that("a name reassigned after a derivative or dosing macro reads it is refused (#146)", {
+  ode <- c(
+    "$PARAM CL = 1, V = 10",
+    "$CMT CENT",
+    "$ODE",
+    "double k = CL / V;",
+    "dxdt_CENT = -k * CENT;",
+    "k = 100;",
+    "$SIGMA 0.04",
+    "$TABLE",
+    "double IPRED = CENT / V;",
+    "double Y = IPRED * (1 + EPS(1));"
+  )
+  expect_refused(read_cpp(ode), seen = "k")
+  main <- c(
+    "$PARAM CL = 1, V = 10",
+    "$CMT CENT",
+    "$MAIN",
+    "double fb = 0.5;",
+    "F_CENT = fb;",
+    "fb = 1;",
+    "$ODE",
+    "dxdt_CENT = -CL / V * CENT;",
+    "$SIGMA 0.04",
+    "$TABLE",
+    "double IPRED = CENT / V;",
+    "double Y = IPRED * (1 + EPS(1));"
+  )
+  expect_refused(read_cpp(main), seen = "fb")
+  # Before the derivative or the macro, a reassignment is fine.
+  ok <- ode
+  ok[5:6] <- ode[6:5]
+  expect_s3_class(read_cpp(ok), "zupmxio_model")
+})
