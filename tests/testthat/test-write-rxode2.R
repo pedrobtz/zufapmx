@@ -246,3 +246,18 @@ test_that("a power residual model round-trips through pow()", {
   expect_equal(pmx_fidelity(w), "exact")
   expect_true("    cp ~ pow(sd, pw)" %in% w$text)
 })
+
+test_that("a combined residual with EPS(1) proportional writes (#129)", {
+  m <- read_ctl(ctl_onecmt(
+    error = c("IPRED = F", "Y = IPRED * (1 + EPS(1)) + EPS(2)"),
+    extra = "$SIGMA 0.01"
+  ))
+
+  w <- pmx_write_rxode2(m)
+
+  expect_faithful(w)
+  expect_true("    Y ~ add(EPS2) + prop(EPS1)" %in% w$text)
+  back <- pmx_write_nonmem(text_model(w$text, "rxode2"))
+  expect_faithful(back)
+  expect_true("Y = F * (1 + EPS(1)) + EPS(2)" %in% back$text)
+})

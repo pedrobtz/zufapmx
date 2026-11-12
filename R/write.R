@@ -167,12 +167,15 @@ sigma_from_sd <- function(m) {
         call = NULL
       )
     }
-    eps <- character()
+    eps <- stats::setNames(character(), character())
     used <- unlist(lapply(
       c(m$individual, m$structure$statements, m$structure$derivatives),
       all.vars
     ))
-    for (sd_name in r$parameters) {
+    # In declaration order, as a NONMEM model numbers its epsilons: the
+    # residual call can list them in another (add() before prop(), #129).
+    declared <- r$parameters[order(match(r$parameters, m$parameters$name))]
+    for (sd_name in declared) {
       if (sd_name %in% used) {
         write_error(
           sprintf(
@@ -207,9 +210,9 @@ sigma_from_sd <- function(m) {
       }
       m$random_effects$sigma[[length(m$random_effects$sigma) + 1]] <- block
       m$parameters <- m$parameters[m$parameters$name != sd_name, ]
-      eps <- c(eps, name)
+      eps[[sd_name]] <- name
     }
-    m$observations[[e]]$residual$parameters <- eps
+    m$observations[[e]]$residual$parameters <- unname(eps[r$parameters])
   }
   rownames(m$parameters) <- NULL
   m
