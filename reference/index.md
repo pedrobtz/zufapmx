@@ -2,6 +2,10 @@
 
 ## All functions
 
+- [`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md)
+  : Check that two models are the same model
+- [`pmx_design()`](https://pedrobtz.github.io/zufapmx/reference/pmx_design.md)
+  : A simulation design for comparing models
 - [`pmx_fidelity()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)
   [`pmx_losses()`](https://pedrobtz.github.io/zufapmx/reference/pmx_fidelity.md)
   : Fidelity and losses of a written model
@@ -15,6 +19,8 @@
   : Read a NONMEM control stream
 - [`pmx_read_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_rxode2.md)
   : Read an rxode2 or nlmixr2 model function
+- [`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
+  : Write a comparison as a Markdown report
 - [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md)
   : Write a model as an mrgsolve model specification
 - [`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md)

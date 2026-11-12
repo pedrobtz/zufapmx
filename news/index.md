@@ -2,6 +2,24 @@
 
 ## zufapmx 0.0.0.9000
 
+- [`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md)
+  checks that two models are the same model. It simulates both on a
+  [`pmx_design()`](https://pedrobtz.github.io/zufapmx/reference/pmx_design.md)
+  (single dose, infusion, multiple doses and steady state, for a typical
+  subject and `n` subjects with random effects), each through its own
+  engine and never on the engine of the writer under test, and compares
+  the predictions point by point. A failed comparison is a value that
+  says where the models differ.
+  [`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
+  writes a comparison as Markdown, with both model texts.
+
+- [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md)
+  declares covariates in `$INPUT`, without a default value, so its
+  output compiles;
+  [`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md)
+  reads `$INPUT` names as covariates
+  ([\#126](https://github.com/pedrobtz/zufapmx/issues/126)).
+
 - Models follow one rule for who may assign and read what (design D18):
   parameters, random effects, compartments and time are never assigned,
   ODE code does not reassign individual parameters, and individual
