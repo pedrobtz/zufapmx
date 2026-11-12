@@ -169,8 +169,13 @@ normalise_model <- function(model) {
     stats::setNames(paste0("C", seq_along(compartments)), compartments),
     stats::setNames(paste0("V", seq_along(vars)), vars)
   )
+  # A closed form's parameter can be a covariate once aliases are gone
+  # (`vp <- wt` makes the closed form read `wt`, #130).
   covariates <- setdiff(
-    unique(unlist(lapply(model_expressions(m), all.vars))),
+    unique(c(
+      unlist(lapply(model_expressions(m), all.vars)),
+      if (closed) unname(m$structure$parameters)
+    )),
     c(names(map), "t", "F")
   )
   folded <- nm_spell(covariates)
