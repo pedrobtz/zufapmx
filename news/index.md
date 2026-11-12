@@ -13,6 +13,9 @@
   [`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
   writes a comparison as Markdown, with both model texts.
 
+- Reading a control stream is about twice as fast: the NM-TRAN and C++
+  tokenizers match all their patterns in one pass per line.
+
 - [`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md)
   reads NONMEM `$TABLE` output, and `pmx_compare(tables, model)` checks
   a translation against the run’s own `PRED`: the model’s typical

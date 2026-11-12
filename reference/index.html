@@ -16,6 +16,10 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/validating-a-translation.html">Validating a translation</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -32,9 +36,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="check-a-translation">Check a translation<a class="anchor" aria-label="anchor" href="#check-a-translation"></a></h2>
 
-
+      <div class="section-desc"><p>Simulate two models on one design, each through its own engine, and compare their predictions.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -57,26 +61,21 @@
 
         <dt>
 
-          <code><a href="pmx_fidelity.html">pmx_fidelity()</a></code> <code><a href="pmx_fidelity.html">pmx_losses()</a></code>
+          <code><a href="pmx_report.html">pmx_report()</a></code>
 
         </dt>
-        <dd>Fidelity and losses of a written model</dd>
+        <dd>Write a comparison as a Markdown report</dd>
+      </dl></div><div class="section level2">
+      <h2 id="read-a-model">Read a model<a class="anchor" aria-label="anchor" href="#read-a-model"></a></h2>
 
-        <dt>
 
-          <code><a href="pmx_inspect.html">pmx_parameters()</a></code> <code><a href="pmx_inspect.html">pmx_omega()</a></code> <code><a href="pmx_inspect.html">pmx_ode()</a></code>
 
-        </dt>
-        <dd>Inspect a model</dd>
+      <dl></dl></div><div class="section level2">
 
-        <dt>
 
-          <code><a href="pmx_read_mrgsolve.html">pmx_read_mrgsolve()</a></code>
 
-        </dt>
-        <dd>Read an mrgsolve model specification</dd>
 
-        <dt>
+      <dl><dt>
 
           <code><a href="pmx_read_nonmem.html">pmx_read_nonmem()</a></code>
 
@@ -92,31 +91,33 @@
 
         <dt>
 
+          <code><a href="pmx_read_mrgsolve.html">pmx_read_mrgsolve()</a></code>
+
+        </dt>
+        <dd>Read an mrgsolve model specification</dd>
+
+        <dt>
+
           <code><a href="pmx_read_tables.html">pmx_read_tables()</a></code>
 
         </dt>
         <dd>Read NONMEM table output</dd>
+      </dl></div><div class="section level2">
+      <h2 id="write-a-model">Write a model<a class="anchor" aria-label="anchor" href="#write-a-model"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Every writer returns the text with its fidelity: exact, equivalent or lossy.</p></div>
 
-          <code><a href="pmx_report.html">pmx_report()</a></code>
+      <dl></dl></div><div class="section level2">
 
-        </dt>
-        <dd>Write a comparison as a Markdown report</dd>
 
-        <dt>
 
-          <code><a href="pmx_write_json.html">pmx_write_json()</a></code> <code><a href="pmx_write_json.html">pmx_read_json()</a></code>
 
-        </dt>
-        <dd>Write a model as JSON, and read it back</dd>
+      <dl><dt>
 
-        <dt>
-
-          <code><a href="pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code>
+          <code><a href="pmx_write_rxode2.html">pmx_write_rxode2()</a></code>
 
         </dt>
-        <dd>Write a model as an mrgsolve model specification</dd>
+        <dd>Write a model as an rxode2 model function</dd>
 
         <dt>
 
@@ -127,19 +128,59 @@
 
         <dt>
 
-          <code><a href="pmx_write_rxode2.html">pmx_write_rxode2()</a></code>
+          <code><a href="pmx_write_mrgsolve.html">pmx_write_mrgsolve()</a></code>
 
         </dt>
-        <dd>Write a model as an rxode2 model function</dd>
+        <dd>Write a model as an mrgsolve model specification</dd>
 
         <dt>
+
+          <code><a href="pmx_fidelity.html">pmx_fidelity()</a></code> <code><a href="pmx_fidelity.html">pmx_losses()</a></code>
+
+        </dt>
+        <dd>Fidelity and losses of a written model</dd>
+
+        <dt>
+
+          <code><a href="pmx_write_json.html">pmx_write_json()</a></code> <code><a href="pmx_write_json.html">pmx_read_json()</a></code>
+
+        </dt>
+        <dd>Write a model as JSON, and read it back</dd>
+      </dl></div><div class="section level2">
+      <h2 id="inspect-a-model">Inspect a model<a class="anchor" aria-label="anchor" href="#inspect-a-model"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="pmx_inspect.html">pmx_parameters()</a></code> <code><a href="pmx_inspect.html">pmx_omega()</a></code> <code><a href="pmx_inspect.html">pmx_ode()</a></code>
+
+        </dt>
+        <dd>Inspect a model</dd>
+      </dl></div><div class="section level2">
+      <h2 id="model-corpus">Model corpus<a class="anchor" aria-label="anchor" href="#model-corpus"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="zufapmx_corpus.html">zufapmx_corpus()</a></code>
 
         </dt>
         <dd>The shipped model corpus</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

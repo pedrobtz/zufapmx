@@ -32,6 +32,12 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/validating-a-translation.html">Validating a translation</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -51,22 +57,97 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of zufapmx is to …</p>
+<p>A population PK/PD model often has to move between tools: a NONMEM run becomes an nlmixr2 model for a new analysis, or an mrgsolve model for simulation. Converters exist, but a translated model is usually trusted on sight, and a slip in a volume or a residual model shows up much later, if at all.</p>
+<p>zufapmx makes the translation checkable. It reads a model from NONMEM, rxode2/nlmixr2 or mrgsolve into one R object, writes it to any of the three, and proves that two models are the same model by simulating both and comparing their predictions.</p>
+<ul>
+<li>
+<strong>The check is the product.</strong> <code><a href="reference/pmx_compare.html">pmx_compare()</a></code> simulates both models on a canonical design (single dose, infusion, multiple doses and steady state, for a typical subject and subjects with random effects) and reports the worst deviation against a tolerance. A failed comparison is a result that says where the models differ, not an error.</li>
+<li>
+<strong>Independent engines.</strong> Each model runs on its own engine, rxode2 or mrgsolve, and never on the engine of the writer under test, so a translation is not checked by the code that made it.</li>
+<li>
+<strong>Nothing is guessed.</strong> Code outside the supported subset is refused with its position. A writer that would drop something that changes predictions refuses the model, and every write reports its fidelity: <code>exact</code>, <code>equivalent</code> or <code>lossy</code>, with what was lost.</li>
+<li>
+<strong>Against NONMEM’s own output.</strong> <code><a href="reference/pmx_compare.html">pmx_compare()</a></code> also takes the tables a NONMEM run wrote, and checks a translation against the run’s <code>PRED</code>.</li>
+<li>
+<strong>A corpus with oracles.</strong> Every shipped model is checked against <a href="https://CRAN.R-project.org/package=nonmem2rx" class="external-link">nonmem2rx</a> and, for ODE models, <a href="https://CRAN.R-project.org/package=amp.sim" class="external-link">amp.sim</a>.</li>
+</ul>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of zufapmx from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
+<p>zufapmx is not on CRAN yet. Install the development version from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"pedrobtz/zufapmx"</span><span class="op">)</span></span></code></pre></div>
+<p>zufapmx itself has no dependencies. Comparisons need the engines, <a href="https://CRAN.R-project.org/package=rxode2" class="external-link">rxode2</a> and <a href="https://CRAN.R-project.org/package=mrgsolve" class="external-link">mrgsolve</a>, which need a C and C++ compiler to build models.</p>
 </div>
 <div class="section level2">
-<h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
-<p>This is a basic example which shows you how to solve a common problem:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/pedrobtz/zufapmx" class="external-link">zufapmx</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/pedrobtz/zufapmx" class="external-link">zufapmx</a></span><span class="op">)</span></span></code></pre></div>
+<p>Read a model. This one is a two-compartment model with first-order absorption, from the corpus that ships with the package:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"corpus"</span>, <span class="st">"twocmt-oral"</span>, <span class="st">"model.ctl"</span>, package <span class="op">=</span> <span class="st">"zufapmx"</span><span class="op">)</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pmx_read_nonmem.html">pmx_read_nonmem</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span>
+<span><span class="va">model</span></span>
+<span><span class="co">#&gt; &lt;zufapmx_model&gt; read from nonmem</span></span>
+<span><span class="co">#&gt; Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)</span></span>
+<span><span class="co">#&gt; Parameters: 5, initial values only</span></span>
+<span><span class="co">#&gt; Random effects: ETA1 on CL (exp), ETA2 on V2 (exp)</span></span>
+<span><span class="co">#&gt; Endpoints: Y (proportional)</span></span></code></pre></div>
+<p>Write it to rxode2. The fidelity says the translation is a known reparameterisation, here residual error as a standard deviation rather than a variance:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rx</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pmx_write_rxode2.html">pmx_write_rxode2</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/pmx_fidelity.html">pmx_fidelity</a></span><span class="op">(</span><span class="va">rx</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "equivalent"</span></span></code></pre></div>
+<p>Check it. The NONMEM model runs on mrgsolve and the rxode2 text runs as written, on rxode2, and every one of the predictions agrees:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/pmx_compare.html">pmx_compare</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">rx</span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;zufapmx comparison&gt; pass</span></span>
+<span><span class="co">#&gt; a: nonmem model, written to mrgsolve by zufapmx, on mrgsolve 2.0.1</span></span>
+<span><span class="co">#&gt; b: rxode2 text, simulated as written, on rxode2 5.1.8</span></span>
+<span><span class="co">#&gt; Tolerance: relative 1e-06, absolute 1e-09.</span></span>
+<span><span class="co">#&gt; 0 of 735 predictions disagree.</span></span>
+<span><span class="co">#&gt; Worst: ss, subject 15, time 0.5: 4.4041147 against 4.4041147 (abs 6.06e-10, rel 1.38e-10).</span></span>
+<span><span class="co">#&gt;   regimen points failed  max_abs  max_rel skipped</span></span>
+<span><span class="co">#&gt;    single    168      0 1.02e-14 8.11e-15        </span></span>
+<span><span class="co">#&gt;  infusion    168      0 8.44e-15 7.44e-15        </span></span>
+<span><span class="co">#&gt;  multiple    252      0 1.60e-14 8.68e-15        </span></span>
+<span><span class="co">#&gt;        ss    147      0 6.06e-10 1.79e-10</span></span></code></pre></div>
+<p>A slip fails. Here the central volume of the rxode2 text is 21 instead of 20, and the comparison says where the predictions part:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">slip</span> <span class="op">&lt;-</span> <span class="va">rx</span></span>
+<span><span class="va">slip</span><span class="op">$</span><span class="va">text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"THETA3 &lt;- c(0, 20)"</span>, <span class="st">"THETA3 &lt;- c(0, 21)"</span>, <span class="va">slip</span><span class="op">$</span><span class="va">text</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/pmx_compare.html">pmx_compare</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">slip</span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;zufapmx comparison&gt; FAIL</span></span>
+<span><span class="co">#&gt; a: nonmem model, written to mrgsolve by zufapmx, on mrgsolve 2.0.1</span></span>
+<span><span class="co">#&gt; b: rxode2 text, simulated as written, on rxode2 5.1.8</span></span>
+<span><span class="co">#&gt; Tolerance: relative 1e-06, absolute 1e-09.</span></span>
+<span><span class="co">#&gt; 735 of 735 predictions disagree.</span></span>
+<span><span class="co">#&gt; Worst: infusion, subject 5, time 8: 0.26833057 against 0.28530119 (abs 0.017, rel 0.0595).</span></span>
+<span><span class="co">#&gt;   regimen points failed max_abs max_rel skipped</span></span>
+<span><span class="co">#&gt;    single    168    168   0.125  0.0592        </span></span>
+<span><span class="co">#&gt;  infusion    168    168   0.102  0.0595        </span></span>
+<span><span class="co">#&gt;  multiple    252    252   0.125  0.0587        </span></span>
+<span><span class="co">#&gt;        ss    147    147   0.119  0.0404</span></span></code></pre></div>
+<p><code><a href="reference/pmx_report.html">pmx_report()</a></code> writes a comparison as Markdown, with the design, the deviations and both model texts, for a reviewer to read without running anything.</p>
+<p>Functions are named by what they do: <code>pmx_read_*()</code> and <code>pmx_write_*()</code> for each format, and <code><a href="reference/pmx_design.html">pmx_design()</a></code>, <code><a href="reference/pmx_compare.html">pmx_compare()</a></code> and <code><a href="reference/pmx_report.html">pmx_report()</a></code> for the check.</p>
+</div>
+<div class="section level2">
+<h2 id="learn-more">Learn more<a class="anchor" aria-label="anchor" href="#learn-more"></a>
+</h2>
+<ul>
+<li>
+<a href="https://pedrobtz.github.io/zufapmx/articles/validating-a-translation.html">Validating a translation</a> walks through a check end to end, and shows how to read a report.</li>
+<li>The <a href="https://pedrobtz.github.io/zufapmx/reference/">reference</a> lists the readers, the writers and the comparison functions.</li>
+<li>
+<code><a href="reference/zufapmx_corpus.html">zufapmx_corpus()</a></code> lists the shipped models.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="related-work">Related work<a class="anchor" aria-label="anchor" href="#related-work"></a>
+</h2>
+<p>zufapmx is checked against <a href="https://CRAN.R-project.org/package=nonmem2rx" class="external-link">nonmem2rx</a>, which translates NONMEM to rxode2, and <a href="https://CRAN.R-project.org/package=amp.sim" class="external-link">amp.sim</a>, which translates it to mrgsolve; <a href="https://github.com/pedrobtz/zufapmx/blob/main/.agents/oracle-agreement.md" class="external-link">oracle-agreement.md</a> records where they agree. The <a href="https://CRAN.R-project.org/package=nlmixr2lib" class="external-link">nlmixr2lib</a> model library is read in its tests. Its tables and run files are read with <a href="https://CRAN.R-project.org/package=zucsv" class="external-link">zucsv</a> and <a href="https://CRAN.R-project.org/package=zuxml" class="external-link">zuxml</a> when installed.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -103,6 +184,7 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
 <li><a href="https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://github.com/pedrobtz/zufapmx/actions/workflows/coverage.yaml" class="external-link"><img src="https://raw.githubusercontent.com/pedrobtz/zufapmx/gh-pages/badges/coverage.svg" alt="coverage"></a></li>
 </ul>
