@@ -64,7 +64,8 @@ predict the same values for the same subjects.</p>
 
 <dl><dt id="arg-a-b">a, b<a class="anchor" aria-label="anchor" href="#arg-a-b"></a></dt>
 <dd><p>The models to compare: each a model read by a <code>pmx_read_*()</code>
-function, or a model written by a <code>pmx_write_*()</code> function.</p></dd>
+function, or a model written by a <code>pmx_write_*()</code> function. One of them
+can be tables from <code><a href="pmx_read_tables.html">pmx_read_tables()</a></code>; see below.</p></dd>
 
 
 <dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
@@ -138,6 +139,18 @@ A point agrees when its relative deviation is at most <code>tol</code> or its
 absolute deviation at most <code>atol</code>, which covers predictions near zero.
 The relative deviation is <code>abs(a - b) / max(abs(a), abs(b))</code>. A missing
 or non-finite prediction never agrees. Residual error is off.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="against-nonmem-output">Against NONMEM output<a class="anchor" aria-label="anchor" href="#against-nonmem-output"></a></h2>
+
+
+<p>Either side can be tables from <code><a href="pmx_read_tables.html">pmx_read_tables()</a></code> instead of a model.
+The other side's typical subject, every random effect at zero, is then
+simulated on the tables' own records, with covariates from their
+columns, and compared with the prediction column (NONMEM's <code>PRED</code>).
+<code>design</code> is not used. NONMEM prints a fixed number of significant
+digits, so a point also agrees when the model's prediction rounds to
+the table's value.</p>
 <p>A comparison that fails is a value, not an error: <code>pass</code> is <code>FALSE</code> and
 the result says where the models differ. Models that cannot be compared
 point by point, because their numbers of random effects differ, fail

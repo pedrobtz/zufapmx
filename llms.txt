@@ -44,8 +44,13 @@ library(zufapmx)
   : Read a NONMEM control stream
 - [`pmx_read_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_rxode2.md)
   : Read an rxode2 or nlmixr2 model function
+- [`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md)
+  : Read NONMEM table output
 - [`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
   : Write a comparison as a Markdown report
+- [`pmx_write_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+  [`pmx_read_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+  : Write a model as JSON, and read it back
 - [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md)
   : Write a model as an mrgsolve model specification
 - [`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md)

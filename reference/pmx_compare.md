@@ -23,7 +23,10 @@ pmx_compare(
 - a, b:
 
   The models to compare: each a model read by a `pmx_read_*()` function,
-  or a model written by a `pmx_write_*()` function.
+  or a model written by a `pmx_write_*()` function. One of them can be
+  tables from
+  [`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md);
+  see below.
 
 - design:
 
@@ -109,6 +112,17 @@ point agrees when its relative deviation is at most `tol` or its
 absolute deviation at most `atol`, which covers predictions near zero.
 The relative deviation is `abs(a - b) / max(abs(a), abs(b))`. A missing
 or non-finite prediction never agrees. Residual error is off.
+
+## Against NONMEM output
+
+Either side can be tables from
+[`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md)
+instead of a model. The other side's typical subject, every random
+effect at zero, is then simulated on the tables' own records, with
+covariates from their columns, and compared with the prediction column
+(NONMEM's `PRED`). `design` is not used. NONMEM prints a fixed number of
+significant digits, so a point also agrees when the model's prediction
+rounds to the table's value.
 
 A comparison that fails is a value, not an error: `pass` is `FALSE` and
 the result says where the models differ. Models that cannot be compared

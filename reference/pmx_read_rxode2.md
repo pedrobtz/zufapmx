@@ -48,7 +48,9 @@ for the model's parts.
 
 Other readers:
 [`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),
-[`pmx_read_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_nonmem.md)
+[`pmx_read_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_nonmem.md),
+[`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md),
+[`pmx_write_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
 
 ## Examples
 

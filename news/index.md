@@ -13,6 +13,25 @@
   [`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
   writes a comparison as Markdown, with both model texts.
 
+- [`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md)
+  reads NONMEM `$TABLE` output, and `pmx_compare(tables, model)` checks
+  a translation against the run’s own `PRED`: the model’s typical
+  subject is simulated on the tables’ records and compared within the
+  precision NONMEM printed.
+
+- [`pmx_write_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+  and
+  [`pmx_read_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+  write the representation as JSON and read it back unchanged (needs
+  zujson).
+
+- [`pmx_write_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_rxode2.md)
+  writes NONMEM’s combined residual `IPRED * (1 + EPS(1)) + EPS(2)`,
+  which it refused
+  ([\#129](https://github.com/pedrobtz/zufapmx/issues/129)), and writers
+  no longer fail on a closed-form parameter assigned from a covariate
+  ([\#130](https://github.com/pedrobtz/zufapmx/issues/130)).
+
 - [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md)
   declares covariates in `$INPUT`, without a default value, so its
   output compiles;
