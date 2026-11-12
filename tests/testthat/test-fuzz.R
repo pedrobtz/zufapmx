@@ -1,43 +1,6 @@
 # Replays the fuzz targets (helper-fuzz.R) on the corpus and on seeded
 # mutations of it. tools/fuzz/ runs the same targets under zufuzz.
 
-fuzz_seeds <- function(format) {
-  files <- c(
-    nonmem = "model.ctl",
-    mrgsolve = "model.cpp",
-    rxode2 = "model-rxode2.R"
-  )
-  paths <- file.path(zufapmx_corpus()$path, files[[format]])
-  if (format == "nonmem") {
-    paths <- c(
-      paths,
-      test_path("fixtures", "nonmem", c("run1.ctl", "run2.ctl"))
-    )
-  }
-  lapply(paths, function(p) readBin(p, "raw", file.size(p)))
-}
-
-expect_fuzz_ok <- function(data, format, label) {
-  err <- tryCatch(
-    {
-      fuzz_target(data, format)
-      NULL
-    },
-    error = function(e) e
-  )
-  expect(
-    is.null(err),
-    sprintf(
-      "%s: %s escaped the %s target: %s\nInput:\n%s",
-      label,
-      class(err)[[1]],
-      format,
-      if (is.null(err)) "" else conditionMessage(err),
-      fuzz_text(data)
-    )
-  )
-}
-
 test_that("every corpus model passes its parser's fuzz target", {
   for (format in c("nonmem", "mrgsolve", "rxode2")) {
     for (seed in fuzz_seeds(format)) {

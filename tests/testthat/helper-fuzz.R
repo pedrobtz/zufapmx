@@ -218,3 +218,41 @@ fuzz_vocabulary <- list(
     ")"
   )
 )
+
+# The seeds of a format: the corpus, and for NONMEM the estimate fixtures.
+fuzz_seeds <- function(format) {
+  files <- c(
+    nonmem = "model.ctl",
+    mrgsolve = "model.cpp",
+    rxode2 = "model-rxode2.R"
+  )
+  paths <- file.path(zufapmx_corpus()$path, files[[format]])
+  if (format == "nonmem") {
+    paths <- c(
+      paths,
+      test_path("fixtures", "nonmem", c("run1.ctl", "run2.ctl"))
+    )
+  }
+  lapply(paths, function(p) readBin(p, "raw", file.size(p)))
+}
+
+expect_fuzz_ok <- function(data, format, label) {
+  err <- tryCatch(
+    {
+      fuzz_target(data, format)
+      NULL
+    },
+    error = function(e) e
+  )
+  expect(
+    is.null(err),
+    sprintf(
+      "%s: %s escaped the %s target: %s\nInput:\n%s",
+      label,
+      class(err)[[1]],
+      format,
+      if (is.null(err)) "" else conditionMessage(err),
+      fuzz_text(data)
+    )
+  )
+}
