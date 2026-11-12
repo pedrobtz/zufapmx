@@ -49,6 +49,7 @@ pmx_read_mrgsolve <- function(file) {
 mrg_blocks_known <- c(
   "PROB",
   "PARAM",
+  "INPUT",
   "THETA",
   "CMT",
   "INIT",
@@ -143,6 +144,7 @@ mrg_read <- function(file) {
   losses <- c(losses, mrg_plugins(block("PLUGIN"), file))
 
   params <- mrg_params(block("PARAM"), file)
+  losses <- c(losses, mrg_inputs(block("INPUT"), file))
   thetas <- mrg_thetas(block("THETA"), file)
   random <- mrg_random_effects(
     block("OMEGA", "SIGMA", "NMXML", "NMEXT"),
@@ -421,8 +423,22 @@ mrg_params <- function(blocks, file) {
   )
 }
 
+# $INPUT names data items, which are covariates: they stay free symbols of
+# the model. Their values are defaults for a data set without the column;
+# NA_real_ is none, and a number is lost, since the model then reads its
+# covariates from the data (#126).
+mrg_inputs <- function(blocks, file) {
+  defaults <- FALSE
+  for (b in blocks) {
+    items <- mrg_assignments(b, file, missing = TRUE)
+    defaults <- defaults || any(!is.na(unlist(items)))
+  }
+  if (defaults) "covariate default values ($INPUT)" else character()
+}
+
 # `name = value` pairs separated by commas or new lines, values numeric.
-mrg_assignments <- function(b, file) {
+# With `missing = TRUE`, `NA_real_` (or `NA`) is a value: NA.
+mrg_assignments <- function(b, file, missing = FALSE) {
   text <- paste(b$lines, collapse = ",")
   items <- trimws(strsplit(text, ",", fixed = TRUE)[[1]])
   items <- items[nzchar(items)]
@@ -439,6 +455,11 @@ mrg_assignments <- function(b, file) {
         expected = "name = value",
         call = NULL
       )
+    }
+    if (missing && parts[[2]] %in% c("NA_real_", "NA")) {
+      out[[parts[[1]]]] <- NA_real_
+      evaluated <- c(evaluated, FALSE)
+      next
     }
     out[[parts[[1]]]] <- mrg_number(parts[[2]], file, b$line[[1]])
     evaluated <- c(evaluated, mrg_evaluated(parts[[2]]))

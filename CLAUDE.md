@@ -24,7 +24,7 @@ to confirm.
 
 ## Current state
 
-Scaffolded 2026-10-28 with `create-pkg.sh`; no functionality yet. The
+The readers, writers and the comparison harness are in place; the
 roadmap in `.agents/roadmap.md` takes it to v0.1.0.
 
 ## Stage tracking
@@ -132,6 +132,13 @@ land; see `.agents/design.md` (§4).
   NONMEM's sigma variances and rxode2's standard-deviation parameters;
   that conversion is why cross-format writes are `equivalent`, not
   `exact`.
+- **The harness** ([R/design.R](R/design.R), [R/compare.R](R/compare.R),
+  [R/engines.R](R/engines.R), [R/report.R](R/report.R)): `pmx_design()`
+  builds NONMEM-style records; `compare_side()` picks each side's engine
+  and text (D4); `engine_simulate()` runs rxode2 or mrgsolve with fixed
+  etas (`params`, and `idata` with `etasrc = "idata.all"`) and aligns the
+  result on id and time. Tests mock `engine_rxode2()`, `engine_mrgsolve()`
+  and `engine_available()` through `local_fake_engines()`.
 - **Conditions** ([R/errors.R](R/errors.R)): `zufapmx_abort()` and the §8
   constructors `parse_error()`, `write_error()` and `engine_error()`,
   each carrying the fields a caller acts on.

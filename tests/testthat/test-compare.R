@@ -1,0 +1,464 @@
+# Engine-free tests mock the engines (helper-compare.R); tests that
+# simulate check against closed forms or the corpus's expected.csv.
+
+test_that("both engines match closed forms on every regimen and subject", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1())
+  d <- pmx_design(n = 2, seed = 11)
+
+  cmp <- pmx_compare(m, pmx_write_mrgsolve(m), d)
+
+  expect_true(cmp$pass)
+  expect_equal(cmp$engines$engine, c("rxode2", "mrgsolve"))
+  # The draws, made independently: subjects 2 and 3 take z * sd.
+  withr::local_seed(11, .rng_kind = "Mersenne-Twister")
+  z <- rbind(c(0, 0), matrix(stats::rnorm(4), 2, 2))
+  eta <- sweep(z, 2, sqrt(c(0.09, 0.04)), `*`)
+  p <- cmp$predictions
+  expected <- numeric(nrow(p))
+  for (i in seq_len(nrow(p))) {
+    expected[[i]] <- advan1_conc(
+      p$regimen[[i]],
+      p$time[[i]],
+      cl = 4 * exp(eta[p$id[[i]], 1]),
+      v = 50 * exp(eta[p$id[[i]], 2])
+    )
+  }
+  expect_equal(p$a, expected, tolerance = 1e-8)
+  expect_equal(p$b, expected, tolerance = 1e-8)
+  expect_gt(length(unique(round(p$a[p$time == 1], 6))), 3)
+})
+
+test_that("the typical subject reproduces every corpus entry's expected.csv", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  corpus <- zufapmx_corpus()
+  # The design's single dose is the corpus's: 100 into compartment 1 at the
+  # same times. The infusion entry's corpus dose lasts 1 unit, not 2.
+  corpus <- corpus[corpus$regimen != "infusion", ]
+  expect_gt(nrow(corpus), 0)
+
+  for (i in seq_len(nrow(corpus))) {
+    m <- pmx_read_nonmem(file.path(corpus$path[[i]], "model.ctl"))
+    cmp <- pmx_compare(
+      m,
+      pmx_write_rxode2(m),
+      pmx_design(n = 0, regimens = "single")
+    )
+    expected <- corpus_expected(corpus$path[[i]])$pred
+    expect_equal(cmp$predictions$a, expected, tolerance = 1e-6)
+    expect_equal(cmp$predictions$b, expected, tolerance = 1e-6)
+  }
+})
+
+test_that("a modelled duration doses every regimen at it, and skips infusion", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1(pk = "D1 = 2"))
+
+  cmp <- pmx_compare(m, pmx_write_mrgsolve(m), pmx_design(n = 0))
+
+  expect_true(cmp$pass)
+  expect_equal(
+    cmp$regimens$skipped[cmp$regimens$regimen == "infusion"],
+    "a model sets the dose's rate or duration"
+  )
+  # A single dose over 2 units is the infusion's closed form.
+  single <- cmp$predictions[cmp$predictions$regimen == "single", ]
+  expected <- advan1_conc("infusion", single$time, cl = 4, v = 50)
+  expect_equal(single$a, expected, tolerance = 1e-8)
+  expect_equal(single$b, expected, tolerance = 1e-8)
+})
+
+test_that("covariates take the design's values, matched without case", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1(
+    cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"
+  ))
+
+  cmp <- pmx_compare(
+    m,
+    pmx_write_mrgsolve(m),
+    pmx_design(n = 0, regimens = "single", covariates = list(wt = 80))
+  )
+
+  expect_true(cmp$pass)
+  expected <- advan1_conc(
+    "single",
+    cmp$predictions$time,
+    cl = 4 * (80 / 70)^0.75,
+    v = 50
+  )
+  expect_equal(cmp$predictions$a, expected, tolerance = 1e-8)
+  expect_equal(cmp$predictions$b, expected, tolerance = 1e-8)
+})
+
+test_that("a covariate the design lacks is the caller's error", {
+  local_fake_engines()
+  m <- read_ctl(ctl_advan1(
+    cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"
+  ))
+
+  expect_error(
+    pmx_compare(m, m, pmx_design(n = 0)),
+    class = "zufapmx_model_error"
+  )
+})
+
+test_that("a wrong translation fails as a value, with where it differs", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1())
+  w <- pmx_write_rxode2(m)
+  w$text <- sub(
+    "THETA1 <- c(0, 4)",
+    "THETA1 <- c(0, 4.1)",
+    w$text,
+    fixed = TRUE
+  )
+
+  cmp <- pmx_compare(m, w, pmx_design(n = 1))
+
+  expect_false(cmp$pass)
+  expect_null(cmp$reason)
+  expect_gt(cmp$worst$rel, 1e-3)
+  expect_true(all(cmp$regimens$failed > 0))
+})
+
+test_that("each point agrees within tol or atol, at the boundary too", {
+  obs <- data.frame(id = 1L, time = 1:4)
+
+  # Relative deviation exactly tol, and just over it (exact in binary).
+  p <- compare_points(
+    "single",
+    obs[1:2, ],
+    c(1, 1),
+    c(0.75, 0.7499),
+    0.25,
+    0
+  )
+  expect_equal(p$pass, c(TRUE, FALSE))
+  # Absolute deviation at atol rescues a large relative deviation near zero.
+  p <- compare_points(
+    "single",
+    obs[1:2, ],
+    c(1e-12, 1e-12),
+    c(0, 0),
+    1e-6,
+    1e-12
+  )
+  expect_equal(p$pass, c(TRUE, TRUE))
+  p <- compare_points("single", obs[1, ], 2e-12, 0, 1e-6, 1e-12)
+  expect_false(p$pass)
+  # Missing and non-finite predictions never agree, even with each other.
+  p <- compare_points(
+    "single",
+    obs,
+    c(NA, Inf, NaN, 0),
+    c(NA, Inf, 1, 0),
+    1,
+    1
+  )
+  expect_equal(p$pass, c(FALSE, FALSE, FALSE, TRUE))
+  expect_equal(p$rel, c(Inf, Inf, Inf, 0))
+})
+
+test_that("a short or missing engine table fails, never passes", {
+  local_fake_engines()
+  testthat::local_mocked_bindings(
+    engine_mrgsolve = function(text, data, etas) {
+      obs <- data[data$evid == 0, ]
+      data.frame(id = obs$id, time = obs$time, Y = obs$time)[-1, ]
+    }
+  )
+  m <- read_ctl(ctl_advan1())
+
+  cmp <- pmx_compare(m, m, pmx_design(n = 0), engines = c("rxode2", "mrgsolve"))
+
+  expect_false(cmp$pass)
+  expect_true(is.na(cmp$worst$b))
+  expect_equal(sum(!cmp$predictions$pass), length(cmp$design$regimens))
+
+  testthat::local_mocked_bindings(
+    engine_mrgsolve = function(text, data, etas) data.frame(id = 1, time = 1)
+  )
+  cmp <- pmx_compare(m, m, pmx_design(n = 0), engines = c("rxode2", "mrgsolve"))
+  expect_false(cmp$pass)
+  expect_true(all(is.na(cmp$predictions$b)))
+})
+
+test_that("models with different numbers of random effects fail with a reason", {
+  local_fake_engines()
+  a <- read_ctl(ctl_advan1())
+  lines <- sub("THETA(2) * EXP(ETA(2))", "THETA(2)", ctl_advan1(), fixed = TRUE)
+  b <- read_ctl(sub("$OMEGA 0.09 0.04", "$OMEGA 0.09", lines, fixed = TRUE))
+
+  cmp <- pmx_compare(a, b, pmx_design(n = 0))
+
+  expect_false(cmp$pass)
+  expect_match(cmp$reason, "2 and 1")
+  expect_null(cmp$predictions)
+  expect_null(cmp$worst)
+})
+
+test_that("a comparison never runs on the engine of the writer under test", {
+  local_fake_engines()
+  nm <- read_ctl(ctl_advan1())
+  mrg <- pmx_read_mrgsolve(corpus_file("onecmt-oral", "model.cpp"))
+  rx <- corpus_rxode2_model("onecmt-oral")
+  engines <- function(a, b, ...) {
+    pmx_compare(
+      a,
+      b,
+      pmx_design(n = 0, regimens = "single"),
+      ...
+    )$engines$engine
+  }
+
+  expect_equal(engines(nm, pmx_write_rxode2(nm)), c("mrgsolve", "rxode2"))
+  expect_equal(engines(nm, pmx_write_mrgsolve(nm)), c("rxode2", "mrgsolve"))
+  expect_equal(engines(pmx_write_mrgsolve(nm), nm), c("mrgsolve", "rxode2"))
+  expect_equal(engines(rx, pmx_write_rxode2(rx)), c("mrgsolve", "rxode2"))
+  expect_equal(engines(mrg, pmx_write_mrgsolve(mrg)), c("rxode2", "mrgsolve"))
+  # Models without a writer under test run on their own engine, NONMEM on
+  # rxode2; so does a written NONMEM model.
+  expect_equal(engines(mrg, rx), c("mrgsolve", "rxode2"))
+  expect_equal(engines(nm, pmx_write_nonmem(nm)), c("rxode2", "rxode2"))
+  # Unless the user asks.
+  expect_equal(
+    engines(nm, pmx_write_rxode2(nm), engines = c("rxode2", NA)),
+    c("rxode2", "rxode2")
+  )
+  expect_equal(
+    engines(pmx_write_rxode2(nm), nm, engines = c("mrgsolve", "mrgsolve")),
+    c("mrgsolve", "mrgsolve")
+  )
+})
+
+test_that("a written model runs as written, not rewritten", {
+  local_fake_engines()
+  m <- read_ctl(ctl_advan1())
+  w <- pmx_write_rxode2(m)
+  w$text <- sub("THETA1 <- c(0, 4)", "THETA1 <- c(0, 5)", w$text, fixed = TRUE)
+
+  cmp <- pmx_compare(m, w, pmx_design(n = 0, regimens = "single"))
+
+  expect_identical(cmp$sides$b$text, w$text)
+  expect_match(cmp$sides$b$origin, "as written")
+  expect_match(cmp$sides$a$origin, "written to mrgsolve by zufapmx")
+})
+
+test_that("a missing engine is an engine error", {
+  local_fake_engines()
+  testthat::local_mocked_bindings(
+    engine_available = function(engine) engine != "mrgsolve"
+  )
+  m <- read_ctl(ctl_advan1())
+  d <- pmx_design(n = 0)
+
+  # D4 leaves a only mrgsolve.
+  expect_error(
+    pmx_compare(m, pmx_write_rxode2(m), d),
+    class = "zufapmx_engine_error"
+  )
+  # A written mrgsolve model needs mrgsolve.
+  expect_error(
+    pmx_compare(pmx_write_mrgsolve(m), m, d),
+    class = "zufapmx_engine_error"
+  )
+  # A model with a choice falls back to the engine that is installed.
+  mrg <- pmx_read_mrgsolve(corpus_file("onecmt-oral", "model.cpp"))
+  expect_equal(pmx_compare(mrg, m, d)$engines$engine, c("rxode2", "rxode2"))
+
+  err <- tryCatch(
+    pmx_compare(m, pmx_write_rxode2(m), d),
+    zufapmx_engine_error = function(e) e
+  )
+  expect_equal(err$engine, "mrgsolve")
+})
+
+test_that("an engine that fails is an engine error carrying its message", {
+  local_fake_engines()
+  testthat::local_mocked_bindings(
+    engine_mrgsolve = function(text, data, etas) stop("solver blew up")
+  )
+  m <- read_ctl(ctl_advan1())
+
+  err <- tryCatch(
+    pmx_compare(m, pmx_write_rxode2(m), pmx_design(n = 0)),
+    error = function(e) e
+  )
+
+  expect_s3_class(err, "zufapmx_engine_error")
+  expect_equal(err$engine, "mrgsolve")
+  expect_equal(conditionMessage(err$parent), "solver blew up")
+})
+
+test_that("a writer's refusal moves a model to the next engine", {
+  local_fake_engines()
+  # rxode2 cannot spell the record's time in individual statements (D15).
+  m <- read_ctl(ctl_advan1(pk = "TAD = TIME"))
+  expect_error(pmx_write_rxode2(m), class = "zufapmx_write_error")
+
+  cmp <- pmx_compare(m, m, pmx_design(n = 0, regimens = "single"))
+
+  expect_equal(cmp$engines$engine, c("mrgsolve", "mrgsolve"))
+  # With no engine left, the refusal is the error.
+  expect_error(
+    pmx_compare(m, pmx_write_mrgsolve(m), pmx_design(n = 0)),
+    class = "zufapmx_write_error"
+  )
+})
+
+test_that("the design's dose compartment must exist in both models", {
+  local_fake_engines()
+  m <- read_ctl(ctl_advan1())
+
+  expect_error(
+    pmx_compare(m, m, pmx_design(n = 0, cmt = 2)),
+    class = "zufapmx_model_error"
+  )
+})
+
+test_that("each engine gets the dose compartment in its own terms", {
+  m <- unclass(pmx_read_mrgsolve(corpus_file("onecmt-oral-mm", "model.cpp")))
+  events <- pmx_design(n = 0, regimens = "single", cmt = 2)$events
+
+  expect_equal(unique(side_events(m, events, 2, "rxode2")$cmt), "CENT")
+  expect_equal(unique(side_events(m, events, 2, "mrgsolve")$cmt), 2)
+  expect_false("regimen" %in% names(side_events(m, events, 2, "rxode2")))
+  lag <- unclass(read_ctl(ctl_advan1(pk = "R1 = 50")))
+  data <- side_events(lag, events, 1, "mrgsolve")
+  expect_equal(data$rate[data$evid == 1], -1)
+})
+
+test_that("both sides draw the same etas from the seed, and leave the RNG alone", {
+  omega <- diag(c(0.09, 0.04))
+  dimnames(omega) <- list(c("ETA1", "ETA2"), c("ETA1", "ETA2"))
+  d <- pmx_design(n = 3, seed = 5)
+
+  set.seed(99)
+  before <- .Random.seed
+  etas <- compare_etas(list(a = omega, b = omega * 4), d)
+  expect_identical(.Random.seed, before)
+
+  expect_equal(etas$a[1, ], c(ETA1 = 0, ETA2 = 0))
+  expect_equal(etas$b, etas$a * 2)
+  expect_equal(
+    compare_etas(list(a = omega, b = omega), d),
+    compare_etas(list(a = omega, b = omega), d)
+  )
+  expect_false(isTRUE(all.equal(
+    compare_etas(list(a = omega, b = omega), pmx_design(n = 3, seed = 6))$a,
+    etas$a
+  )))
+})
+
+test_that("the eta draw does not depend on the caller's RNG kind", {
+  omega <- matrix(0.09, 1, 1, dimnames = list("ETA1", "ETA1"))
+  d <- pmx_design(n = 3, seed = 5)
+  ref <- compare_etas(list(a = omega, b = omega), d)
+
+  withr::local_seed(
+    1,
+    .rng_kind = "Knuth-TAOCP-2002",
+    .rng_normal_kind = "Box-Muller"
+  )
+  kind <- RNGkind()
+  expect_equal(compare_etas(list(a = omega, b = omega), d), ref)
+  expect_equal(RNGkind(), kind)
+})
+
+test_that("omega's square root holds semi-definite matrices, refuses others", {
+  zero <- matrix(c(0.09, 0, 0, 0), 2)
+  expect_equal(omega_root(zero) %*% omega_root(zero), zero)
+  full <- matrix(c(0.09, 0.03, 0.03, 0.04), 2)
+  expect_equal(omega_root(full) %*% omega_root(full), full)
+  expect_error(
+    omega_root(matrix(c(0.09, 0.2, 0.2, 0.04), 2)),
+    class = "zufapmx_model_error"
+  )
+})
+
+test_that("pmx_compare() refuses malformed arguments", {
+  local_fake_engines()
+  m <- read_ctl(ctl_advan1())
+  d <- pmx_design(n = 0)
+  bad <- list(
+    list(a = "model.ctl", b = m),
+    list(a = m, b = list()),
+    list(a = m, b = m, design = list()),
+    list(a = m, b = m, tol = 0),
+    list(a = m, b = m, tol = -1),
+    list(a = m, b = m, tol = NA),
+    list(a = m, b = m, tol = Inf),
+    list(a = m, b = m, tol = c(1e-6, 1e-6)),
+    list(a = m, b = m, tol = "1e-6"),
+    list(a = m, b = m, atol = -1),
+    list(a = m, b = m, atol = NaN),
+    list(a = m, b = m, engines = "rxode2"),
+    list(a = m, b = m, engines = c("rxode2", "nonmem")),
+    list(a = m, b = m, engines = c(1, 2))
+  )
+  for (args in bad) {
+    if (is.null(args$design)) {
+      args$design <- d
+    }
+    expect_error(
+      do.call(pmx_compare, args),
+      class = "zufapmx_model_error",
+      label = deparse(args[setdiff(names(args), c("a", "b", "design"))])
+    )
+  }
+  expect_true(pmx_compare(m, m, d, atol = 0)$pass)
+  expect_true(pmx_compare(m, m, d, engines = c(NA, NA))$pass)
+})
+
+test_that("a comparison prints its verdict, engines and worst point", {
+  local_fake_engines(mrgsolve = function(time, id) time * (1 + 1e-3))
+  m <- read_ctl(ctl_advan1())
+
+  expect_snapshot({
+    pmx_compare(m, pmx_write_rxode2(m), pmx_design(n = 1))
+    pmx_compare(m, m, pmx_design(n = 0, regimens = "single"))
+  })
+  lines <- sub("THETA(2) * EXP(ETA(2))", "THETA(2)", ctl_advan1(), fixed = TRUE)
+  b <- read_ctl(sub("$OMEGA 0.09 0.04", "$OMEGA 0.09", lines, fixed = TRUE))
+  expect_snapshot(pmx_compare(m, b, pmx_design(n = 0)))
+})
+
+test_that("every corpus model round-trips through every pair of formats", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  writers <- list(
+    rxode2 = pmx_write_rxode2,
+    nonmem = pmx_write_nonmem,
+    mrgsolve = pmx_write_mrgsolve
+  )
+  corpus <- zufapmx_corpus()
+  design <- pmx_design(n = 2)
+
+  for (i in seq_len(nrow(corpus))) {
+    models <- corpus_models(corpus$path[[i]], corpus$id[[i]])
+    for (from in names(models)) {
+      for (to in names(writers)) {
+        label <- sprintf("%s: %s -> %s", corpus$id[[i]], from, to)
+        w <- writers[[to]](models[[from]])
+        cmp <- pmx_compare(models[[from]], w, design)
+        expect_true(cmp$pass, label = label)
+        # And back: X -> Y -> X against the original.
+        back <- writers[[from]](text_model(w$text, to))
+        cmp <- pmx_compare(models[[from]], back, design)
+        expect_true(cmp$pass, label = paste(label, "->", from))
+      }
+    }
+  }
+})

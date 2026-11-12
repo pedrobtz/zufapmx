@@ -23,7 +23,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 4 | [NONMEM reader](#stage-4--nonmem-reader) | quick | [#6](https://github.com/pedrobtz/zufapmx/issues/6) | [#21](https://github.com/pedrobtz/zufapmx/pull/21) | 2026-10-28 |
 | 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zufapmx/issues/7) | [#22](https://github.com/pedrobtz/zufapmx/pull/22) | 2026-10-28 |
 | 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zufapmx/issues/8) | [#23](https://github.com/pedrobtz/zufapmx/pull/23) | 2026-10-28 |
-| 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zufapmx/issues/9) | | |
+| 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zufapmx/issues/9) | [#127](https://github.com/pedrobtz/zufapmx/pull/127) | 2026-11-12 |
 | 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zufapmx/issues/10) | | |
 | 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zufapmx/issues/11) | | |
 | 10 | [Full CI](#stage-10--full-ci) | full | [#12](https://github.com/pedrobtz/zufapmx/issues/12) | | |

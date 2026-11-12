@@ -63,6 +63,7 @@ pmx_write_mrgsolve <- function(model) {
     "",
     "$PARAM @annotated",
     mrg_param_lines(m$parameters, spelling),
+    mrg_input_lines(m$provenance$covariates, spelling),
     "",
     if (closed) {
       sprintf(
@@ -251,6 +252,20 @@ mrg_param_lines <- function(p, spelling) {
       )
     },
     character(1)
+  )
+}
+
+# Covariates are data items: $INPUT declares them, and NA_real_ gives no
+# default, so a data set without the column simulates NA rather than a
+# value the writer made up (D9, #126).
+mrg_input_lines <- function(covariates, spelling) {
+  if (length(covariates) == 0) {
+    return(character())
+  }
+  c(
+    "",
+    "$INPUT",
+    sprintf("%s = NA_real_", spelling[covariates] %|NA|% covariates)
   )
 }
 

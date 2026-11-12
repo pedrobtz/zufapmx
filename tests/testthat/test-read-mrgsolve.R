@@ -601,3 +601,31 @@ test_that("an undeclared ETA index is refused", {
     class = "zufapmx_parse_error"
   )
 })
+
+test_that("$INPUT names are covariates, not parameters (#126)", {
+  m <- read_cpp(cpp_onecmt(
+    main = "double CLI = CL * pow(WT / 70.0, 0.75);",
+    extra = "$INPUT WT = NA_real_"
+  ))
+
+  expect_equal(unclass(m)$provenance$covariates, "WT")
+  expect_false("WT" %in% pmx_parameters(m)$name)
+  expect_false(any(grepl("INPUT", unclass(m)$provenance$losses)))
+})
+
+test_that("an $INPUT default value is a recorded loss (#126)", {
+  m <- read_cpp(cpp_onecmt(
+    main = "double CLI = CL * pow(WT / 70.0, 0.75);",
+    extra = "$INPUT WT = 70"
+  ))
+
+  expect_equal(unclass(m)$provenance$covariates, "WT")
+  expect_true(any(grepl("\\$INPUT", unclass(m)$provenance$losses)))
+})
+
+test_that("a malformed $INPUT entry is refused (#126)", {
+  expect_error(
+    read_cpp(cpp_onecmt(extra = "$INPUT WT")),
+    class = "zufapmx_parse_error"
+  )
+})
