@@ -1,5 +1,5 @@
 # zufuzz harness for the rxode2 reader (design §9). Run from the package root
-# with zufapmx installed:
+# with zupmxio installed:
 #
 #   Rscript tools/fuzz/rxode2.R <inputs...>           # replay inputs, no engine
 #   afl-fuzz -i tools/fuzz/corpus/rxode2 -o out -- Rscript tools/fuzz/rxode2.R
@@ -11,7 +11,7 @@
 
 library(zufuzz)
 source("tests/testthat/helper-fuzz.R")
-instrument_package("zufapmx")
+instrument_package("zupmxio")
 
 test_one_input <- function(data) fuzz_target(data, "rxode2")
 

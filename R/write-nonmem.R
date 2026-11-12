@@ -24,7 +24,7 @@
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model-rxode2.R",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' fun <- eval(parse(path))
 #' pmx_write_nonmem(pmx_read_rxode2(fun))
@@ -57,7 +57,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   spelling <- nm_names(m)
   text <- c(
     sprintf("$PROBLEM %s", model_title(m$provenance)),
-    "; zufapmx: $INPUT and $DATA are placeholders; point them at your dataset.",
+    "; zupmxio: $INPUT and $DATA are placeholders; point them at your dataset.",
     paste(
       c("$INPUT ID TIME EVID AMT RATE CMT DV", nm_covariates(m, spelling)),
       collapse = " "

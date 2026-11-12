@@ -10,11 +10,11 @@ test_that("writers refuse what their format cannot hold, and say who can", {
     for (format in formats) {
       err <- expect_error(
         writers[[format]](model),
-        class = "zufapmx_write_error"
+        class = "zupmxio_write_error"
       )
       expect_equal(err$location, location)
       for (other in err$formats) {
-        expect_s3_class(writers[[other]](model), "zufapmx_written")
+        expect_s3_class(writers[[other]](model), "zupmxio_written")
       }
     }
   }

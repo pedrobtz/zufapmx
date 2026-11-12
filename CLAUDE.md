@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`zufapmx` holds a population PK/PD model as one R object, reads it from
+`zupmxio` holds a population PK/PD model as one R object, reads it from
 NONMEM, rxode2/nlmixr2 and mrgsolve, writes it back to any of the three, and
 proves two models are the same model. `pmx_compare()` simulates both on a
 canonical design, each through its own engine, and reports the worst
@@ -34,7 +34,7 @@ parent issue shows a progress bar such as "6 of 7".
 
 - **One parent issue per target version**, titled with the bare version, for
   example `v0.1.0`. This package's is
-  [#1](https://github.com/pedrobtz/zufapmx/issues/1).
+  [#1](https://github.com/pedrobtz/zupmxio/issues/1).
 - **One sub-issue per roadmap stage**, titled as the roadmap titles it, for
   example `Stage 3 — R interface`, and linking to that section. The number of
   stages is whatever the roadmap has; there is no fixed scale.
@@ -110,7 +110,7 @@ land; see `.agents/design.md` (§4).
   over `F`.
 - **Readers and writers** ([R/read-rxode2.R](R/read-rxode2.R),
   [R/write-rxode2.R](R/write-rxode2.R)): a reader raises
-  `zufapmx_parse_error` for anything it does not support, never a model
+  `zupmxio_parse_error` for anything it does not support, never a model
   error; a writer reads its own output back and sets the fidelity
   ([R/written.R](R/written.R)) from whether the representation came back
   identical.
@@ -148,7 +148,7 @@ land; see `.agents/design.md` (§4).
 - **Fuzz targets** (`tools/fuzz/`, left out of the build): zufuzz
   harnesses whose oracle is `fuzz_target()` in
   `tests/testthat/helper-fuzz.R`; `test-fuzz.R` replays it (D23).
-- **Conditions** ([R/errors.R](R/errors.R)): `zufapmx_abort()` and the §8
+- **Conditions** ([R/errors.R](R/errors.R)): `zupmxio_abort()` and the §8
   constructors `parse_error()`, `write_error()` and `engine_error()`,
   each carrying the fields a caller acts on.
 - **The corpus** ([R/corpus.R](R/corpus.R), `inst/corpus/`): see Testing
@@ -176,7 +176,7 @@ These come from the design's decisions (§13) and hold from the first stage.
 - **Residual error is off in comparisons (D5).** Predictions are compared,
   not noise.
 - **`pmx_compare()` never raises on a failed comparison.** Failure is a
-  value; only missing or failing engines raise `zufapmx_engine_error`.
+  value; only missing or failing engines raise `zupmxio_engine_error`.
 - **Unsupported code is refused with a position, never guessed (D6).** The
   NM-TRAN subset is what `nonmem2rx` and `nonmem2mrgsolve` translate today.
 - **Siblings on CRAN are used, not re-implemented (D9a):** `zuxml` for
@@ -210,7 +210,7 @@ These come from the design's decisions (§13) and hold from the first stage.
 - **C++ literals carry a decimal point.** `1/2` is integer division in
   C++; the mrgsolve dialect writes `1.0 / 2.0`.
 - **`$PARAM @annotated` descriptions hold bounds.** `[lower, upper]` and
-  `fixed` are zufapmx's convention; without it every mrgsolve write of a
+  `fixed` are zupmxio's convention; without it every mrgsolve write of a
   bounded model would be `lossy`.
 - **Who assigns and reads what (D14, D18).** The validator refuses
   assignments to parameters, random effects, compartments and time; ODE
@@ -223,7 +223,7 @@ These come from the design's decisions (§13) and hold from the first stage.
   variable.
 - **A statement's refusal points at its record** through `record_at()`:
   statements carry no positions of their own.
-- **Exported functions are `pmx_*` (D10),** with `zufapmx_corpus()` the one
+- **Exported functions are `pmx_*` (D10),** with `zupmxio_corpus()` the one
   package-level exception.
 
 ## Testing conventions
@@ -256,7 +256,7 @@ These come from the design's decisions (§13) and hold from the first stage.
   that is exact or equivalent; `str_full()` snapshots a representation
   untruncated.
 - **Skip engines with `skip_if_no_engine()`,** not
-  `skip_if_not_installed()`. CI sets `ZUFAPMX_REQUIRE_ENGINES=true`, so a
+  `skip_if_not_installed()`. CI sets `ZUPMXIO_REQUIRE_ENGINES=true`, so a
   runner leg where an engine failed to install fails instead of skipping.
 - **One test file per module**, named after the R file it tests.
 - **Keep the suite inside the CRAN time budget.** No runtime recorded yet.

@@ -1,4 +1,8 @@
-# zufapmx 0.0.0.9000
+# zupmxio 0.0.0.9000
+
+* The package is renamed zupmxio, from zufapmx (design D24). Condition
+  classes are `zupmxio_*_error` and the corpus is `zupmxio_corpus()`; the
+  `pmx_*` functions keep their names.
 
 * `pmx_compare()` checks that two models are the same model. It simulates
   both on a `pmx_design()` (single dose, infusion, multiple doses and
@@ -54,13 +58,13 @@
 
 * `pmx_read_rxode2()` accepts `=` in `ini()` and `combined2()`.
 
-* An invalid argument is a `zufapmx_model_error` with one wording across
+* An invalid argument is a `zupmxio_model_error` with one wording across
   functions, and a model edited after reading is validated again before
   it is written or inspected.
 
 * Fidelity is stricter: a write is `"equivalent"` only through the
   reparameterisations writers are known to make, and a translation that
-  reads back as a different model is a `zufapmx_write_error`.
+  reads back as a different model is a `zupmxio_write_error`.
 
 * Time is one symbol, `t`, read from and written to each format's own
   spelling (NONMEM `TIME`/`T`, mrgsolve `TIME`/`SOLVERTIME`, rxode2
@@ -87,7 +91,7 @@
 * `pmx_parameters()`, `pmx_omega()` and `pmx_ode()` inspect a model, and
   `print()` summarises it.
 
-* `zufapmx_corpus()` lists the shipped model corpus: one-, two- and
+* `zupmxio_corpus()` lists the shipped model corpus: one-, two- and
   three-compartment closed-form models and a Michaelis-Menten ODE model,
   each written in NONMEM, rxode2 and mrgsolve form with its typical-subject
   predictions.

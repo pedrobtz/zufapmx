@@ -1361,7 +1361,7 @@
       print(w)
     Output
       $PROBLEM run1.ctl
-      ; zufapmx: $INPUT and $DATA are placeholders; point them at your dataset.
+      ; zupmxio: $INPUT and $DATA are placeholders; point them at your dataset.
       $INPUT ID TIME EVID AMT RATE CMT DV
       $DATA data.csv IGNORE=@
       $SUBROUTINES ADVAN4 TRANS4

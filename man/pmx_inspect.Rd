@@ -42,7 +42,7 @@ equations of an ODE model.
 \examples{
 path <- system.file(
   "corpus", "onecmt-oral-mm", "model.ctl",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 model <- pmx_read_nonmem(path)
 pmx_parameters(model)

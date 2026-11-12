@@ -7,12 +7,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 A translated model is a claim: this rxode2 model, or this mrgsolve model,
-is the NONMEM model it came from. This article shows how zufapmx checks
+is the NONMEM model it came from. This article shows how zupmxio checks
 that claim, what a comparison report contains, and how a reviewer reads
 one.
 
 ```{r, message = FALSE}
-library(zufapmx)
+library(zupmxio)
 ```
 
 ## Translate
@@ -22,7 +22,7 @@ of the models that ship with the package. Reading it gives the model as
 one R object, whatever format it came from:
 
 ```{r}
-path <- system.file("corpus", "twocmt-oral", "model.ctl", package = "zufapmx")
+path <- system.file("corpus", "twocmt-oral", "model.ctl", package = "zupmxio")
 model <- pmx_read_nonmem(path)
 model
 ```
@@ -45,7 +45,7 @@ A write is one of three things:
   one value per parameter. `pmx_losses()` names each item.
 
 A construct that would change predictions is never dropped. The writer
-stops with an error of class `zufapmx_write_error` that names it and the
+stops with an error of class `zupmxio_write_error` that names it and the
 formats that can hold it.
 
 Fidelity is a check of the representation: the text reads back as the
@@ -159,7 +159,7 @@ Read a report in this order:
 1. **Result.** Pass or fail, and how many points disagree.
 2. **Models.** Which side is the text under test, which engine ran each,
    and their versions. A side "simulated as written" is the text itself;
-   a side "written by zufapmx" went through another writer.
+   a side "written by zupmxio" went through another writer.
 3. **Design.** The regimens, the number of subjects and the seed. The
    same design and seed give the same random effects, so a comparison
    can be rerun.
@@ -181,7 +181,7 @@ predictions this model is known to make:
 ```{r}
 expected <- read.csv(system.file(
   "corpus", "twocmt-oral", "expected.csv",
-  package = "zufapmx"
+  package = "zupmxio"
 ))
 records <- data.frame(
   ID = 1,

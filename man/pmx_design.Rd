@@ -31,7 +31,7 @@ one number each, given to every subject. Names match a model's
 covariates without regard to case, since NONMEM upper-cases them.}
 }
 \value{
-A \code{zufapmx_design}: a list with the arguments and \code{events}, a
+A \code{zupmxio_design}: a list with the arguments and \code{events}, a
 data frame of the dose and observation records of every regimen with
 columns \code{regimen}, \code{id}, \code{time}, \code{evid}, \code{amt}, \code{rate}, \code{ii}, \code{addl}
 and \code{ss}.

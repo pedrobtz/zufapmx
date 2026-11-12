@@ -14,7 +14,7 @@
 #' Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines,
 #' dosing or scale assignments inside `IF`, undeclared `THETA`/`ETA`/`EPS`
 #' indices and anything else outside that subset are refused with an error
-#' of class `zufapmx_parse_error` naming the file and, where it can, the
+#' of class `zupmxio_parse_error` naming the file and, where it can, the
 #' line and column.
 #'
 #' Recorded as losses of the read: the title, `$SIZES`, data records,
@@ -36,14 +36,14 @@
 #'   `run.xml` (`<file>.xml`) when it exists and zuxml is installed, else
 #'   the `.ext` file, else none. `"xml"`, `"ext"` and `"lst"` read that
 #'   file and fail if it is missing; `"none"` reads no estimates.
-#' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_nonmem()].
+#' @return A `zupmxio_model`; see [pmx_inspect] and [pmx_write_nonmem()].
 #' @family readers
 #' @seealso [pmx_inspect] for the model's parts.
 #' @export
 #' @examples
 #' path <- system.file(
 #'   "corpus", "twocmt-bolus", "model.ctl",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' pmx_read_nonmem(path)
 pmx_read_nonmem <- function(
@@ -532,7 +532,7 @@ nm_pk <- function(stmts, compartments, file, record) {
     m <- regmatches(name, regexec(predpp, name))[[1]]
     if (name %in% c("TSCALE", "XSCALE")) {
       # They rescale time or amounts inside PREDPP.
-      refuse(name, "a $PK statement zufapmx translates")
+      refuse(name, "a $PK statement zupmxio translates")
     } else if (length(m) == 3) {
       n <- as.integer(m[[3]])
       if (m[[2]] == "S") {

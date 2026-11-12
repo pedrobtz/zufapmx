@@ -21,7 +21,7 @@
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model-rxode2.R",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' fun <- eval(parse(path))
 #' pmx_write_mrgsolve(pmx_read_rxode2(fun))

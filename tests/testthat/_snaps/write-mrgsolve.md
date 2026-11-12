@@ -3,7 +3,7 @@
     Code
       print(pmx_write_mrgsolve(corpus_rxode2_model("twocmt-oral")))
     Output
-      $PROB zufapmx model read from rxode2
+      $PROB zupmxio model read from rxode2
       
       $PARAM @annotated
       tka : 1 : [0, Inf]
@@ -47,7 +47,7 @@
     Code
       print(pmx_write_mrgsolve(corpus_rxode2_model("onecmt-oral-mm")))
     Output
-      $PROB zufapmx model read from rxode2
+      $PROB zupmxio model read from rxode2
       
       $PARAM @annotated
       tka : 1 : [0, Inf]

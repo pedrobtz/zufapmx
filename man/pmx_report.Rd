@@ -27,7 +27,7 @@ disagrees, and the text of both models as the engines ran them.
 \dontshow{if (requireNamespace("rxode2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 path <- system.file(
   "corpus", "onecmt-oral", "model.ctl",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 model <- pmx_read_nonmem(path)
 cmp <- pmx_compare(

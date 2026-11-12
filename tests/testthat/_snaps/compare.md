@@ -3,8 +3,8 @@
     Code
       pmx_compare(m, pmx_write_rxode2(m), pmx_design(n = 1))
     Output
-      <zufapmx comparison> FAIL
-      a: nonmem model, written to mrgsolve by zufapmx, on mrgsolve 0.0.0
+      <zupmxio comparison> FAIL
+      a: nonmem model, written to mrgsolve by zupmxio, on mrgsolve 0.0.0
       b: rxode2 text, simulated as written, on rxode2 0.0.0
       Tolerance: relative 1e-06, absolute 1e-09.
       70 of 70 predictions disagree.
@@ -17,9 +17,9 @@
     Code
       pmx_compare(m, m, pmx_design(n = 0, regimens = "single"))
     Output
-      <zufapmx comparison> pass
-      a: nonmem model, written to rxode2 by zufapmx, on rxode2 0.0.0
-      b: nonmem model, written to rxode2 by zufapmx, on rxode2 0.0.0
+      <zupmxio comparison> pass
+      a: nonmem model, written to rxode2 by zupmxio, on rxode2 0.0.0
+      b: nonmem model, written to rxode2 by zupmxio, on rxode2 0.0.0
       Tolerance: relative 1e-06, absolute 1e-09.
       0 of 8 predictions disagree.
       Worst: single, subject 1, time 0.5: 0.5 against 0.5 (abs 0, rel 0).
@@ -31,9 +31,9 @@
     Code
       pmx_compare(m, b, pmx_design(n = 0))
     Output
-      <zufapmx comparison> FAIL
-      a: nonmem model, written to rxode2 by zufapmx, on rxode2 0.0.0
-      b: nonmem model, written to rxode2 by zufapmx, on rxode2 0.0.0
+      <zupmxio comparison> FAIL
+      a: nonmem model, written to rxode2 by zupmxio, on rxode2 0.0.0
+      b: nonmem model, written to rxode2 by zupmxio, on rxode2 0.0.0
       Tolerance: relative 1e-06, absolute 1e-09.
       The models have 2 and 1 random effects.
 
@@ -42,9 +42,9 @@
     Code
       cmp
     Output
-      <zufapmx comparison> FAIL
+      <zupmxio comparison> FAIL
       a: NONMEM table output, column `PRED` (5 significant digits)
-      b: nonmem model, written to rxode2 by zufapmx, on rxode2 0.0.0
+      b: nonmem model, written to rxode2 by zupmxio, on rxode2 0.0.0
       Tolerance: relative 1e-06, absolute 1e-09.
       2 of 2 predictions disagree.
       Worst: table, subject 1, time 1: 1 against 1.001 (abs 0.001, rel 0.000999).
@@ -62,7 +62,7 @@
       | Side | Simulated | Engine | Source |
       | --- | --- | --- | --- |
       | a | NONMEM table output, column `PRED` (5 significant digits) | none: NONMEM's own output | nonmem table, `sdtab1` |
-      | b | nonmem model, written to rxode2 by zufapmx | rxode2 0.0.0 | nonmem, `advan1.ctl` |
+      | b | nonmem model, written to rxode2 by zupmxio | rxode2 0.0.0 | nonmem, `advan1.ctl` |
       
       ## Design
       

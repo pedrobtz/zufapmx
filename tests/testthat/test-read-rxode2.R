@@ -33,9 +33,9 @@ test_that("an ODE corpus model reads into states, statements and derivatives", {
 })
 
 test_that("every corpus model reads", {
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
   for (id in corpus$id) {
-    expect_s3_class(pmx_read_rxode2(corpus_rxode2(id)), "zufapmx_model")
+    expect_s3_class(pmx_read_rxode2(corpus_rxode2(id)), "zupmxio_model")
   }
 })
 
@@ -190,27 +190,27 @@ test_that("constructs outside the supported set are refused", {
 
   expect_error(
     pmx_read_rxode2(base(quote(x <- sin(cl)))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(x <- ifelse(cl > 1, 1, 2)))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(cp ~ t(sd)))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(y ~ add(sd)))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(alag(gut) <- 1))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     pmx_read_rxode2(base(quote(d / dt(central) <- -cl))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -221,9 +221,9 @@ test_that("a function without ini() or model() is refused", {
         cp <- linCmt()
       })
     }),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
-  expect_error(pmx_read_rxode2("one.cmt"), class = "zufapmx_model_error")
+  expect_error(pmx_read_rxode2("one.cmt"), class = "zupmxio_model_error")
 })
 
 test_that("metadata, constant ini expressions and prop() + add() read", {
@@ -290,7 +290,7 @@ test_that("a construct outside the table in a derivative is a parse error", {
         cp ~ add(sd)
       })
     }),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -427,7 +427,7 @@ test_that("a parameter reassigned in model() is refused", {
         cp ~ add(sd)
       })
     }),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -447,7 +447,7 @@ test_that("a linCmt() endpoint that is reassigned or read is refused", {
         cp ~ add(sd)
       })
     }),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -480,7 +480,7 @@ test_that("ini() takes = and combined2(), and refuses combined1()", {
   expect_equal(unclass(m)$observations$cp$residual$type, "combined")
   expect_error(
     reads(quote(add(a) + prop(b) + combined1())),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -505,7 +505,7 @@ test_that("an ini() value cannot run code", {
       cp ~ add(sd)
     }))
   )
-  expect_error(pmx_read_rxode2(f), class = "zufapmx_parse_error")
+  expect_error(pmx_read_rxode2(f), class = "zupmxio_parse_error")
   expect_false(file.exists(marker))
 })
 
@@ -522,7 +522,7 @@ test_that("residual error parameters must be ini() parameters", {
         cp ~ prop(prop.sd)
       })
     }),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -563,11 +563,11 @@ test_that("rxode2 models are refused for the constructs they lack", {
       quote(cp <- linCmt()),
       quote(cp ~ add(sd))
     ))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     pmx_read_rxode2(model(list(quote(cp <- 1), quote(cp ~ add(sd))))),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 
   lnorm <- pmx_read_rxode2(model(list(
@@ -604,7 +604,7 @@ test_that("initial values need one to three values in bound order", {
   for (value in list(quote(c(0, 4, 10, 99)), quote(c(10, 5)), quote(c()))) {
     expect_error(
       pmx_read_rxode2(ini_model(value)),
-      class = "zufapmx_parse_error",
+      class = "zupmxio_parse_error",
       label = deparse(value)
     )
   }

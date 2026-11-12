@@ -45,4 +45,4 @@ jobs:
       # A runner leg where an engine or oracle failed to install fails
       # instead of skipping their tests (tests/testthat/helper-engines.R).
       env: |
-        ZUFAPMX_REQUIRE_ENGINES=true
+        ZUPMXIO_REQUIRE_ENGINES=true

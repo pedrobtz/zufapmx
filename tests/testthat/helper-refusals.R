@@ -4,7 +4,7 @@
 # function, so its refusals have no line.
 # `info` names the case in a loop.
 expect_refused <- function(object, seen, line = NULL, info = NULL) {
-  err <- expect_error(object, class = "zufapmx_parse_error", info = info)
+  err <- expect_error(object, class = "zupmxio_parse_error", info = info)
   expect_equal(err$seen, seen, info = info)
   if (!is.null(line)) {
     expect_equal(err$line, line, info = info)

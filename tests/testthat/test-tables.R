@@ -15,7 +15,7 @@ test_that("a NONMEM table reads into records, with its precision", {
 
   t <- pmx_read_tables(file)
 
-  expect_s3_class(t, "zufapmx_tables")
+  expect_s3_class(t, "zupmxio_tables")
   expect_equal(t$digits, 5)
   expect_equal(t$prediction, "PRED")
   r <- t$records
@@ -97,17 +97,17 @@ test_that("EVID 2 records are dropped and resets refused", {
   df$EVID[[2]] <- 3
   expect_error(
     pmx_read_tables(local_nm_table(df)),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   df$EVID[[2]] <- 4
   expect_error(
     pmx_read_tables(local_nm_table(df)),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   df$EVID[[2]] <- 5
   expect_error(
     pmx_read_tables(local_nm_table(df)),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -122,9 +122,9 @@ test_that("tables from one run read side by side", {
   expect_equal(t$files, normalizePath(c(sd, pa)))
 
   short <- local_nm_table(data.frame(ID = 1, CL = 4))
-  expect_error(pmx_read_tables(c(sd, short)), class = "zufapmx_parse_error")
+  expect_error(pmx_read_tables(c(sd, short)), class = "zupmxio_parse_error")
   other <- local_nm_table(data.frame(ID = c(1, 1, 2), CL = 4))
-  expect_error(pmx_read_tables(c(sd, other)), class = "zufapmx_parse_error")
+  expect_error(pmx_read_tables(c(sd, other)), class = "zupmxio_parse_error")
 })
 
 test_that("the prediction column matches without regard to case", {
@@ -145,7 +145,7 @@ test_that("malformed tables are parse errors at their line", {
     pmx_read_tables(file)
   }
   refused <- function(x, line = NULL) {
-    err <- expect_error(read_lines(x), class = "zufapmx_parse_error")
+    err <- expect_error(read_lines(x), class = "zupmxio_parse_error")
     if (!is.null(line)) {
       expect_equal(err$line, line)
     }
@@ -172,13 +172,13 @@ test_that("records out of NONMEM's order are refused", {
   )
   expect_error(
     pmx_read_tables(local_nm_table(df)),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 
   df <- table_single_dose(c(2, 1), c(1, 1))
   expect_error(
     pmx_read_tables(local_nm_table(df)),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -193,10 +193,10 @@ test_that("only the prediction may be missing", {
 test_that("pmx_read_tables() refuses malformed arguments", {
   file <- local_nm_table(table_single_dose(1, 1))
   for (bad in list(1, NA_character_, character(), "no-such.tab", tempdir())) {
-    expect_error(pmx_read_tables(bad), class = "zufapmx_model_error")
+    expect_error(pmx_read_tables(bad), class = "zupmxio_model_error")
   }
   for (bad in list(NA_character_, "", c("PRED", "DV"), 1)) {
-    expect_error(pmx_read_tables(file, bad), class = "zufapmx_model_error")
+    expect_error(pmx_read_tables(file, bad), class = "zupmxio_model_error")
   }
 })
 

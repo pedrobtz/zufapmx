@@ -35,7 +35,7 @@ test_that("the typical subject reproduces every corpus entry's expected.csv", {
   skip_on_cran()
   skip_if_no_engine("rxode2")
   skip_if_no_engine("mrgsolve")
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
   # The design's single dose is the corpus's: 100 into compartment 1 at the
   # same times. The infusion entry's corpus dose lasts 1 unit, not 2.
   corpus <- corpus[corpus$regimen != "infusion", ]
@@ -107,7 +107,7 @@ test_that("a covariate the design lacks is the caller's error", {
 
   expect_error(
     pmx_compare(m, m, pmx_design(n = 0)),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -252,7 +252,7 @@ test_that("a written model runs as written, not rewritten", {
 
   expect_identical(cmp$sides$b$text, w$text)
   expect_match(cmp$sides$b$origin, "as written")
-  expect_match(cmp$sides$a$origin, "written to mrgsolve by zufapmx")
+  expect_match(cmp$sides$a$origin, "written to mrgsolve by zupmxio")
 })
 
 test_that("a missing engine is an engine error", {
@@ -266,12 +266,12 @@ test_that("a missing engine is an engine error", {
   # D4 leaves a only mrgsolve.
   expect_error(
     pmx_compare(m, pmx_write_rxode2(m), d),
-    class = "zufapmx_engine_error"
+    class = "zupmxio_engine_error"
   )
   # A written mrgsolve model needs mrgsolve.
   expect_error(
     pmx_compare(pmx_write_mrgsolve(m), m, d),
-    class = "zufapmx_engine_error"
+    class = "zupmxio_engine_error"
   )
   # A model with a choice falls back to the engine that is installed.
   mrg <- pmx_read_mrgsolve(corpus_file("onecmt-oral", "model.cpp"))
@@ -279,7 +279,7 @@ test_that("a missing engine is an engine error", {
 
   err <- tryCatch(
     pmx_compare(m, pmx_write_rxode2(m), d),
-    zufapmx_engine_error = function(e) e
+    zupmxio_engine_error = function(e) e
   )
   expect_equal(err$engine, "mrgsolve")
 })
@@ -296,7 +296,7 @@ test_that("an engine that fails is an engine error carrying its message", {
     error = function(e) e
   )
 
-  expect_s3_class(err, "zufapmx_engine_error")
+  expect_s3_class(err, "zupmxio_engine_error")
   expect_equal(err$engine, "mrgsolve")
   expect_equal(conditionMessage(err$parent), "solver blew up")
 })
@@ -305,7 +305,7 @@ test_that("a writer's refusal moves a model to the next engine", {
   local_fake_engines()
   # rxode2 cannot spell the record's time in individual statements (D15).
   m <- read_ctl(ctl_advan1(pk = "TAD = TIME"))
-  expect_error(pmx_write_rxode2(m), class = "zufapmx_write_error")
+  expect_error(pmx_write_rxode2(m), class = "zupmxio_write_error")
 
   cmp <- pmx_compare(m, m, pmx_design(n = 0, regimens = "single"))
 
@@ -313,7 +313,7 @@ test_that("a writer's refusal moves a model to the next engine", {
   # With no engine left, the refusal is the error.
   expect_error(
     pmx_compare(m, pmx_write_mrgsolve(m), pmx_design(n = 0)),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
 })
 
@@ -323,7 +323,7 @@ test_that("the design's dose compartment must exist in both models", {
 
   expect_error(
     pmx_compare(m, m, pmx_design(n = 0, cmt = 2)),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -383,7 +383,7 @@ test_that("omega's square root holds semi-definite matrices, refuses others", {
   expect_equal(omega_root(full) %*% omega_root(full), full)
   expect_error(
     omega_root(matrix(c(0.09, 0.2, 0.2, 0.04), 2)),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
@@ -413,7 +413,7 @@ test_that("pmx_compare() refuses malformed arguments", {
     }
     expect_error(
       do.call(pmx_compare, args),
-      class = "zufapmx_model_error",
+      class = "zupmxio_model_error",
       label = deparse(args[setdiff(names(args), c("a", "b", "design"))])
     )
   }
@@ -443,7 +443,7 @@ test_that("every corpus model round-trips through every pair of formats", {
     nonmem = pmx_write_nonmem,
     mrgsolve = pmx_write_mrgsolve
   )
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
   design <- pmx_design(n = 2)
 
   for (i in seq_len(nrow(corpus))) {
@@ -467,7 +467,7 @@ test_that("a model agrees with NONMEM tables printed from its predictions", {
   skip_on_cran()
   skip_if_no_engine("rxode2")
   skip_if_no_engine("mrgsolve")
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
   corpus <- corpus[corpus$regimen != "infusion", ]
 
   for (i in seq_len(nrow(corpus))) {
@@ -559,8 +559,8 @@ test_that("tables are compared with a model, never with tables", {
   tables <- pmx_read_tables(local_nm_table(table_single_dose(1, 1)))
   m <- read_ctl(ctl_advan1())
 
-  expect_error(pmx_compare(tables, tables), class = "zufapmx_model_error")
-  expect_s3_class(pmx_compare(tables, m), "zufapmx_comparison")
+  expect_error(pmx_compare(tables, tables), class = "zupmxio_model_error")
+  expect_s3_class(pmx_compare(tables, m), "zupmxio_comparison")
   expect_null(pmx_compare(m, tables)$design)
 })
 
@@ -570,14 +570,14 @@ test_that("tables must hold the model's covariates and compartments", {
   m <- read_ctl(ctl_advan1(
     cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"
   ))
-  expect_error(pmx_compare(tables, m), class = "zufapmx_model_error")
+  expect_error(pmx_compare(tables, m), class = "zupmxio_model_error")
 
   df <- table_single_dose(1, 1)
   df$CMT <- 2
   tables <- pmx_read_tables(local_nm_table(df))
   expect_error(
     pmx_compare(tables, read_ctl(ctl_advan1())),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 

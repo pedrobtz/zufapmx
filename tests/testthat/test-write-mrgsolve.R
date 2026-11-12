@@ -1,5 +1,5 @@
 test_that("corpus mrgsolve models round-trip exactly", {
-  for (path in zufapmx_corpus()$path) {
+  for (path in zupmxio_corpus()$path) {
     w <- pmx_write_mrgsolve(pmx_read_mrgsolve(file.path(path, "model.cpp")))
     expect_equal(pmx_fidelity(w), "exact", label = basename(path))
   }
@@ -24,7 +24,7 @@ test_that("every corpus model writes to every format and back", {
       pmx_read_mrgsolve(path)
     }
   )
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     models <- corpus_models(corpus$path[[i]], corpus$id[[i]])
@@ -43,7 +43,7 @@ test_that("every corpus model writes to every format and back", {
 test_that("written mrgsolve models simulate to their expected predictions", {
   skip_on_cran()
   skip_if_no_engine("mrgsolve")
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     models <- corpus_models(corpus$path[[i]], corpus$id[[i]])
@@ -100,7 +100,7 @@ test_that("constructs mrgsolve cannot hold are refused", {
   two$observations$cp2 <- two$observations$cp
   expect_error(
     pmx_write_mrgsolve(do.call(new_model, two)),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
 
   pow <- parts
@@ -110,14 +110,14 @@ test_that("constructs mrgsolve cannot hold are refused", {
   )
   expect_error(
     pmx_write_mrgsolve(do.call(new_model, pow)),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
 
   reserved <- parts
   reserved$individual <- c(reserved$individual, list(quote(TIME <- 1)))
   expect_error(
     pmx_write_mrgsolve(do.call(new_model, reserved)),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
 })
 
@@ -195,7 +195,7 @@ test_that("every residual type round-trips through the mrgsolve writer", {
   expression <- read_ctl(ctl_onecmt(
     error = c("W = SQRT(THETA(1))", "Y = F + W * EPS(1)")
   ))
-  expect_error(pmx_write_mrgsolve(expression), class = "zufapmx_write_error")
+  expect_error(pmx_write_mrgsolve(expression), class = "zupmxio_write_error")
 })
 
 test_that("written text is stable", {
@@ -218,7 +218,7 @@ test_that("a lossy write is still checked against its source", {
   back <- do.call(new_model, wrong)
   expect_error(
     written_fidelity("initial values", m, back),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
 })
 
@@ -264,7 +264,7 @@ test_that("C++ increment, decrement and compound assignment are refused", {
   )) {
     expect_error(
       read_cpp(cpp_onecmt(main = main)),
-      class = "zufapmx_parse_error",
+      class = "zupmxio_parse_error",
       label = main
     )
   }
@@ -275,7 +275,7 @@ test_that("names C++ or mrgsolve reserve are refused", {
   ind <- c(unclass(m)$individual, list(quote(return <- 1)))
   err <- expect_error(
     pmx_write_mrgsolve(model_with(m, individual = ind)),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
   expect_equal(err$location, "individual")
 
@@ -286,7 +286,7 @@ test_that("names C++ or mrgsolve reserve are refused", {
   obs[[1]]$prediction <- quote(exp / v)
   err <- expect_error(
     pmx_write_mrgsolve(model_with(m, structure = s, observations = obs)),
-    class = "zufapmx_write_error"
+    class = "zupmxio_write_error"
   )
   expect_equal(err$location, "structure")
 })

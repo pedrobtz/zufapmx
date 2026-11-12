@@ -598,7 +598,7 @@ read_model <- function(source, ...) {
   parts$provenance$covariates <- model_covariates(source, parts)
   tryCatch(
     do.call(new_model, parts),
-    zufapmx_model_error = function(e) {
+    zupmxio_model_error = function(e) {
       parse_error(
         source,
         NA_integer_,

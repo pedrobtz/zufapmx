@@ -11,7 +11,7 @@
       
       | Side | Simulated | Engine | Source |
       | --- | --- | --- | --- |
-      | a | nonmem model, written to mrgsolve by zufapmx | mrgsolve 0.0.0 | nonmem, `advan1.ctl` |
+      | a | nonmem model, written to mrgsolve by zupmxio | mrgsolve 0.0.0 | nonmem, `advan1.ctl` |
       | b | rxode2 text, simulated as written | rxode2 0.0.0 | written rxode2, fidelity equivalent |
       
       ## Design

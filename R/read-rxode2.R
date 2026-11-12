@@ -10,7 +10,7 @@
 #' initial amounts (`depot(0) <-`); time as `t` or `time`; and residual
 #' models `add()`, `prop()`, `add() + prop()`, `lnorm()` and `pow()` whose
 #' parameters are `ini()` parameters or `model()` variables. Anything else
-#' is refused with an error of class `zufapmx_parse_error`.
+#' is refused with an error of class `zupmxio_parse_error`.
 #'
 #' Recorded as losses of the read: `label()`s, `description` and other
 #' top-level metadata such as `reference` or `units`, and `ini()` values
@@ -20,7 +20,7 @@
 #' time is continuous; a `linCmt()` model refuses them.
 #'
 #' @param model A model function, as written for rxode2 or nlmixr2.
-#' @return A `zufapmx_model`; see [pmx_inspect] and [pmx_write_rxode2()].
+#' @return A `zupmxio_model`; see [pmx_inspect] and [pmx_write_rxode2()].
 #' @family readers
 #' @seealso [pmx_inspect] for the model's parts.
 #' @export
@@ -45,7 +45,7 @@
 pmx_read_rxode2 <- function(model) {
   source <- paste(deparse(substitute(model)), collapse = " ")
   if (!is.function(model)) {
-    zufapmx_abort("`model` must be a model function.", "model")
+    zupmxio_abort("`model` must be a model function.", "model")
   }
   rxode2_read_body(body(model), source)
 }
@@ -138,7 +138,7 @@ rxode2_read_context <- function(source) {
     check = function(x, stmt = x, fn = expr_check) {
       tryCatch(
         fn(x),
-        zufapmx_model_error = function(e) {
+        zupmxio_model_error = function(e) {
           parse_error(
             source,
             NA_integer_,
