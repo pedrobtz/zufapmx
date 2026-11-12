@@ -24,7 +24,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 5 | [NONMEM writer](#stage-5--nonmem-writer) | quick | [#7](https://github.com/pedrobtz/zufapmx/issues/7) | [#22](https://github.com/pedrobtz/zufapmx/pull/22) | 2026-10-28 |
 | 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zufapmx/issues/8) | [#23](https://github.com/pedrobtz/zufapmx/pull/23) | 2026-10-28 |
 | 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zufapmx/issues/9) | [#127](https://github.com/pedrobtz/zufapmx/pull/127) | 2026-11-12 |
-| 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zufapmx/issues/10) | | |
+| 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zufapmx/issues/10) | | 2026-11-12 |
 | 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zufapmx/issues/11) | | |
 | 10 | [Full CI](#stage-10--full-ci) | full | [#12](https://github.com/pedrobtz/zufapmx/issues/12) | | |
 | 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#13](https://github.com/pedrobtz/zufapmx/issues/13) | | |
@@ -469,8 +469,6 @@ blocks Stage 7.
 
 - **Q2, blocks Stage 1.** May the corpus carry open-access published models
   whose licence is silent? The design says no.
-- **Q1, blocks Stage 8.** Compare individual predictions from estimation
-  output as well as simulations?
 - **Q4, blocks Stage 11.** Is the external pharmacometrician's review
   required before submission? The design says yes.
 - The design's decisions marked (C), D3 and D6 above all, are still the

@@ -214,7 +214,9 @@ engines = NULL)`:
 The harness is the product. A regulator with NONMEM output tables and a
 sponsor's nlmixr2 translation can run it on the tables alone through
 `pmx_compare(tables, model)`, which skips the first model's engine and
-reads the predictions from `$TABLE` output.
+reads the predictions from `$TABLE` output. The model's typical subject
+is simulated on the tables' own records (Q1, D21), and a point also
+agrees when the model's prediction rounds to the table's printed value.
 
 ### 4.5 Expressions
 
@@ -313,7 +315,8 @@ typical-subject predictions on the standard design.
   the same fields from every writer. (Added 2026-10-29, from review issue
   #89.)
 - `zufapmx_engine_error`: the engine missing or failing, with the engine's
-  own message attached.
+  own message attached. zujson counts as an engine here: the JSON
+  functions raise it when zujson is not installed (D22).
 - `zufapmx_model_error`: an invalid argument, or a model that fails
   validation. Readers never raise it for their input: what the validator
   rejects in a model read from a file is that file's `zufapmx_parse_error`.
@@ -330,6 +333,8 @@ typical-subject predictions on the standard design.
   round-trip test in every direction available, comparing the prediction
   tables with the harness's own tolerance check (D17).
 - The three parsers have `zufuzz` targets, run in the family's fuzz job.
+  The family's fuzz job builds C harnesses only, so these are R scripts
+  in `tools/fuzz/` whose oracle the test suite replays (D23).
 - Oracle tests skip when the oracle is not installed and are required on
   the r-actions legs that install `Suggests`.
 - A property test generates random closed-form models (compartments,
@@ -484,6 +489,28 @@ decides it and the maintainer may overturn it.
   simulates as `NA`; the reader reads `$INPUT` names as covariates and
   records a numeric default as a loss. Before, the writer left covariates
   undeclared and its output did not compile (#126).
+- **D21 (M), 2026-11-12.** Settles Q1: `pmx_compare()` compares
+  simulations and the typical subject only. `pmx_compare(tables, model)`
+  simulates the model with every random effect at zero on the tables' own
+  dose and observation records, with covariates from their columns, and
+  compares the prediction column (`PRED`). Individual predictions
+  (`IPRED` with the run's etas) are not compared in v0.1.0. NONMEM prints
+  5 significant digits by default, which no tolerance near 1e-6 can
+  match, so `pmx_read_tables()` records the digits of the prediction
+  column and a point also agrees when the model's prediction lies within
+  half a unit in that last digit.
+- **D22 (C), 2026-11-12.** The JSON document is zufapmx's own: one object
+  with the seven components, `"zufapmx": "model"` and a `version`.
+  Statements and expressions are R code in strings, written in the fewest
+  digits that parse back `identical()`; constants are numbers; `Inf` and
+  `-Inf` are strings, since JSON has none. A model read back is
+  `identical()` to the one written. Without zujson, the JSON functions
+  raise `zufapmx_engine_error`.
+- **D23 (C), 2026-11-12.** The `zufuzz` targets (§9) live in `tools/fuzz/`
+  with their oracle in `tests/testthat/helper-fuzz.R`, since zufuzz is
+  not on CRAN and cannot be a `Suggests`. `test-fuzz.R` replays the
+  corpus and seeded mutations through the same oracle in every check;
+  a coverage-guided campaign runs by hand under AFL++.
 
 ## 14. Later versions, in the order they are expected
 
@@ -515,6 +542,7 @@ decides it and the maintainer may overturn it.
   from estimation output (`IPRED` from `$TABLE` against rxode2's
   individual predictions with the same etas)? This RFC compares
   simulations only and reads tables for the typical subject.
+  **Resolved by D21:** typical subject only in v0.1.0.
 - **Q2.** Is a corpus entry allowed to carry a published model whose
   paper is open access but whose licence is silent? This RFC says no:
   corpus models are from libraries with explicit licences or re-typed

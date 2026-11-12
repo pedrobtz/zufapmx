@@ -139,6 +139,15 @@ land; see `.agents/design.md` (§4).
   etas (`params`, and `idata` with `etasrc = "idata.all"`) and aligns the
   result on id and time. Tests mock `engine_rxode2()`, `engine_mrgsolve()`
   and `engine_available()` through `local_fake_engines()`.
+- **Tables and JSON** ([R/tables.R](R/tables.R), [R/json.R](R/json.R)):
+  `pmx_read_tables()` squeezes NONMEM's space-padded columns to commas and
+  parses with zucsv, or `utils::read.csv()` without it, and records the
+  prediction column's printed digits (D21). JSON is an explicit schema,
+  not a generic serialisation; a read must be `identical()` to the model
+  written (D22).
+- **Fuzz targets** (`tools/fuzz/`, left out of the build): zufuzz
+  harnesses whose oracle is `fuzz_target()` in
+  `tests/testthat/helper-fuzz.R`; `test-fuzz.R` replays it (D23).
 - **Conditions** ([R/errors.R](R/errors.R)): `zufapmx_abort()` and the §8
   constructors `parse_error()`, `write_error()` and `engine_error()`,
   each carrying the fields a caller acts on.
