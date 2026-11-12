@@ -2,3 +2,40 @@ url: https://pedrobtz.github.io/zufapmx/
 template:
   bootstrap: 5
 
+reference:
+- title: Check a translation
+  desc: >
+    Simulate two models on one design, each through its own engine, and
+    compare their predictions.
+  contents:
+  - pmx_compare
+  - pmx_design
+  - pmx_report
+- title: Read a model
+  contents:
+  - pmx_read_nonmem
+  - pmx_read_rxode2
+  - pmx_read_mrgsolve
+  - pmx_read_tables
+- title: Write a model
+  desc: >
+    Every writer returns the text with its fidelity: exact, equivalent or
+    lossy.
+  contents:
+  - pmx_write_rxode2
+  - pmx_write_nonmem
+  - pmx_write_mrgsolve
+  - pmx_fidelity
+  - pmx_write_json
+- title: Inspect a model
+  contents:
+  - pmx_inspect
+- title: Model corpus
+  contents:
+  - zufapmx_corpus
+
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - articles/validating-a-translation
