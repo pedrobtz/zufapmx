@@ -25,7 +25,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 6 | [mrgsolve reader and writer](#stage-6--mrgsolve-reader-and-writer) | quick | [#8](https://github.com/pedrobtz/zufapmx/issues/8) | [#23](https://github.com/pedrobtz/zufapmx/pull/23) | 2026-10-28 |
 | 7 | [Equivalence harness](#stage-7--equivalence-harness) | full | [#9](https://github.com/pedrobtz/zufapmx/issues/9) | [#127](https://github.com/pedrobtz/zufapmx/pull/127) | 2026-11-12 |
 | 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zufapmx/issues/10) | [#131](https://github.com/pedrobtz/zufapmx/pull/131) | 2026-11-12 |
-| 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zufapmx/issues/11) | | |
+| 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zufapmx/issues/11) | | 2026-11-12 |
 | 10 | [Full CI](#stage-10--full-ci) | full | [#12](https://github.com/pedrobtz/zufapmx/issues/12) | | |
 | 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#13](https://github.com/pedrobtz/zufapmx/issues/13) | | |
 
@@ -391,6 +391,20 @@ first and can follow a translation check end to end.
 - §10 measurements are recorded in this roadmap.
 
 **Design.** §10, §11 (stage 7), D1.
+
+**Measurements (2026-11-12).** `tools/bench/performance.R` on x86_64
+macOS, R 4.6.2:
+
+| Operation (§10) | Target | Measured |
+| --- | --- | --- |
+| read a 500-line control stream | under 50 ms | 275 ms |
+| read the whole corpus (18 models) | under 2 s | 178 ms |
+| `pmx_compare()` overhead beyond the simulations, default design | under 100 ms | 59 ms |
+
+The first target is missed. Before this stage the read took 646 ms; the
+tokenizer now matches one alternation of its patterns per line. The rest
+is tracked in [#132](https://github.com/pedrobtz/zufapmx/issues/132). §12
+does not make §10 an acceptance criterion, so this does not block v0.1.0.
 
 ## Stage 10 — Full CI
 
