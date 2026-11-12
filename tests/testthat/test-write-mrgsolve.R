@@ -290,3 +290,54 @@ test_that("names C++ or mrgsolve reserve are refused", {
   )
   expect_equal(err$location, "structure")
 })
+
+test_that("covariates are declared in $INPUT without a value (#126)", {
+  m <- read_ctl(ctl_onecmt(pk = "CLI = CL * (WT / 70)**0.75"))
+
+  w <- pmx_write_mrgsolve(m)
+
+  expect_true("WT = NA_real_" %in% w$text)
+  expect_equal(pmx_fidelity(w), "exact")
+})
+
+test_that("a written covariate takes its value from the data (#126)", {
+  skip_on_cran()
+  skip_if_no_engine("mrgsolve")
+  m <- read_cpp(c(
+    "$PARAM TVCL = 4, V = 50",
+    "$CMT CENT",
+    "$MAIN",
+    "double CL = TVCL * pow(WT / 70.0, 0.75);",
+    "$ODE",
+    "dxdt_CENT = -CL / V * CENT;",
+    "$SIGMA 0.04",
+    "$TABLE",
+    "double IPRED = CENT / V;",
+    "double Y = IPRED * (1 + EPS(1));"
+  ))
+  w <- pmx_write_mrgsolve(m)
+  dir <- withr::local_tempdir("mrgcov")
+  writeLines(w$text, file.path(dir, paste0(basename(dir), ".cpp")))
+  mod <- suppressMessages(
+    mrgsolve::mread(basename(dir), project = dir, quiet = TRUE)
+  )
+  data <- data.frame(
+    ID = c(1, 1, 2, 2),
+    time = c(0, 4, 0, 4),
+    evid = c(1, 0, 1, 0),
+    amt = c(100, 0, 100, 0),
+    cmt = 1,
+    WT = c(70, 70, 80, 80)
+  )
+
+  out <- mrgsolve::mrgsim_d(
+    mrgsolve::zero_re(mod),
+    data,
+    obsonly = TRUE,
+    output = "df"
+  )
+
+  # dA/dt = -CL / V * A with CL = 4 * (WT / 70)^0.75 and V = 50.
+  cl <- 4 * (c(70, 80) / 70)^0.75
+  expect_equal(out$IPRED, 100 / 50 * exp(-cl / 50 * 4), tolerance = 1e-6)
+})
