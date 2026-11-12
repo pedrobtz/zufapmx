@@ -32,7 +32,7 @@
 #'
 #' @param file The path of a table file, or several from one run.
 #' @param prediction The name of the prediction column.
-#' @return A `zufapmx_tables` object: a list with `records`, a data frame
+#' @return A `zupmxio_tables` object: a list with `records`, a data frame
 #'   with columns `id`, `time`, `evid`, `amt`, `cmt`, `rate`, `ii`, `addl`,
 #'   `ss` and `pred` followed by the table's other columns under their own
 #'   names; `prediction`, the column read as `pred`; `digits`, the
@@ -57,7 +57,7 @@ pmx_read_tables <- function(file, prediction = "PRED") {
       !all(file.exists(file)) ||
       any(dir.exists(file))
   ) {
-    zufapmx_abort(
+    zupmxio_abort(
       "`file` must be the paths of existing table files.",
       "model"
     )
@@ -68,7 +68,7 @@ pmx_read_tables <- function(file, prediction = "PRED") {
       is.na(prediction) ||
       !nzchar(prediction)
   ) {
-    zufapmx_abort("`prediction` must be a column name.", "model")
+    zupmxio_abort("`prediction` must be a column name.", "model")
   }
 
   tables <- lapply(file, table_read_one, prediction = prediction)
@@ -94,7 +94,7 @@ pmx_read_tables <- function(file, prediction = "PRED") {
       digits = min(digits),
       files = normalizePath(file)
     ),
-    class = "zufapmx_tables"
+    class = "zupmxio_tables"
   )
 }
 
@@ -422,10 +422,10 @@ table_records <- function(columns, prediction, file) {
 }
 
 #' @export
-print.zufapmx_tables <- function(x, ...) {
+print.zupmxio_tables <- function(x, ...) {
   r <- x$records
   cat(sprintf(
-    "<zufapmx tables> %d subject%s, %d dose and %d observation records\n",
+    "<zupmxio tables> %d subject%s, %d dose and %d observation records\n",
     length(unique(r$id)),
     if (length(unique(r$id)) == 1) "" else "s",
     sum(r$evid == 1),

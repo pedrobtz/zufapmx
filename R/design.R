@@ -38,7 +38,7 @@
 #' @param covariates A named list or numeric vector of covariate values,
 #'   one number each, given to every subject. Names match a model's
 #'   covariates without regard to case, since NONMEM upper-cases them.
-#' @return A `zufapmx_design`: a list with the arguments and `events`, a
+#' @return A `zupmxio_design`: a list with the arguments and `events`, a
 #'   data frame of the dose and observation records of every regimen with
 #'   columns `regimen`, `id`, `time`, `evid`, `amt`, `rate`, `ii`, `addl`
 #'   and `ss`.
@@ -63,7 +63,7 @@ pmx_design <- function(
       !all(regimens %in% names(design_regimens)) ||
       anyDuplicated(regimens)
   ) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf(
         "`regimens` must be distinct values among %s.",
         paste0("\"", names(design_regimens), "\"", collapse = ", ")
@@ -92,7 +92,7 @@ pmx_design <- function(
       covariates = covariates,
       events = events
     ),
-    class = "zufapmx_design"
+    class = "zupmxio_design"
   )
 }
 
@@ -145,9 +145,9 @@ design_events <- function(regimen, ids) {
 }
 
 #' @export
-print.zufapmx_design <- function(x, ...) {
+print.zupmxio_design <- function(x, ...) {
   cat(sprintf(
-    "<zufapmx design> %s, dosing compartment %d\n",
+    "<zupmxio design> %s, dosing compartment %d\n",
     paste(x$regimens, collapse = ", "),
     x$cmt
   ))
@@ -166,8 +166,8 @@ print.zufapmx_design <- function(x, ...) {
 }
 
 check_design <- function(x) {
-  if (!inherits(x, "zufapmx_design")) {
-    zufapmx_abort(
+  if (!inherits(x, "zupmxio_design")) {
+    zupmxio_abort(
       sprintf(
         "`design` must be a design from pmx_design(), not %s.",
         class(x)[[1]]
@@ -188,7 +188,7 @@ check_count <- function(x, lower, upper, name = deparse(substitute(x))) {
       x < lower ||
       x > upper
   ) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf("`%s` must be a whole number from %d to %d.", name, lower, upper),
       "model",
       call = sys.call(-1)
@@ -204,7 +204,7 @@ check_whole <- function(x, name = deparse(substitute(x))) {
       x != round(x) ||
       abs(x) > .Machine$integer.max
   ) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf("`%s` must be a whole number.", name),
       "model",
       call = sys.call(-1)
@@ -228,7 +228,7 @@ check_covariates <- function(x) {
           logical(1)
         ))))
   if (!ok) {
-    zufapmx_abort(
+    zupmxio_abort(
       paste(
         "`covariates` must be a named list of numbers, one per covariate,",
         "with names distinct without regard to case."

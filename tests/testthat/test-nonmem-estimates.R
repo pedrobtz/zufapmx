@@ -58,7 +58,7 @@ test_that("an .lst without final estimates is refused", {
 test_that("a missing output file named by `estimates` is a model error", {
   expect_error(
     pmx_read_nonmem(local_run("ext", fixture_lines("run1.ext")), "lst"),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 

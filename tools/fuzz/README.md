@@ -4,9 +4,9 @@ One [zufuzz](https://github.com/pedrobtz/zufuzz) harness per reader:
 `nonmem.R`, `mrgsolve.R` and `rxode2.R`. Each feeds bytes to a reader and
 applies the oracle in `tests/testthat/helper-fuzz.R`:
 
-- the reader reads the input or refuses it with a `zufapmx_parse_error`;
+- the reader reads the input or refuses it with a `zupmxio_parse_error`;
 - a model it reads writes to every format or is refused with a
-  `zufapmx_write_error`, and a write's fidelity is `exact`, `equivalent`
+  `zupmxio_write_error`, and a write's fidelity is `exact`, `equivalent`
   or `lossy`;
 - the model round-trips through JSON when zujson is installed.
 

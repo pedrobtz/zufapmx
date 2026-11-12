@@ -94,7 +94,7 @@ read_back <- function(expr, format) {
     expr,
     # Only a refusal is a failed translation; any other error is a bug and
     # propagates as itself.
-    zufapmx_parse_error = function(e) {
+    zupmxio_parse_error = function(e) {
       write_error(
         sprintf(
           "a model whose %s text does not read back (%s)",
@@ -129,7 +129,7 @@ model_title <- function(provenance) {
   if (identical(provenance$format, "nonmem")) {
     return(basename(provenance$file))
   }
-  sprintf("zufapmx model read from %s", provenance$format)
+  sprintf("zupmxio model read from %s", provenance$format)
 }
 
 # A variance in $SIGMA has no bounds, so bounds on a standard deviation

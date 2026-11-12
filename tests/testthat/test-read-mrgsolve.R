@@ -1,14 +1,14 @@
 test_that("every corpus mrgsolve model reads", {
-  for (path in zufapmx_corpus()$path) {
+  for (path in zupmxio_corpus()$path) {
     expect_s3_class(
       pmx_read_mrgsolve(file.path(path, "model.cpp")),
-      "zufapmx_model"
+      "zupmxio_model"
     )
   }
 })
 
 test_that("closed-form and ODE models read into their structures", {
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
   closed <- pmx_read_mrgsolve(file.path(
     corpus$path[corpus$id == "twocmt-oral"],
     "model.cpp"
@@ -32,7 +32,7 @@ test_that("closed-form and ODE models read into their structures", {
 test_that("corpus mrgsolve models predict their expected.csv", {
   skip_on_cran()
   skip_if_no_engine("rxode2")
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     model <- pmx_read_mrgsolve(file.path(corpus$path[[i]], "model.cpp"))
@@ -234,7 +234,7 @@ test_that("the $TABLE prediction is the term in F's place, fully expanded", {
         "double Y = W * EPS(1) + IPRED;"
       )
     )),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -277,7 +277,7 @@ test_that("Y is matched exactly in $TABLE", {
         "double YOBS = IPRED * (1 + EPS(1));"
       )
     )),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -313,7 +313,7 @@ test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order
   )
 
   writeLines(c("$THETA 1", lines), "model.cpp")
-  expect_error(pmx_read_mrgsolve("model.cpp"), class = "zufapmx_parse_error")
+  expect_error(pmx_read_mrgsolve("model.cpp"), class = "zupmxio_parse_error")
 })
 
 test_that("$NMXML needs zuxml", {
@@ -324,31 +324,31 @@ test_that("$NMXML needs zuxml", {
   )
   expect_error(
     read_cpp(c(sprintf("$NMXML path = \"%s\"", xml), cpp_onecmt())),
-    class = "zufapmx_engine_error"
+    class = "zupmxio_engine_error"
   )
 })
 
 test_that("a directory is not a model file", {
   expect_error(
     pmx_read_mrgsolve(withr::local_tempdir()),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
   expect_error(
     pmx_read_nonmem(withr::local_tempdir()),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
 })
 
 test_that("time is SOLVERTIME in $ODE and TIME elsewhere", {
   err <- expect_error(
     read_cpp(cpp_onecmt(main = "double K = SOLVERTIME;")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$seen, "SOLVERTIME")
 
   lines <- cpp_onecmt()
   lines <- sub("-CL / V * CENT", "-CL / V * CENT * TIME", lines, fixed = TRUE)
-  err <- expect_error(read_cpp(lines), class = "zufapmx_parse_error")
+  err <- expect_error(read_cpp(lines), class = "zupmxio_parse_error")
   expect_equal(err$seen, "TIME")
 })
 
@@ -365,7 +365,7 @@ test_that("$ODE beside $PKMODEL is refused", {
       "$TABLE",
       "double Y = CENT / V * (1 + EPS(1));"
     )),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$line, 4)
 })
@@ -387,14 +387,14 @@ test_that("$NMXML and $NMEXT refuse options the reader does not honour", {
   for (option in c("omega = FALSE", "tname = \"x\"", "path = 1")) {
     err <- expect_error(
       read_cpp(c(sprintf("$NMEXT run = 1, %s", option), cpp_onecmt()[-1])),
-      class = "zufapmx_parse_error",
+      class = "zupmxio_parse_error",
       info = option
     )
     expect_equal(err$line, 1, info = option)
   }
   err <- expect_error(
     read_cpp(c("$NMEXT path = \"no-such.ext\"", cpp_onecmt())),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$line, 1)
 })
@@ -402,15 +402,15 @@ test_that("$NMXML and $NMEXT refuse options the reader does not honour", {
 test_that("C++ comparisons are ints, and wide int literals are refused", {
   expect_error(
     read_cpp(cpp_onecmt(main = "double K = TVCL + (1 > 0) / 2;")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_s3_class(
     read_cpp(cpp_onecmt(main = "double K = TVCL + (1 > 0) / 2.0;")),
-    "zufapmx_model"
+    "zupmxio_model"
   )
   err <- expect_error(
     read_cpp(cpp_onecmt(main = "double K = 3000000000;")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$seen, "3000000000")
 })
@@ -426,7 +426,7 @@ test_that("a $PARAM value cannot run code", {
     cpp_onecmt(),
     fixed = TRUE
   )
-  expect_error(read_cpp(lines), class = "zufapmx_parse_error")
+  expect_error(read_cpp(lines), class = "zupmxio_parse_error")
   expect_false(file.exists(marker))
 })
 
@@ -475,22 +475,22 @@ test_that("annotated parameter names must be names", {
       "q <- 1; message('x'); TVCL : 1 : x",
       cpp_onecmt()[-1]
     )),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
 test_that("C++ integer division and int declarations are refused", {
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = pow(CL / 70.0, 3 / 4);")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = (1 + 2) / 4;")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     read_cpp(cpp_onecmt(main = "int N = 2;")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 
   m <- read_cpp(cpp_onecmt(
@@ -568,12 +568,12 @@ test_that("$PARAM bounds must be in order", {
       "TVV : 50 : [0, Inf]",
       cpp_onecmt()[-1]
     )),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
 test_that("malformed model files are parse errors, never bare R errors", {
-  expect_error(read_cpp(character()), class = "zufapmx_parse_error")
+  expect_error(read_cpp(character()), class = "zupmxio_parse_error")
   pkmodel <- function(ncmt) {
     c(
       "$PARAM CL = 1, V = 2",
@@ -587,18 +587,18 @@ test_that("malformed model files are parse errors, never bare R errors", {
   expect_refused(read_cpp(pkmodel(0)), "ncmt = 0", 2)
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = exp(CL, V);")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     read_cpp(c("$PARAM TVCL = 1", cpp_onecmt())),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
 test_that("an undeclared ETA index is refused", {
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = ETA(4);")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -626,7 +626,7 @@ test_that("an $INPUT default value is a recorded loss (#126)", {
 test_that("a malformed $INPUT entry is refused (#126)", {
   expect_error(
     read_cpp(cpp_onecmt(extra = "$INPUT WT")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -639,7 +639,7 @@ test_that("C++ tokens keep their order, type and column", {
   )
   err <- expect_error(
     cpp_tokenize("x = 1 @ 2", 5L, "f"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(c(err$line, err$column), c(5L, 7L))
 })

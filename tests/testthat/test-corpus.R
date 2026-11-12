@@ -1,5 +1,5 @@
-test_that("zufapmx_corpus() lists every shipped entry", {
-  corpus <- zufapmx_corpus()
+test_that("zupmxio_corpus() lists every shipped entry", {
+  corpus <- zupmxio_corpus()
 
   expect_s3_class(corpus, "data.frame")
   expect_named(
@@ -21,7 +21,7 @@ test_that("zufapmx_corpus() lists every shipped entry", {
 })
 
 test_that("every format an entry lists has its model file", {
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
   files <- c(
     nonmem = "model.ctl",
     rxode2 = "model-rxode2.R",
@@ -46,7 +46,7 @@ test_that("an entry with a missing field is an error", {
     file.path(root, "broken", "entry.dcf")
   )
 
-  expect_error(corpus_read(root), class = "zufapmx_corpus_error")
+  expect_error(corpus_read(root), class = "zupmxio_corpus_error")
 })
 
 test_that("an entry that lists a missing model file is an error", {
@@ -64,13 +64,13 @@ test_that("an entry that lists a missing model file is an error", {
     file.path(root, "nofile", "entry.dcf")
   )
 
-  expect_error(corpus_read(root), class = "zufapmx_corpus_error")
+  expect_error(corpus_read(root), class = "zupmxio_corpus_error")
 })
 
 test_that("the corpus reader refuses an empty root, unknown formats and regimens", {
   expect_error(
     corpus_read(withr::local_tempdir()),
-    class = "zufapmx_corpus_error"
+    class = "zupmxio_corpus_error"
   )
   root <- withr::local_tempdir()
   dir.create(file.path(root, "x"))
@@ -85,6 +85,6 @@ test_that("the corpus reader refuses an empty root, unknown formats and regimens
     ),
     file.path(root, "x", "entry.dcf")
   )
-  expect_error(corpus_read(root), class = "zufapmx_corpus_error")
-  expect_error(corpus_design("subcutaneous"), class = "zufapmx_corpus_error")
+  expect_error(corpus_read(root), class = "zupmxio_corpus_error")
+  expect_error(corpus_design("subcutaneous"), class = "zupmxio_corpus_error")
 })

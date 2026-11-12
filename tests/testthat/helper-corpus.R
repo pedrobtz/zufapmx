@@ -120,7 +120,7 @@ corpus_max_rel_dev <- function(got, expected) {
 
 # An entry's rxode2 model function, and the model read from it.
 corpus_rxode2 <- function(id) {
-  eval(parse(system.file("corpus", id, "model-rxode2.R", package = "zufapmx")))
+  eval(parse(system.file("corpus", id, "model-rxode2.R", package = "zupmxio")))
 }
 
 corpus_rxode2_model <- function(id) {
@@ -202,7 +202,7 @@ corpus_models <- function(path, id) {
 
 # A file of a corpus entry, by id rather than by position.
 corpus_file <- function(id, file) {
-  system.file("corpus", id, file, package = "zufapmx", mustWork = TRUE)
+  system.file("corpus", id, file, package = "zupmxio", mustWork = TRUE)
 }
 
 # A write that kept the model: exact or equivalent, reporting what it was.

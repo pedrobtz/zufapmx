@@ -28,7 +28,7 @@ engine_writers <- list(
 
 # The engine of a written model's own format, or NA (NONMEM has none here).
 written_engine <- function(x) {
-  if (inherits(x, "zufapmx_written") && x$format %in% engine_names) {
+  if (inherits(x, "zupmxio_written") && x$format %in% engine_names) {
     x$format
   } else {
     NA_character_
@@ -51,7 +51,7 @@ compare_side <- function(x, requested, exclude) {
     ))
   }
 
-  model <- if (inherits(x, "zufapmx_written")) {
+  model <- if (inherits(x, "zupmxio_written")) {
     text_model(x$text, x$format)
   } else {
     x
@@ -69,9 +69,9 @@ compare_side <- function(x, requested, exclude) {
     }
     written <- tryCatch(
       engine_writers[[engine]](model),
-      zufapmx_write_error = function(e) e
+      zupmxio_write_error = function(e) e
     )
-    if (inherits(written, "zufapmx_write_error")) {
+    if (inherits(written, "zupmxio_write_error")) {
       refusal <- refusal %||% written
       next
     }
@@ -80,15 +80,15 @@ compare_side <- function(x, requested, exclude) {
       text = written$text,
       model = text_model(written$text, engine),
       origin = sprintf(
-        "%s, written to %s by zufapmx",
-        if (inherits(x, "zufapmx_written")) {
+        "%s, written to %s by zupmxio",
+        if (inherits(x, "zupmxio_written")) {
           sprintf("%s text", x$format)
         } else {
           sprintf("%s model", source)
         },
         engine
       ),
-      provenance = if (inherits(x, "zufapmx_written")) {
+      provenance = if (inherits(x, "zupmxio_written")) {
         written_provenance(x)
       } else {
         unclass(x)$provenance
@@ -142,7 +142,7 @@ engine_simulate <- function(side, data, etas) {
       rxode2 = engine_rxode2(side$text, data, etas),
       mrgsolve = engine_mrgsolve(side$text, data, etas)
     ),
-    zufapmx_error = function(e) stop(e),
+    zupmxio_error = function(e) stop(e),
     error = function(e) engine_error(side$engine, e, call = NULL)
   )
   names(out) <- tolower(names(out))
@@ -225,11 +225,11 @@ engine_mrgsolve <- function(text, data, etas) {
 engine_cache <- new.env(parent = emptyenv())
 
 mrgsolve_compiled <- function(text) {
-  dir <- file.path(tempdir(), "zufapmx-mrgsolve")
+  dir <- file.path(tempdir(), "zupmxio-mrgsolve")
   dir.create(dir, showWarnings = FALSE)
   path <- tempfile(tmpdir = dir, fileext = ".cpp")
   writeLines(text, path)
-  name <- paste0("zufapmx_", substr(unname(tools::md5sum(path)), 1, 16))
+  name <- paste0("zupmxio_", substr(unname(tools::md5sum(path)), 1, 16))
   unlink(path)
   if (is.null(engine_cache[[name]])) {
     writeLines(text, file.path(dir, paste0(name, ".cpp")))

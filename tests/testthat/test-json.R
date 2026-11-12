@@ -1,6 +1,6 @@
 test_that("every corpus model round-trips through JSON exactly", {
   skip_if_no_engine("zujson")
-  corpus <- zufapmx_corpus()
+  corpus <- zupmxio_corpus()
 
   for (i in seq_len(nrow(corpus))) {
     models <- corpus_models(corpus$path[[i]], corpus$id[[i]])
@@ -65,7 +65,7 @@ test_that("the JSON holds the representation as plain data", {
 
   x <- zujson::json_parse(pmx_write_json(m), simplify = FALSE)
 
-  expect_identical(x$zufapmx, "model")
+  expect_identical(x$zupmxio, "model")
   expect_identical(x$version, 1L)
   expect_identical(x$parameters[[1]]$upper, "Inf")
   expect_null(x$parameters[[1]]$estimate)
@@ -104,8 +104,8 @@ test_that("JSON needs zujson", {
   file <- withr::local_tempfile(fileext = ".json")
   writeLines("{}", file)
 
-  expect_error(pmx_write_json(m), class = "zufapmx_engine_error")
-  expect_error(pmx_read_json(file), class = "zufapmx_engine_error")
+  expect_error(pmx_write_json(m), class = "zupmxio_engine_error")
+  expect_error(pmx_read_json(file), class = "zupmxio_engine_error")
 })
 
 test_that("closed-form counts must be whole numbers", {
@@ -126,14 +126,14 @@ test_that("closed-form counts must be whole numbers", {
     expect_no_warning(
       expect_error(
         pmx_read_json(file),
-        class = "zufapmx_parse_error",
+        class = "zupmxio_parse_error",
         label = bad
       )
     )
   }
 })
 
-test_that("a file that is not a zufapmx JSON model is a parse error", {
+test_that("a file that is not a zupmxio JSON model is a parse error", {
   skip_if_no_engine("zujson")
   good <- pmx_write_json(model_onecmt_mm(), pretty = FALSE)
   edit <- function(pattern, replacement) {
@@ -142,7 +142,7 @@ test_that("a file that is not a zufapmx JSON model is a parse error", {
   bad <- c(
     not_json = "{ not json",
     not_object = "[1, 2]",
-    not_model = '{"zufapmx": "design"}',
+    not_model = '{"zupmxio": "design"}',
     version = edit('"version":1', '"version":2'),
     role = edit('"role":"other"', '"role":"rate"'),
     number = edit('"init":1', '"init":"one"'),
@@ -161,7 +161,7 @@ test_that("a file that is not a zufapmx JSON model is a parse error", {
     writeLines(bad[[case]], file)
     expect_error(
       pmx_read_json(file),
-      class = "zufapmx_parse_error",
+      class = "zupmxio_parse_error",
       label = case
     )
   }
@@ -170,20 +170,20 @@ test_that("a file that is not a zufapmx JSON model is a parse error", {
 test_that("the JSON functions refuse malformed arguments", {
   m <- model_onecmt_mm()
 
-  expect_error(pmx_write_json(list()), class = "zufapmx_model_error")
-  expect_error(pmx_write_json(m, file = 1), class = "zufapmx_model_error")
+  expect_error(pmx_write_json(list()), class = "zupmxio_model_error")
+  expect_error(pmx_write_json(m, file = 1), class = "zupmxio_model_error")
   expect_error(
     pmx_write_json(m, file = NA_character_),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
-  expect_error(pmx_write_json(m, file = ""), class = "zufapmx_model_error")
-  expect_error(pmx_write_json(m, pretty = NA), class = "zufapmx_model_error")
-  expect_error(pmx_write_json(m, pretty = "yes"), class = "zufapmx_model_error")
+  expect_error(pmx_write_json(m, file = ""), class = "zupmxio_model_error")
+  expect_error(pmx_write_json(m, pretty = NA), class = "zupmxio_model_error")
+  expect_error(pmx_write_json(m, pretty = "yes"), class = "zupmxio_model_error")
   expect_error(
     pmx_read_json("no-such-file.json"),
-    class = "zufapmx_model_error"
+    class = "zupmxio_model_error"
   )
-  expect_error(pmx_read_json(c("a", "b")), class = "zufapmx_model_error")
+  expect_error(pmx_read_json(c("a", "b")), class = "zupmxio_model_error")
 })
 
 test_that("a model without an endpoint round-trips through JSON", {

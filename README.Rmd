@@ -11,12 +11,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-# zufapmx
+# zupmxio
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![R-CMD-check](https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml)
-[![coverage](https://raw.githubusercontent.com/pedrobtz/zufapmx/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zufapmx/actions/workflows/coverage.yaml)
+[![R-CMD-check](https://github.com/pedrobtz/zupmxio/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zupmxio/actions/workflows/R-CMD-check.yaml)
+[![coverage](https://raw.githubusercontent.com/pedrobtz/zupmxio/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zupmxio/actions/workflows/coverage.yaml)
 <!-- badges: end -->
 
 A population PK/PD model often has to move between tools: a NONMEM run
@@ -25,7 +25,7 @@ simulation. Converters exist, but a translated model is usually trusted on
 sight, and a slip in a volume or a residual model shows up much later, if
 at all.
 
-zufapmx makes the translation checkable. It reads a model from NONMEM,
+zupmxio makes the translation checkable. It reads a model from NONMEM,
 rxode2/nlmixr2 or mrgsolve into one R object, writes it to any of the
 three, and proves that two models are the same model by simulating both and
 comparing their predictions.
@@ -50,14 +50,14 @@ comparing their predictions.
 
 ## Installation
 
-zufapmx is not on CRAN yet. Install the development version from GitHub:
+zupmxio is not on CRAN yet. Install the development version from GitHub:
 
 ``` r
 # install.packages("pak")
-pak::pak("pedrobtz/zufapmx")
+pak::pak("pedrobtz/zupmxio")
 ```
 
-zufapmx itself has no dependencies. Comparisons need the engines,
+zupmxio itself has no dependencies. Comparisons need the engines,
 [rxode2](https://CRAN.R-project.org/package=rxode2) and
 [mrgsolve](https://CRAN.R-project.org/package=mrgsolve), which need a C
 and C++ compiler to build models.
@@ -65,14 +65,14 @@ and C++ compiler to build models.
 ## Usage
 
 ```{r, message = FALSE}
-library(zufapmx)
+library(zupmxio)
 ```
 
 Read a model. This one is a two-compartment model with first-order
 absorption, from the corpus that ships with the package:
 
 ```{r}
-path <- system.file("corpus", "twocmt-oral", "model.ctl", package = "zufapmx")
+path <- system.file("corpus", "twocmt-oral", "model.ctl", package = "zupmxio")
 model <- pmx_read_nonmem(path)
 model
 ```
@@ -112,19 +112,19 @@ for the check.
 
 ## Learn more
 
-* [Validating a translation](https://pedrobtz.github.io/zufapmx/articles/validating-a-translation.html)
+* [Validating a translation](https://pedrobtz.github.io/zupmxio/articles/validating-a-translation.html)
   walks through a check end to end, and shows how to read a report.
-* The [reference](https://pedrobtz.github.io/zufapmx/reference/) lists the
+* The [reference](https://pedrobtz.github.io/zupmxio/reference/) lists the
   readers, the writers and the comparison functions.
-* `zufapmx_corpus()` lists the shipped models.
+* `zupmxio_corpus()` lists the shipped models.
 
 ## Related work
 
-zufapmx is checked against [nonmem2rx](https://CRAN.R-project.org/package=nonmem2rx),
+zupmxio is checked against [nonmem2rx](https://CRAN.R-project.org/package=nonmem2rx),
 which translates NONMEM to rxode2, and
 [amp.sim](https://CRAN.R-project.org/package=amp.sim), which translates it
 to mrgsolve;
-[oracle-agreement.md](https://github.com/pedrobtz/zufapmx/blob/main/.agents/oracle-agreement.md)
+[oracle-agreement.md](https://github.com/pedrobtz/zupmxio/blob/main/.agents/oracle-agreement.md)
 records where they agree. The
 [nlmixr2lib](https://CRAN.R-project.org/package=nlmixr2lib) model library
 is read in its tests. Its tables and run files are read with

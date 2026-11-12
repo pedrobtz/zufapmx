@@ -12,7 +12,7 @@ pmx_read_tables(file, prediction = "PRED")
 \item{prediction}{The name of the prediction column.}
 }
 \value{
-A \code{zufapmx_tables} object: a list with \code{records}, a data frame
+A \code{zupmxio_tables} object: a list with \code{records}, a data frame
 with columns \code{id}, \code{time}, \code{evid}, \code{amt}, \code{cmt}, \code{rate}, \code{ii}, \code{addl},
 \code{ss} and \code{pred} followed by the table's other columns under their own
 names; \code{prediction}, the column read as \code{pred}; \code{digits}, the

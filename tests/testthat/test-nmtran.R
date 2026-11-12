@@ -81,7 +81,7 @@ test_that("DADT and A_0 are statement targets", {
 test_that("verbatim code is refused with its line", {
   err <- expect_error(
     nm_parse_lines(c("CL = 1", "\"  CALL FOO")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$line, 2L)
   expect_snapshot(cat(conditionMessage(err)))
@@ -90,7 +90,7 @@ test_that("verbatim code is refused with its line", {
 test_that("a function outside the table is refused with its position", {
   err <- expect_error(
     nm_parse_lines("X = SIN(T)"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$line, 1L)
   expect_equal(err$column, 5L)
@@ -100,13 +100,13 @@ test_that("a function outside the table is refused with its position", {
 test_that("unbalanced IF blocks and stray tokens are refused", {
   expect_error(
     nm_parse_lines(c("IF (A.GT.1) THEN", "B = 1")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
-  expect_error(nm_parse_lines("ENDIF"), class = "zufapmx_parse_error")
-  expect_error(nm_parse_lines("X = (A + B"), class = "zufapmx_parse_error")
-  expect_error(nm_parse_lines("X = A B"), class = "zufapmx_parse_error")
-  expect_error(nm_parse_lines("CALL PASS(MODE)"), class = "zufapmx_parse_error")
-  expect_error(nm_parse_lines("X = A # B"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("ENDIF"), class = "zupmxio_parse_error")
+  expect_error(nm_parse_lines("X = (A + B"), class = "zupmxio_parse_error")
+  expect_error(nm_parse_lines("X = A B"), class = "zupmxio_parse_error")
+  expect_error(nm_parse_lines("CALL PASS(MODE)"), class = "zupmxio_parse_error")
+  expect_error(nm_parse_lines("X = A # B"), class = "zupmxio_parse_error")
 })
 
 test_that("records split on $ and accept abbreviations", {
@@ -129,7 +129,7 @@ test_that("records split on $ and accept abbreviations", {
   expect_equal(split$records[[4]]$line, 4:5)
   expect_error(
     nm_split(c("$PROB x", "$FOO"), "t.ctl"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
@@ -151,16 +151,16 @@ test_that("NM-TRAN names are case-insensitive", {
 test_that("record names need three letters, and an ambiguous one says so", {
   expect_error(
     nm_split(c("$PROB x", "$OM 0.1"), "t.ctl"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   err <- expect_error(
     nm_split(c("$PROB x", "$S 0.1"), "t.ctl"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$seen, "$S")
   err <- expect_error(
     nm_split(c("$PROB x", "$SI 0.1"), "t.ctl"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$seen, "$SI")
 })
@@ -176,7 +176,7 @@ test_that("nothing but ENDIF follows a plain ELSE", {
       "Q = 3",
       "ENDIF"
     )),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_error(
     nm_parse_lines(c(
@@ -188,34 +188,34 @@ test_that("nothing but ENDIF follows a plain ELSE", {
       "Q = 3",
       "ENDIF"
     )),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
 })
 
 test_that("compartment indices are whole numbers", {
-  expect_error(nm_parse_lines("DADT(1.7) = 0"), class = "zufapmx_parse_error")
-  expect_error(nm_parse_lines("A_0(1.0) = 0"), class = "zufapmx_parse_error")
+  expect_error(nm_parse_lines("DADT(1.7) = 0"), class = "zupmxio_parse_error")
+  expect_error(nm_parse_lines("A_0(1.0) = 0"), class = "zupmxio_parse_error")
 })
 
 test_that("abbreviated code is refused with its position", {
   err <- expect_error(
     nm_parse_lines(c("X = 1", "ELSE")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$line, 2L)
   err <- expect_error(
     nm_parse_lines("X = THETA(Y)"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$seen, "THETA")
   err <- expect_error(
     nm_parse_lines("FOO(1) = 2"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(err$seen, "FOO")
   err <- expect_error(
     read_ctl(ctl_onecmt(pk = "X = A(5)")),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(c(err$line, err$column), c(8L, 5L))
 })
@@ -242,7 +242,7 @@ test_that("tokens keep their order, type, spelling and column", {
   expect_true(all(vapply(tokens, `[[`, 0L, "line") == 4L))
   err <- expect_error(
     nm_tokenize("A = 1 # 2", 3L, "f"),
-    class = "zufapmx_parse_error"
+    class = "zupmxio_parse_error"
   )
   expect_equal(c(err$line, err$column), c(3L, 7L))
   expect_length(nm_tokenize("   ", 1L, "f"), 0)

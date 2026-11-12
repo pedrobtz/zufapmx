@@ -45,7 +45,7 @@ new_model <- function(
       observations = observations,
       provenance = provenance
     ),
-    class = "zufapmx_model"
+    class = "zupmxio_model"
   )
   validate_model(model)
 }
@@ -75,7 +75,7 @@ new_model <- function(
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral-mm", "model.ctl",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' model <- pmx_read_nonmem(path)
 #' pmx_parameters(model)
@@ -120,13 +120,13 @@ pmx_ode <- function(model) {
 }
 
 #' @export
-print.zufapmx_model <- function(x, ...) {
+print.zupmxio_model <- function(x, ...) {
   cat(format(x, ...), sep = "\n")
   invisible(x)
 }
 
 #' @export
-format.zufapmx_model <- function(x, ...) {
+format.zupmxio_model <- function(x, ...) {
   check_model(x)
   p <- x$parameters
   estimated <- sum(!is.na(p$estimate))
@@ -134,7 +134,7 @@ format.zufapmx_model <- function(x, ...) {
   obs <- x$observations
 
   c(
-    sprintf("<zufapmx_model> read from %s", x$provenance$format),
+    sprintf("<zupmxio_model> read from %s", x$provenance$format),
     paste("Structure:", format_structure(x$structure)),
     sprintf(
       "Parameters: %d, %s",
@@ -461,14 +461,14 @@ validate_observations <- function(x) {
 }
 
 model_abort <- function(fmt, ...) {
-  zufapmx_abort(sprintf(fmt, ...), "model", call = sys.call(-1))
+  zupmxio_abort(sprintf(fmt, ...), "model", call = sys.call(-1))
 }
 
 # A model handed to an exported function is validated again: it is data
 # (D3), and may have been edited since it was read.
 check_model <- function(x) {
-  if (!inherits(x, "zufapmx_model")) {
-    model_abort("Expected a zufapmx model, not %s.", class(x)[[1]])
+  if (!inherits(x, "zupmxio_model")) {
+    model_abort("Expected a zupmxio model, not %s.", class(x)[[1]])
   }
   validate_model(x)
 }
@@ -484,7 +484,7 @@ check_choice <- function(
     return(choices[[1]])
   }
   if (!is.character(arg) || length(arg) != 1 || !arg %in% choices) {
-    zufapmx_abort(
+    zupmxio_abort(
       sprintf(
         "`%s` must be one of %s.",
         name,
@@ -505,7 +505,7 @@ check_file <- function(file) {
       !file.exists(file) ||
       dir.exists(file)
   ) {
-    zufapmx_abort(
+    zupmxio_abort(
       "`file` must be the path of an existing file.",
       "model",
       call = sys.call(-1)

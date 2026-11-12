@@ -4,7 +4,7 @@
 new_written <- function(text, format, fidelity, losses) {
   structure(
     list(text = text, format = format, fidelity = fidelity, losses = losses),
-    class = "zufapmx_written"
+    class = "zupmxio_written"
   )
 }
 
@@ -20,7 +20,7 @@ new_written <- function(text, format, fidelity, losses) {
 #'   each item.
 #'
 #' A construct that would change predictions is never dropped: the writer
-#' stops with an error of class `zufapmx_write_error` instead.
+#' stops with an error of class `zupmxio_write_error` instead.
 #'
 #' @param written The result of a `pmx_write_*()` function.
 #' @return `pmx_fidelity()`: a string. `pmx_losses()`: a character vector,
@@ -30,7 +30,7 @@ new_written <- function(text, format, fidelity, losses) {
 #' @examples
 #' path <- system.file(
 #'   "corpus", "onecmt-oral", "model-rxode2.R",
-#'   package = "zufapmx"
+#'   package = "zupmxio"
 #' )
 #' fun <- eval(parse(path))
 #' written <- pmx_write_rxode2(pmx_read_rxode2(fun))
@@ -49,12 +49,12 @@ pmx_losses <- function(written) {
 }
 
 #' @export
-format.zufapmx_written <- function(x, ...) {
+format.zupmxio_written <- function(x, ...) {
   x$text
 }
 
 #' @export
-print.zufapmx_written <- function(x, ...) {
+print.zupmxio_written <- function(x, ...) {
   cat(x$text, sep = "\n")
   cat(sprintf(
     "# %s, fidelity: %s%s\n",
@@ -70,7 +70,7 @@ print.zufapmx_written <- function(x, ...) {
 }
 
 #' @export
-as.character.zufapmx_written <- function(x, ...) {
+as.character.zupmxio_written <- function(x, ...) {
   x$text
 }
 
@@ -148,7 +148,7 @@ normalise_model <- function(model) {
   m <- unclass(model)
   # A model whose residual error has no sigma form (an SD parameter used
   # elsewhere) is compared as it stands; both sides then keep their SDs.
-  m <- tryCatch(sigma_from_sd(m), zufapmx_write_error = function(e) m)
+  m <- tryCatch(sigma_from_sd(m), zupmxio_write_error = function(e) m)
   m <- drop_aliases(m)
 
   closed <- identical(m$structure$type, "closed")
@@ -327,8 +327,8 @@ model_content <- function(model) {
 }
 
 check_written <- function(x) {
-  if (!inherits(x, "zufapmx_written")) {
-    zufapmx_abort(
+  if (!inherits(x, "zupmxio_written")) {
+    zupmxio_abort(
       sprintf("Expected a written model, not %s.", class(x)[[1]]),
       "model"
     )

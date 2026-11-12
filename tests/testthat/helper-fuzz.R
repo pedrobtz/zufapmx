@@ -3,8 +3,8 @@
 # corpus and seeded mutations of it, so the oracle is the same in both.
 #
 # The oracle: a reader either reads the input or refuses it with a
-# zufapmx_parse_error. A model it reads writes to every format or is
-# refused with a zufapmx_write_error, and round-trips through JSON. Any
+# zupmxio_parse_error. A model it reads writes to every format or is
+# refused with a zupmxio_write_error, and round-trips through JSON. Any
 # other error is a finding. Only exported functions are used, so the
 # harnesses run against the installed package.
 
@@ -12,31 +12,31 @@ fuzz_target <- function(data, format) {
   text <- fuzz_text(data)
   model <- switch(
     format,
-    nonmem = fuzz_read_file(text, ".ctl", zufapmx::pmx_read_nonmem),
-    mrgsolve = fuzz_read_file(text, ".cpp", zufapmx::pmx_read_mrgsolve),
+    nonmem = fuzz_read_file(text, ".ctl", zupmxio::pmx_read_nonmem),
+    mrgsolve = fuzz_read_file(text, ".cpp", zupmxio::pmx_read_mrgsolve),
     rxode2 = fuzz_read_rxode2(text)
   )
   if (is.null(model)) {
     return(invisible(NULL))
   }
   writers <- list(
-    nonmem = zufapmx::pmx_write_nonmem,
-    rxode2 = zufapmx::pmx_write_rxode2,
-    mrgsolve = zufapmx::pmx_write_mrgsolve
+    nonmem = zupmxio::pmx_write_nonmem,
+    rxode2 = zupmxio::pmx_write_rxode2,
+    mrgsolve = zupmxio::pmx_write_mrgsolve
   )
   for (writer in writers) {
-    written <- tryCatch(writer(model), zufapmx_write_error = function(e) NULL)
+    written <- tryCatch(writer(model), zupmxio_write_error = function(e) NULL)
     if (!is.null(written)) {
       stopifnot(
-        zufapmx::pmx_fidelity(written) %in% c("exact", "equivalent", "lossy")
+        zupmxio::pmx_fidelity(written) %in% c("exact", "equivalent", "lossy")
       )
     }
   }
   if (requireNamespace("zujson", quietly = TRUE)) {
     path <- tempfile(fileext = ".json")
     on.exit(unlink(path))
-    zufapmx::pmx_write_json(model, path)
-    stopifnot(identical(zufapmx::pmx_read_json(path), model))
+    zupmxio::pmx_write_json(model, path)
+    stopifnot(identical(zupmxio::pmx_read_json(path), model))
   }
   invisible(model)
 }
@@ -57,7 +57,7 @@ fuzz_read_file <- function(text, ext, reader) {
   path <- tempfile(fileext = ext)
   on.exit(unlink(path))
   writeLines(text, path, useBytes = TRUE)
-  tryCatch(reader(path), zufapmx_parse_error = function(e) NULL)
+  tryCatch(reader(path), zupmxio_parse_error = function(e) NULL)
 }
 
 # An rxode2 model is R code. Only a top-level `function` expression is
@@ -76,7 +76,7 @@ fuzz_read_rxode2 <- function(text) {
     return(NULL)
   }
   fun <- eval(exprs[[1]], baseenv())
-  tryCatch(zufapmx::pmx_read_rxode2(fun), zufapmx_parse_error = function(e) {
+  tryCatch(zupmxio::pmx_read_rxode2(fun), zupmxio_parse_error = function(e) {
     NULL
   })
 }
@@ -226,7 +226,7 @@ fuzz_seeds <- function(format) {
     mrgsolve = "model.cpp",
     rxode2 = "model-rxode2.R"
   )
-  paths <- file.path(zufapmx_corpus()$path, files[[format]])
+  paths <- file.path(zupmxio_corpus()$path, files[[format]])
   if (format == "nonmem") {
     paths <- c(
       paths,
