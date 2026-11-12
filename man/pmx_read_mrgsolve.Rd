@@ -56,6 +56,7 @@ pmx_read_mrgsolve(path)
 
 Other readers:
 \code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}},
-\code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}}
+\code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}},
+\code{\link[=pmx_write_json]{pmx_write_json()}}
 }
 \concept{readers}
