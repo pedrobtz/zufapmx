@@ -15,7 +15,8 @@ pmx_compare(
 }
 \arguments{
 \item{a, b}{The models to compare: each a model read by a \verb{pmx_read_*()}
-function, or a model written by a \verb{pmx_write_*()} function.}
+function, or a model written by a \verb{pmx_write_*()} function. One of them
+can be tables from \code{\link[=pmx_read_tables]{pmx_read_tables()}}; see below.}
 
 \item{design}{A design from \code{\link[=pmx_design]{pmx_design()}}.}
 
@@ -75,12 +76,23 @@ A point agrees when its relative deviation is at most \code{tol} or its
 absolute deviation at most \code{atol}, which covers predictions near zero.
 The relative deviation is \code{abs(a - b) / max(abs(a), abs(b))}. A missing
 or non-finite prediction never agrees. Residual error is off.
+}
+\section{Against NONMEM output}{
+
+Either side can be tables from \code{\link[=pmx_read_tables]{pmx_read_tables()}} instead of a model.
+The other side's typical subject, every random effect at zero, is then
+simulated on the tables' own records, with covariates from their
+columns, and compared with the prediction column (NONMEM's \code{PRED}).
+\code{design} is not used. NONMEM prints a fixed number of significant
+digits, so a point also agrees when the model's prediction rounds to
+the table's value.
 
 A comparison that fails is a value, not an error: \code{pass} is \code{FALSE} and
 the result says where the models differ. Models that cannot be compared
 point by point, because their numbers of random effects differ, fail
 with a \code{reason} and no predictions.
 }
+
 \examples{
 \dontshow{if (requireNamespace("rxode2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 path <- system.file(

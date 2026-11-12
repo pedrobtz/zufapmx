@@ -70,44 +70,30 @@ pmx_report <- function(comparison, file = NULL, max_points = 20) {
     md_table(data.frame(
       Side = c("a", "b"),
       Simulated = vapply(x$sides, `[[`, character(1), "origin"),
-      Engine = paste(x$engines$engine, x$engines$version),
+      Engine = ifelse(
+        x$engines$engine == "table",
+        "none: NONMEM's own output",
+        paste(x$engines$engine, x$engines$version)
+      ),
       Source = vapply(x$sides, report_source, character(1))
     )),
     "",
     "## Design",
     "",
-    sprintf(
-      "Regimens %s, each a dose of %s into compartment %d.",
-      paste(d$regimens, collapse = ", "),
-      md_num(design_dose, 15),
-      d$cmt
-    ),
+    report_design(x),
     sprintf(
       paste(
-        "The typical subject (1) and %d subjects with random effects drawn",
-        "with seed %s. Residual error is off."
-      ),
-      d$n,
-      md_num(d$seed, 15)
-    ),
-    if (length(d$covariates) > 0) {
-      sprintf(
-        "Covariates: %s.",
-        paste(
-          names(d$covariates),
-          md_num(unlist(d$covariates), 15),
-          sep = " = ",
-          collapse = ", "
-        )
-      )
-    },
-    sprintf(
-      paste(
-        "A point agrees when its relative deviation is at most %s or its",
-        "absolute deviation at most %s."
+        "A point agrees when its relative deviation is at most %s%s its",
+        "absolute deviation at most %s%s."
       ),
       md_num(x$tol, 15),
-      md_num(x$atol, 15)
+      if (is.null(d)) "," else " or",
+      md_num(x$atol, 15),
+      if (is.null(d)) {
+        ", or the model's prediction rounds to the table's value"
+      } else {
+        ""
+      }
     ),
     "",
     report_results(x, max_points),
@@ -193,11 +179,60 @@ report_results <- function(x, max_points) {
   out
 }
 
+report_design <- function(x) {
+  d <- x$design
+  if (is.null(d)) {
+    p <- x$sides[[which(x$engines$engine == "table")]]$provenance
+    return(sprintf(
+      paste(
+        "The tables' own records: %d subject%s and %d records. The model's",
+        "typical subject, every random effect at zero, as NONMEM's `PRED`.",
+        "Residual error is off."
+      ),
+      p$subjects,
+      if (p$subjects == 1) "" else "s",
+      p$records
+    ))
+  }
+  c(
+    sprintf(
+      "Regimens %s, each a dose of %s into compartment %d.",
+      paste(d$regimens, collapse = ", "),
+      md_num(design_dose, 15),
+      d$cmt
+    ),
+    sprintf(
+      paste(
+        "The typical subject (1) and %d subjects with random effects drawn",
+        "with seed %s. Residual error is off."
+      ),
+      d$n,
+      md_num(d$seed, 15)
+    ),
+    if (length(d$covariates) > 0) {
+      sprintf(
+        "Covariates: %s.",
+        paste(
+          names(d$covariates),
+          md_num(unlist(d$covariates), 15),
+          sep = " = ",
+          collapse = ", "
+        )
+      )
+    }
+  )
+}
+
 report_source <- function(side) {
   p <- side$provenance
   file <- p$file
   if (!is.null(file) && !is.na(file)) {
-    return(sprintf("%s, `%s`", p$format, basename(file)))
+    files <- strsplit(file, ", ", fixed = TRUE)[[1]]
+    return(sprintf(
+      "%s, %s",
+      p$format,
+      paste0("`", basename(files), "`", collapse = ", ")
+    ))
   }
   if (!is.null(p$fidelity)) {
     return(sprintf("written %s, fidelity %s", p$format, p$fidelity))
@@ -206,6 +241,17 @@ report_source <- function(side) {
 }
 
 report_text <- function(side) {
+  if (identical(side$engine, "table")) {
+    return(sprintf(
+      "Predictions read from %s.",
+      paste0(
+        "`",
+        basename(strsplit(side$provenance$file, ", ", fixed = TRUE)[[1]]),
+        "`",
+        collapse = ", "
+      )
+    ))
+  }
   fence <- strrep("`", max(3, md_longest_backticks(side$text) + 1))
   language <- c(rxode2 = "r", mrgsolve = "cpp")[[side$engine]]
   c(paste0(fence, language), side$text, fence)

@@ -62,3 +62,44 @@ test_that("a writer whose text does not read back raises a write error", {
     class = "zufapmx_write_error"
   )
 })
+
+test_that("same_content() compares attributes as a set, like identical()", {
+  a <- data.frame(x = c(1, 2), y = c("a", "b"))
+  b <- structure(
+    list(x = c(1, 2), y = c("a", "b")),
+    row.names = c(NA, -2L),
+    class = "data.frame"
+  )
+  expect_identical(a, b)
+  expect_false(identical(names(attributes(a)), names(attributes(b))))
+
+  expect_true(same_content(a, b))
+  expect_true(same_content(list(p = a), list(p = b)))
+  b$x[[2]] <- 3
+  expect_false(same_content(a, b))
+})
+
+test_that("a closed-form parameter aliased to a covariate writes (#130)", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- c(0, 4)
+      tv <- c(0, 10)
+      tq <- c(0, 2)
+      eta.cl ~ 0.09
+      prop.sd <- 0.2
+    })
+    model({
+      cl <- tcl * exp(eta.cl)
+      v <- tv
+      q <- tq
+      vp <- vpcov
+      cp <- linCmt()
+      cp ~ prop(prop.sd)
+    })
+  })
+  expect_equal(unclass(m)$provenance$covariates, "vpcov")
+
+  for (writer in list(pmx_write_nonmem, pmx_write_rxode2, pmx_write_mrgsolve)) {
+    expect_faithful(writer(m))
+  }
+})

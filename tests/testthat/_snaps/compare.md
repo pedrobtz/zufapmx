@@ -37,3 +37,52 @@
       Tolerance: relative 1e-06, absolute 1e-09.
       The models have 2 and 1 random effects.
 
+# a comparison with tables prints and reports its source
+
+    Code
+      cmp
+    Output
+      <zufapmx comparison> FAIL
+      a: NONMEM table output, column `PRED` (5 significant digits)
+      b: nonmem model, written to rxode2 by zufapmx, on rxode2 0.0.0
+      Tolerance: relative 1e-06, absolute 1e-09.
+      2 of 2 predictions disagree.
+      Worst: table, subject 1, time 1: 1 against 1.001 (abs 0.001, rel 0.000999).
+       regimen points failed max_abs  max_rel skipped
+         table      2      2   0.002 0.000999        
+    Code
+      writeLines(utils::head(pmx_report(cmp), 32))
+    Output
+      # Model comparison
+      
+      **Result: FAIL.** 2 of 2 predictions disagree.
+      
+      ## Models
+      
+      | Side | Simulated | Engine | Source |
+      | --- | --- | --- | --- |
+      | a | NONMEM table output, column `PRED` (5 significant digits) | none: NONMEM's own output | nonmem table, `sdtab1` |
+      | b | nonmem model, written to rxode2 by zufapmx | rxode2 0.0.0 | nonmem, `advan1.ctl` |
+      
+      ## Design
+      
+      The tables' own records: 1 subject and 3 records. The model's typical subject, every random effect at zero, as NONMEM's `PRED`. Residual error is off.
+      A point agrees when its relative deviation is at most 1e-06, its absolute deviation at most 1e-09, or the model's prediction rounds to the table's value.
+      
+      ## Results
+      
+      | Regimen | Points | Disagree | Largest absolute | Largest relative | Skipped |
+      | --- | --- | --- | --- | --- | --- |
+      | table | 2 | 2 | 0.002 | 0.000999 |  |
+      
+      Worst point: table, subject 1, time 1: 1 (a) against 1.001 (b), absolute deviation 0.001, relative 0.000999.
+      
+      ### Points that disagree
+      
+      | Regimen | Subject | Time | a | b | Absolute | Relative |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | table | 1 | 1 | 1 | 1.001 | 0.001 | 0.000999 |
+      | table | 1 | 2 | 2 | 2.002 | 0.002 | 0.000999 |
+      
+      ## Model a
+
