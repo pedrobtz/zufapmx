@@ -256,7 +256,8 @@ json_unmodel <- function(x, file) {
   if (!is.list(x) || !identical(x$zufapmx, "model")) {
     json_error(file, "not a zufapmx model (no `\"zufapmx\": \"model\"`)")
   }
-  if (!identical(as.integer(json_scalar(x$version)), json_version)) {
+  version <- tryCatch(json_int(x$version), zufapmx_model_error = function(e) NA)
+  if (!identical(version, json_version)) {
     json_error(
       file,
       sprintf(
@@ -283,12 +284,12 @@ json_unmodel <- function(x, file) {
   structure <- if (identical(type, "closed")) {
     list(
       type = type,
-      ncmt = as.integer(json_scalar(structure_x$ncmt)),
+      ncmt = json_int(structure_x$ncmt),
       depot = json_logical(structure_x$depot),
       parameters = unlist(lapply(structure_x$parameters, json_string)) %||%
         stats::setNames(character(), character()),
-      advan = as.integer(json_scalar(structure_x$advan)),
-      trans = as.integer(json_scalar(structure_x$trans))
+      advan = json_int(structure_x$advan),
+      trans = json_int(structure_x$trans)
     )
   } else {
     list(
@@ -414,6 +415,20 @@ json_scalar <- function(x) {
     model_abort("Expected a single value, not %s.", json_describe(x))
   }
   x
+}
+
+# A whole number in R's integer range, never truncated or coerced to NA.
+json_int <- function(x) {
+  x <- json_scalar(x)
+  if (
+    !is.numeric(x) ||
+      !is.finite(x) ||
+      x != round(x) ||
+      abs(x) > .Machine$integer.max
+  ) {
+    model_abort("Expected a whole number, not %s.", json_describe(x))
+  }
+  as.integer(x)
 }
 
 json_string <- function(x) {
