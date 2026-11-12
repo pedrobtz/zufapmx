@@ -27,13 +27,13 @@
       | single | 8 | 8 | 0.024 | 0.000999 |  |
       | ss | 7 | 7 | 0.0115 | 0.000999 |  |
       
-      Worst point: single, subject 1, time 0.5: 0.5005 (a) against 0.5 (b), absolute deviation 5e-04, relative 0.000999.
+      Worst point: single, subject 1, time 0.5: 0.5005 (a) against 0.5 (b), absolute deviation 0.0005, relative 0.000999.
       
       ### Points that disagree
       
       | Regimen | Subject | Time | a | b | Absolute | Relative |
       | --- | --- | --- | --- | --- | --- | --- |
-      | single | 1 | 0.5 | 0.5005 | 0.5 | 5e-04 | 0.000999 |
+      | single | 1 | 0.5 | 0.5005 | 0.5 | 0.0005 | 0.000999 |
       | single | 1 | 1 | 1.001 | 1 | 0.001 | 0.000999 |
       
       And 13 more.

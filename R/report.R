@@ -79,7 +79,7 @@ pmx_report <- function(comparison, file = NULL, max_points = 20) {
     sprintf(
       "Regimens %s, each a dose of %s into compartment %d.",
       paste(d$regimens, collapse = ", "),
-      format(design_dose),
+      md_num(design_dose, 15),
       d$cmt
     ),
     sprintf(
@@ -88,12 +88,17 @@ pmx_report <- function(comparison, file = NULL, max_points = 20) {
         "with seed %s. Residual error is off."
       ),
       d$n,
-      format(d$seed)
+      md_num(d$seed, 15)
     ),
     if (length(d$covariates) > 0) {
       sprintf(
         "Covariates: %s.",
-        paste(names(d$covariates), d$covariates, sep = " = ", collapse = ", ")
+        paste(
+          names(d$covariates),
+          md_num(unlist(d$covariates), 15),
+          sep = " = ",
+          collapse = ", "
+        )
       )
     },
     sprintf(
@@ -101,8 +106,8 @@ pmx_report <- function(comparison, file = NULL, max_points = 20) {
         "A point agrees when its relative deviation is at most %s or its",
         "absolute deviation at most %s."
       ),
-      format(x$tol),
-      format(x$atol)
+      md_num(x$tol, 15),
+      md_num(x$atol, 15)
     ),
     "",
     report_results(x, max_points),
@@ -150,7 +155,7 @@ report_results <- function(x, max_points) {
         ),
         w$regimen,
         w$id,
-        format(w$time),
+        md_num(w$time, 15),
         md_num(w$a, 10),
         md_num(w$b, 10),
         md_num(w$abs),
@@ -171,7 +176,7 @@ report_results <- function(x, max_points) {
           md_table(data.frame(
             Regimen = shown$regimen,
             Subject = shown$id,
-            Time = format_num(shown$time, 15),
+            Time = md_num(shown$time, 15),
             a = md_num(shown$a, 10),
             b = md_num(shown$b, 10),
             Absolute = md_num(shown$abs),
@@ -211,16 +216,13 @@ md_longest_backticks <- function(text) {
   if (length(runs) == 0) 0 else max(nchar(runs))
 }
 
+# Numbers in `digits` significant digits, whatever the caller's digits,
+# scipen and OutDec options: a report is shared, so it reads the same
+# everywhere.
 md_num <- function(x, digits = 3) {
-  ifelse(is.na(x), "", format_num(x, digits))
-}
-
-format_num <- function(x, digits) {
-  vapply(
-    x,
-    function(v) if (is.na(v)) "" else format(signif(v, digits)),
-    character(1)
-  )
+  out <- formatC(x, digits = digits, format = "g", decimal.mark = ".")
+  out[is.na(x)] <- ""
+  trimws(out)
 }
 
 md_table <- function(df) {

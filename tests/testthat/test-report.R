@@ -100,6 +100,12 @@ test_that("pmx_report() refuses malformed arguments", {
   )
   expect_error(pmx_report(cmp, max_points = -1), class = "zufapmx_model_error")
   expect_error(pmx_report(cmp, max_points = 1.5), class = "zufapmx_model_error")
+  expect_error(pmx_report(cmp, max_points = Inf), class = "zufapmx_model_error")
+  expect_error(
+    pmx_report(cmp, max_points = .Machine$integer.max + 1),
+    class = "zufapmx_model_error"
+  )
+  expect_error(pmx_report(cmp, max_points = NA), class = "zufapmx_model_error")
 })
 
 test_that("a report reads as it did", {
@@ -115,4 +121,26 @@ test_that("a report reads as it did", {
   )
 
   expect_snapshot(writeLines(pmx_report(cmp, max_points = 2)))
+})
+
+test_that("a report does not depend on the caller's options or locale", {
+  local_fake_engines(mrgsolve = function(time, id) time * (1 + 1.23456789e-4))
+  path <- file.path(withr::local_tempdir(), "advan1.ctl")
+  writeLines(ctl_advan1(), path)
+  m <- pmx_read_nonmem(path)
+  cmp <- pmx_compare(
+    m,
+    pmx_write_rxode2(m),
+    pmx_design(n = 0, regimens = "single", covariates = list(WT = 72.5)),
+    tol = 1.5e-7
+  )
+  ref <- pmx_report(cmp)
+
+  withr::local_options(OutDec = ",", scipen = -5, digits = 3)
+  expect_identical(pmx_report(cmp), ref)
+  withr::local_locale(c(LC_NUMERIC = "C", LC_COLLATE = "C"))
+  expect_identical(pmx_report(cmp), ref)
+  # Predictions keep 10 significant digits.
+  expect_true(any(grepl("| 0.5000617284 |", ref, fixed = TRUE)))
+  expect_true(any(grepl("at most 1.5e-07", ref, fixed = TRUE)))
 })
