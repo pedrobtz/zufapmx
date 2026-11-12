@@ -181,19 +181,27 @@ values and says so.
 
 ### 4.4 The equivalence harness
 
-`pmx_compare(a, b, design = pmx_design(), tol = 1e-6)`:
+`pmx_compare(a, b, design = pmx_design(), tol = 1e-6, atol = 1e-9,
+engines = NULL)`:
 
 1. Resolves each model to an engine: rxode2 for rxode2 and NONMEM-read
    models (through the rxode2 writer), mrgsolve for mrgsolve models, or
    any engine the user names. A model cannot be compared through the
    engine it was translated from and to, unless the user asks: that is
-   what makes the test independent of the writer being checked.
+   what makes the test independent of the writer being checked. A
+   written rxode2 or mrgsolve model runs as written, on its own format's
+   engine, so the text under test is the text simulated; the other side
+   then runs on the other engine. A writer that refuses a model moves it
+   to the next engine. (Settled 2026-11-12, Stage 7.)
 2. Builds the design: a typical subject (all etas zero) and `n` subjects
    with etas drawn from omega under a fixed seed, over a fixed regimen
-   set: single bolus, single first-order dose, infusion, multiple doses
-   with interval and additional doses, and steady state. Residual error
-   is off; the harness compares predictions, not noise. Covariates take
-   the values in the design table.
+   set: a single dose, an infusion, multiple doses with interval and
+   additional doses, and steady state, each into one dose compartment
+   (D19). Both sides take the same standard normal draws, each times its
+   own omega's square root, so a translation that changes omega changes
+   predictions. Residual error is off; the harness compares predictions,
+   not noise. Covariates take the values in the design table, matched to
+   a model's covariates without regard to case.
 3. Simulates both, aligns the two prediction tables on subject, time and
    endpoint, and computes absolute and relative deviations under the
    design's tolerances, in base R (D17). A missing or short table is a
@@ -234,7 +242,7 @@ w  <- pmx_write_mrgsolve(m)
 pmx_fidelity(w)                                 # "exact", "equivalent", "lossy"
 pmx_losses(w)                                   # character(), or what was lost
 
-d  <- pmx_design(n = 20, seed = 1, regimens = c("bolus", "oral", "ss"))
+d  <- pmx_design(n = 20, seed = 1, regimens = c("single", "ss"))
 cmp <- pmx_compare(m, w, design = d, tol = 1e-6)
 cmp                                             # pass/fail, worst deviation
 pmx_report(cmp, "run001-translation.md")
@@ -265,9 +273,11 @@ otherwise, from `.lst` when asked, and are absent when none exists. A
 model with estimates writes estimates; a model without writes initial
 values and sets a loss.
 
-**Comparison** passes when every relative deviation is below `tol` or
-every absolute deviation is below `atol` for predictions near zero. The
-seed is part of the design and of the report.
+**Comparison** passes when every point agrees: its relative deviation
+`abs(a - b) / max(abs(a), abs(b))` is at most `tol`, or its absolute
+deviation at most `atol`, for predictions near zero. A missing or
+non-finite prediction never agrees. The seed is part of the design and of
+the report.
 
 ## 7. The oracle
 
@@ -460,6 +470,20 @@ decides it and the maintainer may overturn it.
   `$PK` is the amount at the previous record, which no other format
   holds. The validator enforces all three, so every format reads and
   writes the same split. Settles review issues #81, #82 and #99.
+- **D19 (M), 2026-11-12.** A regimen is a dosing pattern into one
+  compartment, chosen by position: `pmx_design(cmt = 1)`, NONMEM's
+  default dose compartment. The regimens are `"single"`, `"infusion"`,
+  `"multiple"` and `"ss"`. §4.4's "single bolus" and "single first-order
+  dose" are both `"single"`: which one it is depends on whether
+  compartment 1 is a depot. Telling a central compartment from a depot
+  in an arbitrary ODE model would be a guess. A model that sets the dose
+  compartment's rate or duration is dosed with `rate = -1` or `-2`, and
+  its infusion regimen is skipped.
+- **D20 (C), 2026-11-12.** The mrgsolve writer declares covariates in
+  `$INPUT` as `NA_real_`, so the data set supplies them and a missing one
+  simulates as `NA`; the reader reads `$INPUT` names as covariates and
+  records a numeric default as a loss. Before, the writer left covariates
+  undeclared and its output did not compile (#126).
 
 ## 14. Later versions, in the order they are expected
 
