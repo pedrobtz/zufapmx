@@ -46,7 +46,8 @@ fuzz_target <- function(data, format) {
 # refuses a CR that readLines() and source() would have dropped.
 fuzz_text <- function(data) {
   data <- data[data != as.raw(0)]
-  text <- gsub("\r\n", "\n", rawToChar(data), fixed = TRUE)
+  # On the bytes: in a UTF-8 locale gsub() refuses invalid UTF-8.
+  text <- gsub("\r\n", "\n", rawToChar(data), fixed = TRUE, useBytes = TRUE)
   Encoding(text) <- "UTF-8"
   if (!validUTF8(text)) {
     text <- iconv(text, "UTF-8", "UTF-8", sub = "?")
