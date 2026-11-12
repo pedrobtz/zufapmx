@@ -131,12 +131,18 @@ model_with <- function(model, ...) {
 # str() without truncation: every element, every character, and 15
 # significant digits (17 would show the last-place differences R's decimal
 # parser makes without long double).
+# R-devel (4.7) puts a space after the colon of a nested list or data
+# frame (`$ a: List of 2`); the snapshots keep R-release's `$ a:List of 2`,
+# so both versions print the same.
 str_full <- function(x) {
-  str(
+  out <- utils::capture.output(str(
     x,
     vec.len = Inf,
     list.len = Inf,
     nchar.max = 10000,
     digits.d = 15
-  )
+  ))
+  out <- sub("(\\$ [^:]*:) (List of|'data.frame':)", "\\1\\2", out)
+  out <- sub("(- attr\\(\\*, \"[^\"]*\"\\)=) (List of)", "\\1\\2", out)
+  cat(out, sep = "\n")
 }
