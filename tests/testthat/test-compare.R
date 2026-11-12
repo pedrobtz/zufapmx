@@ -462,3 +462,135 @@ test_that("every corpus model round-trips through every pair of formats", {
     }
   }
 })
+
+test_that("a model agrees with NONMEM tables printed from its predictions", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  corpus <- zufapmx_corpus()
+  corpus <- corpus[corpus$regimen != "infusion", ]
+
+  for (i in seq_len(nrow(corpus))) {
+    expected <- corpus_expected(corpus$path[[i]])
+    # What NONMEM would print: 5 significant digits.
+    table <- local_nm_table(table_single_dose(expected$time, expected$pred))
+    tables <- pmx_read_tables(table)
+    models <- corpus_models(corpus$path[[i]], corpus$id[[i]])
+    for (from in names(models)) {
+      cmp <- pmx_compare(tables, models[[from]])
+      label <- paste(corpus$id[[i]], from)
+      expect_true(cmp$pass, label = label)
+      expect_equal(cmp$engines$engine[[1]], "table", label = label)
+      expect_equal(nrow(cmp$predictions), nrow(expected), label = label)
+    }
+  }
+})
+
+test_that("a table value off in its fourth digit fails", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  expected <- corpus_expected(corpus_file("onecmt-oral", ""))
+  pred <- expected$pred
+  pred[[3]] <- pred[[3]] * 1.001
+  tables <- pmx_read_tables(local_nm_table(table_single_dose(
+    expected$time,
+    pred
+  )))
+
+  cmp <- pmx_compare(tables, corpus_rxode2_model("onecmt-oral"))
+
+  expect_false(cmp$pass)
+  expect_equal(which(!cmp$predictions$pass), 3L)
+  expect_equal(cmp$worst$time, expected$time[[3]])
+})
+
+test_that("tables carry their subjects, covariates and repeated times", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  m <- read_ctl(ctl_advan1(
+    cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"
+  ))
+  times <- c(0.5, 2, 2, 8)
+  subject <- function(id, wt) {
+    df <- table_single_dose(
+      times,
+      advan1_conc("single", times, cl = 4 * (wt / 70)^0.75, v = 50),
+      id = id
+    )
+    df$WT <- wt
+    df
+  }
+  tables <- pmx_read_tables(local_nm_table(rbind(
+    subject(101, 60),
+    subject(205, 90)
+  )))
+
+  cmp <- pmx_compare(pmx_write_mrgsolve(m), tables)
+
+  expect_true(cmp$pass)
+  expect_equal(unique(cmp$predictions$id), c(101, 205))
+  expect_equal(cmp$engines$engine, c("mrgsolve", "table"))
+  expect_equal(nrow(cmp$predictions), 8)
+})
+
+test_that("a point agrees when the model rounds to the table's value", {
+  expect_equal(
+    table_resolution(c(1.2345, -0.012345, 0), 5),
+    c(5e-5, 5e-7, 5e-5) * (1 + 1e-9)
+  )
+  expect_equal(table_resolution(1, NA), 0)
+  obs <- data.frame(id = 1L, time = 1:3)
+
+  p <- compare_points(
+    "table",
+    obs,
+    c(1.2345, 1.2345, 1.2345),
+    c(1.23455, 1.2344501, 1.234551),
+    1e-7,
+    0,
+    resolution = table_resolution(rep(1.2345, 3), 5)
+  )
+
+  expect_equal(p$pass, c(TRUE, TRUE, FALSE))
+})
+
+test_that("tables are compared with a model, never with tables", {
+  local_fake_engines()
+  tables <- pmx_read_tables(local_nm_table(table_single_dose(1, 1)))
+  m <- read_ctl(ctl_advan1())
+
+  expect_error(pmx_compare(tables, tables), class = "zufapmx_model_error")
+  expect_s3_class(pmx_compare(tables, m), "zufapmx_comparison")
+  expect_null(pmx_compare(m, tables)$design)
+})
+
+test_that("tables must hold the model's covariates and compartments", {
+  local_fake_engines()
+  tables <- pmx_read_tables(local_nm_table(table_single_dose(1, 1)))
+  m <- read_ctl(ctl_advan1(
+    cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"
+  ))
+  expect_error(pmx_compare(tables, m), class = "zufapmx_model_error")
+
+  df <- table_single_dose(1, 1)
+  df$CMT <- 2
+  tables <- pmx_read_tables(local_nm_table(df))
+  expect_error(
+    pmx_compare(tables, read_ctl(ctl_advan1())),
+    class = "zufapmx_model_error"
+  )
+})
+
+test_that("a comparison with tables prints and reports its source", {
+  local_fake_engines(rxode2 = function(time, id) time * (1 + 1e-3))
+  path <- file.path(withr::local_tempdir(), "sdtab1")
+  writeLines(nm_table_lines(table_single_dose(c(1, 2), c(1, 2))), path)
+  model <- file.path(withr::local_tempdir(), "advan1.ctl")
+  writeLines(ctl_advan1(), model)
+  cmp <- pmx_compare(pmx_read_tables(path), pmx_read_nonmem(model))
+
+  expect_snapshot({
+    cmp
+    writeLines(utils::head(pmx_report(cmp), 32))
+  })
+})

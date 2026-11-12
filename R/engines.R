@@ -15,6 +15,9 @@ engine_available <- function(engine) {
 }
 
 engine_version <- function(engine) {
+  if (identical(engine, "table")) {
+    return(NA_character_)
+  }
   as.character(utils::packageVersion(engine))
 }
 
@@ -150,7 +153,12 @@ engine_simulate <- function(side, data, etas) {
   obs <- data[data$evid == 0, ]
   # Element by element: format() pads a vector to a common width, so keys
   # built from tables of different lengths would not match.
-  key <- function(id, time) sprintf("%d|%.15g", as.integer(id), time)
+  # A subject can have several observations at one time; the k-th of them
+  # matches the k-th the engine returns.
+  key <- function(id, time) {
+    k <- sprintf("%d|%.15g", as.integer(id), time)
+    paste(k, stats::ave(seq_along(k), k, FUN = seq_along))
+  }
   column <- tolower(endpoint)
   if (!column %in% names(out)) {
     return(rep(NA_real_, nrow(obs)))

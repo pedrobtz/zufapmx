@@ -86,11 +86,37 @@ pmx_compare <- function(
   check_tolerance(atol, positive = FALSE)
   engines <- check_engines(engines)
 
-  sides <- list(
-    a = compare_side(a, engines[[1]], written_engine(b)),
-    b = compare_side(b, engines[[2]], written_engine(a))
+  tables <- c(
+    a = inherits(a, "zufapmx_tables"),
+    b = inherits(b, "zufapmx_tables")
   )
-  out <- compare_sides(sides, design, tol, atol)
+  if (all(tables)) {
+    zufapmx_abort(
+      "`a` and `b` are both tables; compare tables with a model.",
+      "model"
+    )
+  }
+  if (any(tables)) {
+    at <- names(tables)[tables]
+    other <- names(tables)[!tables]
+    t <- if (tables[["a"]]) a else b
+    sides <- list()
+    sides[[at]] <- table_side(t)
+    sides[[other]] <- compare_side(
+      if (tables[["a"]]) b else a,
+      engines[[match(other, c("a", "b"))]],
+      NA_character_
+    )
+    sides <- sides[c("a", "b")]
+    out <- compare_tables(t, sides[[other]], at, tol, atol)
+    design <- NULL
+  } else {
+    sides <- list(
+      a = compare_side(a, engines[[1]], written_engine(b)),
+      b = compare_side(b, engines[[2]], written_engine(a))
+    )
+    out <- compare_sides(sides, design, tol, atol)
+  }
   structure(
     c(
       out,
@@ -113,6 +139,118 @@ pmx_compare <- function(
     ),
     class = "zufapmx_comparison"
   )
+}
+
+# A side that is NONMEM's own output: no engine, no text.
+table_side <- function(t) {
+  list(
+    engine = "table",
+    origin = sprintf(
+      "NONMEM table output, column `%s` (%d significant digits)",
+      t$prediction,
+      t$digits
+    ),
+    provenance = list(
+      format = "nonmem table",
+      file = paste(t$files, collapse = ", "),
+      digits = t$digits,
+      subjects = length(unique(t$records$id)),
+      records = nrow(t$records)
+    ),
+    text = NULL
+  )
+}
+
+# A model against the predictions of NONMEM tables: the typical subject
+# (Q1) simulated on the table's own records, compared within the table's
+# printed precision as well as the tolerances.
+compare_tables <- function(t, side, at, tol, atol) {
+  m <- unclass(side$model)
+  if (length(m$observations) != 1) {
+    zufapmx_abort(
+      "pmx_compare() compares models with one endpoint.",
+      "model",
+      call = NULL
+    )
+  }
+  r <- t$records
+  compartments <- model_compartments(m$structure)
+  bad <- !r$cmt %in% seq_along(compartments)
+  if (any(bad)) {
+    zufapmx_abort(
+      sprintf(
+        "A table record names compartment %s, but the model has %d.",
+        format(r$cmt[bad][[1]]),
+        length(compartments)
+      ),
+      "model",
+      call = NULL
+    )
+  }
+  ids <- unique(r$id)
+  data <- data.frame(
+    id = match(r$id, ids),
+    time = r$time,
+    evid = r$evid,
+    amt = r$amt,
+    cmt = if (side$engine == "rxode2") compartments[r$cmt] else r$cmt,
+    rate = r$rate,
+    ii = r$ii,
+    addl = r$addl,
+    ss = r$ss
+  )
+  covariates <- m$provenance$covariates
+  extra <- setdiff(names(r), c(names(data), "pred"))
+  for (cov in covariates) {
+    col <- extra[toupper(extra) == toupper(cov)]
+    if (length(col) == 0) {
+      zufapmx_abort(
+        sprintf(
+          "The tables have no column for the covariate `%s`.",
+          cov
+        ),
+        "model",
+        call = NULL
+      )
+    }
+    data[[cov]] <- r[[col[[1]]]]
+  }
+  omega <- pmx_omega(side$model, "estimate")
+  etas <- matrix(
+    0,
+    length(ids),
+    ncol(omega),
+    dimnames = list(NULL, colnames(omega))
+  )
+  model <- engine_simulate(side, data, etas)
+  obs <- r[r$evid == 0, ]
+  table <- obs$pred
+  points <- compare_points(
+    "table",
+    obs,
+    if (at == "a") table else model,
+    if (at == "a") model else table,
+    tol,
+    atol,
+    resolution = table_resolution(table, t$digits)
+  )
+  list(
+    pass = nrow(points) > 0 && all(points$pass),
+    reason = NULL,
+    worst = compare_worst(points, atol),
+    regimens = compare_regimen("table", points, NA_character_),
+    predictions = points
+  )
+}
+
+# Half a unit in the last printed digit of each table value: a prediction
+# that rounds to the table's value agrees with it.
+table_resolution <- function(x, digits) {
+  if (is.na(digits)) {
+    return(rep(0, length(x)))
+  }
+  e <- ifelse(x == 0 | !is.finite(x), 0, floor(log10(abs(x))))
+  0.5 * 10^(e - digits + 1) * (1 + 1e-9)
 }
 
 compare_sides <- function(sides, design, tol, atol) {
@@ -301,7 +439,7 @@ side_events <- function(m, events, cmt, engine) {
 }
 
 # A missing or non-finite prediction deviates infinitely: it never agrees.
-compare_points <- function(regimen, obs, a, b, tol, atol) {
+compare_points <- function(regimen, obs, a, b, tol, atol, resolution = 0) {
   finite <- is.finite(a) & is.finite(b)
   dev <- ifelse(finite, abs(a - b), Inf)
   rel <- ifelse(finite & dev == 0, 0, dev / pmax(abs(a), abs(b)))
@@ -314,7 +452,7 @@ compare_points <- function(regimen, obs, a, b, tol, atol) {
     b = b,
     abs = dev,
     rel = rel,
-    pass = finite & (rel <= tol | dev <= atol)
+    pass = finite & (rel <= tol | dev <= atol | dev <= resolution)
   )
 }
 
@@ -346,6 +484,9 @@ compare_worst <- function(p, atol) {
   bad <- which(!is.finite(p$a) | !is.finite(p$b))
   i <- if (length(bad) > 0) {
     bad[[1]]
+  } else if (any(!p$pass)) {
+    failing <- which(!p$pass)
+    failing[[which.max(p$rel[failing])]]
   } else if (any(p$abs > atol)) {
     outside <- which(p$abs > atol)
     outside[[which.max(p$rel[outside])]]
@@ -365,6 +506,10 @@ print.zufapmx_comparison <- function(x, ...) {
   ))
   for (s in c("a", "b")) {
     side <- x$sides[[s]]
+    if (identical(side$engine, "table")) {
+      cat(sprintf("%s: %s\n", s, side$origin))
+      next
+    }
     cat(sprintf(
       "%s: %s, on %s %s\n",
       s,
@@ -410,6 +555,9 @@ print.zufapmx_comparison <- function(x, ...) {
 }
 
 check_comparable <- function(x, name) {
+  if (inherits(x, "zufapmx_tables")) {
+    return(invisible())
+  }
   if (inherits(x, "zufapmx_model")) {
     validate_model(x)
     return(invisible())
@@ -419,7 +567,10 @@ check_comparable <- function(x, name) {
   }
   zufapmx_abort(
     sprintf(
-      "`%s` must be a model from pmx_read_*() or pmx_write_*(), not %s.",
+      paste(
+        "`%s` must be a model from pmx_read_*() or pmx_write_*(), or",
+        "tables from pmx_read_tables(), not %s."
+      ),
       name,
       class(x)[[1]]
     ),

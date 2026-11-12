@@ -71,3 +71,36 @@ advan1_conc <- function(regimen, t, cl, v) {
     ss = dose / v * exp(-k * t) / (1 - exp(-k * 12))
   )
 }
+
+# A data frame as NONMEM writes a $TABLE: a title line, a header of names
+# 12 wide, and values in 1PE11.4 (5 significant digits by default).
+nm_table_lines <- function(df, digits = 5, title = TRUE) {
+  fmt <- sprintf("%%%d.%dE", digits + 7, digits - 1)
+  rows <- apply(as.matrix(df), 1, function(r) {
+    paste0(" ", paste(sprintf(fmt, r), collapse = " "))
+  })
+  c(
+    if (title) "TABLE NO.  1",
+    paste0(" ", paste(formatC(names(df), width = -11), collapse = " ")),
+    rows
+  )
+}
+
+local_nm_table <- function(df, ..., env = parent.frame()) {
+  file <- withr::local_tempfile(fileext = ".tab", .local_envir = env)
+  writeLines(nm_table_lines(df, ...), file)
+  file
+}
+
+# The records of one subject's single dose of 100 into compartment 1 and
+# observations at `times`, with `pred` at the observations.
+table_single_dose <- function(times, pred, id = 1) {
+  data.frame(
+    ID = id,
+    TIME = c(0, times),
+    AMT = c(100, rep(0, length(times))),
+    EVID = c(1, rep(0, length(times))),
+    CMT = 1,
+    PRED = c(0, pred)
+  )
+}

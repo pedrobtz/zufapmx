@@ -54,6 +54,7 @@ identical(pmx_read_json(file), model)
 Other readers:
 \code{\link[=pmx_read_mrgsolve]{pmx_read_mrgsolve()}},
 \code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}},
-\code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}}
+\code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}},
+\code{\link[=pmx_read_tables]{pmx_read_tables()}}
 }
 \concept{readers}
