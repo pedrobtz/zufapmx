@@ -629,3 +629,17 @@ test_that("a malformed $INPUT entry is refused (#126)", {
     class = "zufapmx_parse_error"
   )
 })
+
+test_that("C++ tokens keep their order, type and column", {
+  tokens <- cpp_tokenize("x+= 1.0f; --y", 2L, "f")
+
+  expect_equal(
+    vapply(tokens, function(t) paste(t$type, t$value, t$column), ""),
+    c("name x 1", "op += 2", "number 1.0f 5", "op ; 9", "op -- 11", "name y 13")
+  )
+  err <- expect_error(
+    cpp_tokenize("x = 1 @ 2", 5L, "f"),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(c(err$line, err$column), c(5L, 7L))
+})

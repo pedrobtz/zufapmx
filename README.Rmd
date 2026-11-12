@@ -1,0 +1,132 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# zufapmx
+
+<!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![R-CMD-check](https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zufapmx/actions/workflows/R-CMD-check.yaml)
+[![coverage](https://raw.githubusercontent.com/pedrobtz/zufapmx/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zufapmx/actions/workflows/coverage.yaml)
+<!-- badges: end -->
+
+A population PK/PD model often has to move between tools: a NONMEM run
+becomes an nlmixr2 model for a new analysis, or an mrgsolve model for
+simulation. Converters exist, but a translated model is usually trusted on
+sight, and a slip in a volume or a residual model shows up much later, if
+at all.
+
+zufapmx makes the translation checkable. It reads a model from NONMEM,
+rxode2/nlmixr2 or mrgsolve into one R object, writes it to any of the
+three, and proves that two models are the same model by simulating both and
+comparing their predictions.
+
+* **The check is the product.** `pmx_compare()` simulates both models on a
+  canonical design (single dose, infusion, multiple doses and steady state,
+  for a typical subject and subjects with random effects) and reports the
+  worst deviation against a tolerance. A failed comparison is a result
+  that says where the models differ, not an error.
+* **Independent engines.** Each model runs on its own engine, rxode2 or
+  mrgsolve, and never on the engine of the writer under test, so a
+  translation is not checked by the code that made it.
+* **Nothing is guessed.** Code outside the supported subset is refused
+  with its position. A writer that would drop something that changes
+  predictions refuses the model, and every write reports its fidelity:
+  `exact`, `equivalent` or `lossy`, with what was lost.
+* **Against NONMEM's own output.** `pmx_compare()` also takes the tables a
+  NONMEM run wrote, and checks a translation against the run's `PRED`.
+* **A corpus with oracles.** Every shipped model is checked against
+  [nonmem2rx](https://CRAN.R-project.org/package=nonmem2rx) and, for ODE
+  models, [amp.sim](https://CRAN.R-project.org/package=amp.sim).
+
+## Installation
+
+zufapmx is not on CRAN yet. Install the development version from GitHub:
+
+``` r
+# install.packages("pak")
+pak::pak("pedrobtz/zufapmx")
+```
+
+zufapmx itself has no dependencies. Comparisons need the engines,
+[rxode2](https://CRAN.R-project.org/package=rxode2) and
+[mrgsolve](https://CRAN.R-project.org/package=mrgsolve), which need a C
+and C++ compiler to build models.
+
+## Usage
+
+```{r, message = FALSE}
+library(zufapmx)
+```
+
+Read a model. This one is a two-compartment model with first-order
+absorption, from the corpus that ships with the package:
+
+```{r}
+path <- system.file("corpus", "twocmt-oral", "model.ctl", package = "zufapmx")
+model <- pmx_read_nonmem(path)
+model
+```
+
+Write it to rxode2. The fidelity says the translation is a known
+reparameterisation, here residual error as a standard deviation rather
+than a variance:
+
+```{r}
+rx <- pmx_write_rxode2(model)
+pmx_fidelity(rx)
+```
+
+Check it. The NONMEM model runs on mrgsolve and the rxode2 text runs as
+written, on rxode2, and every one of the predictions agrees:
+
+```{r}
+pmx_compare(model, rx)
+```
+
+A slip fails. Here the central volume of the rxode2 text is 21 instead of
+20, and the comparison says where the predictions part:
+
+```{r}
+slip <- rx
+slip$text <- sub("THETA3 <- c(0, 20)", "THETA3 <- c(0, 21)", slip$text, fixed = TRUE)
+pmx_compare(model, slip)
+```
+
+`pmx_report()` writes a comparison as Markdown, with the design, the
+deviations and both model texts, for a reviewer to read without running
+anything.
+
+Functions are named by what they do: `pmx_read_*()` and `pmx_write_*()`
+for each format, and `pmx_design()`, `pmx_compare()` and `pmx_report()`
+for the check.
+
+## Learn more
+
+* [Validating a translation](https://pedrobtz.github.io/zufapmx/articles/validating-a-translation.html)
+  walks through a check end to end, and shows how to read a report.
+* The [reference](https://pedrobtz.github.io/zufapmx/reference/) lists the
+  readers, the writers and the comparison functions.
+* `zufapmx_corpus()` lists the shipped models.
+
+## Related work
+
+zufapmx is checked against [nonmem2rx](https://CRAN.R-project.org/package=nonmem2rx),
+which translates NONMEM to rxode2, and
+[amp.sim](https://CRAN.R-project.org/package=amp.sim), which translates it
+to mrgsolve;
+[oracle-agreement.md](https://github.com/pedrobtz/zufapmx/blob/main/.agents/oracle-agreement.md)
+records where they agree. The
+[nlmixr2lib](https://CRAN.R-project.org/package=nlmixr2lib) model library
+is read in its tests. Its tables and run files are read with
+[zucsv](https://CRAN.R-project.org/package=zucsv) and
+[zuxml](https://CRAN.R-project.org/package=zuxml) when installed.

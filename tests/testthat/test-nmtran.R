@@ -219,3 +219,31 @@ test_that("abbreviated code is refused with its position", {
   )
   expect_equal(c(err$line, err$column), c(8L, 5L))
 })
+
+test_that("tokens keep their order, type, spelling and column", {
+  tokens <- nm_tokenize("IF(X.gt.1.)Y=2.5D-3**a", 4L, "f")
+
+  expect_equal(
+    vapply(tokens, function(t) paste(t$type, t$value, t$column), ""),
+    c(
+      "name IF 1",
+      "op ( 3",
+      "name X 4",
+      "dotop .GT. 5",
+      "number 1. 9",
+      "op ) 11",
+      "name Y 12",
+      "op = 13",
+      "number 2.5D-3 14",
+      "op ** 20",
+      "name A 22"
+    )
+  )
+  expect_true(all(vapply(tokens, `[[`, 0L, "line") == 4L))
+  err <- expect_error(
+    nm_tokenize("A = 1 # 2", 3L, "f"),
+    class = "zufapmx_parse_error"
+  )
+  expect_equal(c(err$line, err$column), c(3L, 7L))
+  expect_length(nm_tokenize("   ", 1L, "f"), 0)
+})

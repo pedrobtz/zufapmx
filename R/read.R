@@ -128,42 +128,60 @@ tokenize <- function(
   expected,
   upper = character()
 ) {
-  tokens <- list()
+  # One alternation of the patterns, matched over each line at once: at
+  # each position PCRE tries the alternatives in order, as the patterns
+  # are listed, and a gap between matches is where none matched.
+  combined <- paste0(
+    "(?<",
+    names(patterns),
+    ">",
+    sub("^((?:\\(\\?[a-z]+\\))?)\\^", "\\1", patterns),
+    ")",
+    collapse = "|"
+  )
+  tokens <- vector("list", 0)
   for (k in seq_along(lines)) {
     text <- lines[[k]]
-    pos <- 1L
     n <- nchar(text)
-    while (pos <= n) {
-      rest <- substr(text, pos, n)
-      matched <- FALSE
-      for (type in names(patterns)) {
-        m <- regmatches(rest, regexpr(patterns[[type]], rest, perl = TRUE))
-        if (length(m) == 1 && nzchar(m)) {
-          if (type != "space") {
-            value <- if (type %in% upper) toupper(m) else m
-            tokens[[length(tokens) + 1]] <- list(
-              type = type,
-              value = value,
-              line = line_numbers[[k]],
-              column = pos
-            )
-          }
-          pos <- pos + nchar(m)
-          matched <- TRUE
-          break
-        }
+    if (n == 0) {
+      next
+    }
+    m <- gregexpr(combined, text, perl = TRUE)[[1]]
+    starts <- as.integer(m)
+    if (starts[[1]] == -1L) {
+      starts <- integer()
+    }
+    lengths <- attr(m, "match.length")
+    groups <- attr(m, "capture.length")[, names(patterns), drop = FALSE]
+    pos <- 1L
+    out <- vector("list", length(starts))
+    for (i in seq_along(starts)) {
+      if (starts[[i]] != pos) {
+        break
       }
-      if (!matched) {
-        parse_error(
-          file,
-          line_numbers[[k]],
-          pos,
-          seen = substr(rest, 1, 1),
-          expected = expected,
-          call = NULL
+      type <- names(patterns)[groups[i, ] > 0][[1]]
+      if (type != "space") {
+        value <- substr(text, pos, pos + lengths[[i]] - 1L)
+        out[[i]] <- list(
+          type = type,
+          value = if (type %in% upper) toupper(value) else value,
+          line = line_numbers[[k]],
+          column = pos
         )
       }
+      pos <- pos + lengths[[i]]
     }
+    if (pos <= n) {
+      parse_error(
+        file,
+        line_numbers[[k]],
+        pos,
+        seen = substr(text, pos, pos),
+        expected = expected,
+        call = NULL
+      )
+    }
+    tokens <- c(tokens, Filter(Negate(is.null), out))
   }
   tokens
 }

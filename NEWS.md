@@ -8,6 +8,9 @@
   failed comparison is a value that says where the models differ.
   `pmx_report()` writes a comparison as Markdown, with both model texts.
 
+* Reading a control stream is about twice as fast: the NM-TRAN and C++
+  tokenizers match all their patterns in one pass per line.
+
 * `pmx_read_tables()` reads NONMEM `$TABLE` output, and
   `pmx_compare(tables, model)` checks a translation against the run's own
   `PRED`: the model's typical subject is simulated on the tables' records
