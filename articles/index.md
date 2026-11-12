@@ -3,4 +3,4 @@
 ### Articles
 
 - [Validating a
-  translation](https://pedrobtz.github.io/zufapmx/articles/validating-a-translation.md):
+  translation](https://pedrobtz.github.io/zupmxio/articles/validating-a-translation.md):

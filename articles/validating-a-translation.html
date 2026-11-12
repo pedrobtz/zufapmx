@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Validating a translation • zufapmx</title>
+<title>Validating a translation • zupmxio</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -18,7 +18,7 @@
 
     <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
 
-    <a class="navbar-brand me-2" href="../index.html">zufapmx</a>
+    <a class="navbar-brand me-2" href="../index.html">zupmxio</a>
 
     <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
 
@@ -42,7 +42,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/pedrobtz/zufapmx/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/pedrobtz/zupmxio/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -59,18 +59,18 @@
       <h1>Validating a translation</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/pedrobtz/zufapmx/blob/main/vignettes/articles/validating-a-translation.Rmd" class="external-link"><code>vignettes/articles/validating-a-translation.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/pedrobtz/zupmxio/blob/main/vignettes/articles/validating-a-translation.Rmd" class="external-link"><code>vignettes/articles/validating-a-translation.Rmd</code></a></small>
       <div class="d-none name"><code>validating-a-translation.Rmd</code></div>
     </div>
 
     
     
 <p>A translated model is a claim: this rxode2 model, or this mrgsolve
-model, is the NONMEM model it came from. This article shows how zufapmx
+model, is the NONMEM model it came from. This article shows how zupmxio
 checks that claim, what a comparison report contains, and how a reviewer
 reads one.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/pedrobtz/zufapmx" class="external-link">zufapmx</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/pedrobtz/zupmxio" class="external-link">zupmxio</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="translate">Translate<a class="anchor" aria-label="anchor" href="#translate"></a>
 </h2>
@@ -78,10 +78,10 @@ reads one.</p>
 one of the models that ship with the package. Reading it gives the model
 as one R object, whatever format it came from:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"corpus"</span>, <span class="st">"twocmt-oral"</span>, <span class="st">"model.ctl"</span>, package <span class="op">=</span> <span class="st">"zufapmx"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"corpus"</span>, <span class="st">"twocmt-oral"</span>, <span class="st">"model.ctl"</span>, package <span class="op">=</span> <span class="st">"zupmxio"</span><span class="op">)</span></span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pmx_read_nonmem.html">pmx_read_nonmem</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span>
 <span><span class="va">model</span></span>
-<span><span class="co">#&gt; &lt;zufapmx_model&gt; read from nonmem</span></span>
+<span><span class="co">#&gt; &lt;zupmxio_model&gt; read from nonmem</span></span>
 <span><span class="co">#&gt; Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)</span></span>
 <span><span class="co">#&gt; Parameters: 5, initial values only</span></span>
 <span><span class="co">#&gt; Random effects: ETA1 on CL (exp), ETA2 on V2 (exp)</span></span>
@@ -109,7 +109,7 @@ format holds only one value per parameter. <code><a href="../reference/pmx_fidel
 names each item.</li>
 </ul>
 <p>A construct that would change predictions is never dropped. The
-writer stops with an error of class <code>zufapmx_write_error</code>
+writer stops with an error of class <code>zupmxio_write_error</code>
 that names it and the formats that can hold it.</p>
 <p>Fidelity is a check of the representation: the text reads back as the
 same model. It does not run the model. That is the comparison’s job.</p>
@@ -122,8 +122,8 @@ predictions, point by point:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pmx_compare.html">pmx_compare</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">mrg</span><span class="op">)</span></span>
 <span><span class="va">cmp</span></span>
-<span><span class="co">#&gt; &lt;zufapmx comparison&gt; pass</span></span>
-<span><span class="co">#&gt; a: nonmem model, written to rxode2 by zufapmx, on rxode2 5.1.8</span></span>
+<span><span class="co">#&gt; &lt;zupmxio comparison&gt; pass</span></span>
+<span><span class="co">#&gt; a: nonmem model, written to rxode2 by zupmxio, on rxode2 5.1.8</span></span>
 <span><span class="co">#&gt; b: mrgsolve text, simulated as written, on mrgsolve 2.0.1</span></span>
 <span><span class="co">#&gt; Tolerance: relative 1e-06, absolute 1e-09.</span></span>
 <span><span class="co">#&gt; 0 of 735 predictions disagree.</span></span>
@@ -144,7 +144,7 @@ off: the check is of predictions, not of noise.
 their values:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pmx_design.html">pmx_design</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, regimens <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"single"</span>, <span class="st">"ss"</span><span class="op">)</span>, covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>WT <span class="op">=</span> <span class="fl">70</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;zufapmx design&gt; single, ss, dosing compartment 1</span></span>
+<span><span class="co">#&gt; &lt;zupmxio design&gt; single, ss, dosing compartment 1</span></span>
 <span><span class="co">#&gt; The typical subject and 5 with random effects (seed 1).</span></span>
 <span><span class="co">#&gt; Covariates: WT = 70.</span></span></code></pre></div>
 <p>Compartment 1 is NONMEM’s default dose compartment. Into a depot, a
@@ -177,8 +177,8 @@ source says 20.</p>
 <span><span class="va">slip</span><span class="op">$</span><span class="va">text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"THETA3 : 20 :"</span>, <span class="st">"THETA3 : 21 :"</span>, <span class="va">slip</span><span class="op">$</span><span class="va">text</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">bad</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pmx_compare.html">pmx_compare</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">slip</span><span class="op">)</span></span>
 <span><span class="va">bad</span></span>
-<span><span class="co">#&gt; &lt;zufapmx comparison&gt; FAIL</span></span>
-<span><span class="co">#&gt; a: nonmem model, written to rxode2 by zufapmx, on rxode2 5.1.8</span></span>
+<span><span class="co">#&gt; &lt;zupmxio comparison&gt; FAIL</span></span>
+<span><span class="co">#&gt; a: nonmem model, written to rxode2 by zupmxio, on rxode2 5.1.8</span></span>
 <span><span class="co">#&gt; b: mrgsolve text, simulated as written, on mrgsolve 2.0.1</span></span>
 <span><span class="co">#&gt; Tolerance: relative 1e-06, absolute 1e-09.</span></span>
 <span><span class="co">#&gt; 735 of 735 predictions disagree.</span></span>
@@ -222,7 +222,7 @@ simulated:</p>
 
 | Side | Simulated | Engine | Source |
 | --- | --- | --- | --- |
-| a | nonmem model, written to rxode2 by zufapmx | rxode2 5.1.8 | nonmem, `model.ctl` |
+| a | nonmem model, written to rxode2 by zupmxio | rxode2 5.1.8 | nonmem, `model.ctl` |
 | b | mrgsolve text, simulated as written | mrgsolve 2.0.1 | written mrgsolve, fidelity exact |
 
 ## Design
@@ -275,7 +275,7 @@ disagree.</li>
 <li>
 <strong>Models.</strong> Which side is the text under test, which
 engine ran each, and their versions. A side “simulated as written” is
-the text itself; a side “written by zufapmx” went through another
+the text itself; a side “written by zupmxio” went through another
 writer.</li>
 <li>
 <strong>Design.</strong> The regimens, the number of subjects and
@@ -302,7 +302,7 @@ one, from the predictions this model is known to make:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">expected</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
 <span>  <span class="st">"corpus"</span>, <span class="st">"twocmt-oral"</span>, <span class="st">"expected.csv"</span>,</span>
-<span>  package <span class="op">=</span> <span class="st">"zufapmx"</span></span>
+<span>  package <span class="op">=</span> <span class="st">"zupmxio"</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  ID <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -325,11 +325,11 @@ one, from the predictions this model is known to make:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tables</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pmx_read_tables.html">pmx_read_tables</a></span><span class="op">(</span><span class="va">table</span><span class="op">)</span></span>
 <span><span class="va">tables</span></span>
-<span><span class="co">#&gt; &lt;zufapmx tables&gt; 1 subject, 1 dose and 8 observation records</span></span>
+<span><span class="co">#&gt; &lt;zupmxio tables&gt; 1 subject, 1 dose and 8 observation records</span></span>
 <span><span class="co">#&gt; Prediction: `PRED`, 5 significant digits.</span></span>
-<span><span class="co">#&gt; From file1b3e17c9829d.tab.</span></span>
+<span><span class="co">#&gt; From file1b77821e54.tab.</span></span>
 <span><span class="fu"><a href="../reference/pmx_compare.html">pmx_compare</a></span><span class="op">(</span><span class="va">tables</span>, <span class="va">mrg</span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;zufapmx comparison&gt; pass</span></span>
+<span><span class="co">#&gt; &lt;zupmxio comparison&gt; pass</span></span>
 <span><span class="co">#&gt; a: NONMEM table output, column `PRED` (5 significant digits)</span></span>
 <span><span class="co">#&gt; b: mrgsolve text, simulated as written, on mrgsolve 2.0.1</span></span>
 <span><span class="co">#&gt; Tolerance: relative 1e-06, absolute 1e-09.</span></span>

@@ -16,10 +16,10 @@ pmx_read_mrgsolve(file)
 
 ## Value
 
-A `zufapmx_model`; see
-[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+A `zupmxio_model`; see
+[pmx_inspect](https://pedrobtz.github.io/zupmxio/reference/pmx_inspect.md)
 and
-[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md).
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_mrgsolve.md).
 
 ## Details
 
@@ -37,7 +37,7 @@ comparisons, [`exp()`](https://rdrr.io/r/base/Log.html),
 `dxdt_CMT`, `F_CMT`, `ALAG_CMT`, `R_CMT`, `D_CMT` and `CMT_0`. Anything
 else, including `$GLOBAL`, `$PREAMBLE`, the `nm-vars` plugin, `int`
 declarations and integer division (`3/4`), is refused with an error of
-class `zufapmx_parse_error`. `$PKMODEL` may take its parameters from
+class `zupmxio_parse_error`. `$PKMODEL` may take its parameters from
 `$PARAM` directly or from `$MAIN`.
 
 Recorded as losses of the read: the title, `$PLUGIN`, `$SET`, `$PARAM`
@@ -52,29 +52,29 @@ The observation is `Y` in `$TABLE`, written over a prediction such as
 `IPRED`; its residual model is recognised as for NONMEM. An `@annotated`
 `$PARAM` description of the form `[lower, upper]`, optionally followed
 by `fixed`, gives a parameter's bounds, as
-[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_mrgsolve.md)
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_mrgsolve.md)
 writes them.
 
 ## See also
 
-[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+[pmx_inspect](https://pedrobtz.github.io/zupmxio/reference/pmx_inspect.md)
 for the model's parts.
 
 Other readers:
-[`pmx_read_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_nonmem.md),
-[`pmx_read_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_rxode2.md),
-[`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md),
-[`pmx_write_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+[`pmx_read_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_nonmem.md),
+[`pmx_read_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_rxode2.md),
+[`pmx_read_tables()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_tables.md),
+[`pmx_write_json()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_json.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "twocmt-bolus", "model.cpp",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 pmx_read_mrgsolve(path)
-#> <zufapmx_model> read from mrgsolve
+#> <zupmxio_model> read from mrgsolve
 #> Structure: two-compartment closed form, direct input (ADVAN3 TRANS4)
 #> Parameters: 4, initial values only
 #> Random effects: ETA1 on CL (exp), ETA2 on V1 (exp)

@@ -25,13 +25,13 @@ pmx_compare(
   The models to compare: each a model read by a `pmx_read_*()` function,
   or a model written by a `pmx_write_*()` function. One of them can be
   tables from
-  [`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md);
+  [`pmx_read_tables()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_tables.md);
   see below.
 
 - design:
 
   A design from
-  [`pmx_design()`](https://pedrobtz.github.io/zufapmx/reference/pmx_design.md).
+  [`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md).
 
 - tol:
 
@@ -49,7 +49,7 @@ pmx_compare(
 
 ## Value
 
-A `zufapmx_comparison`, a list with:
+A `zupmxio_comparison`, a list with:
 
 - pass:
 
@@ -98,7 +98,7 @@ Each side runs on an engine (rxode2 or mrgsolve):
 - A written rxode2 or mrgsolve model runs as written, on its own
   format's engine. That is the text under test.
 
-- A model, or a written NONMEM model, is written by zufapmx to an engine
+- A model, or a written NONMEM model, is written by zupmxio to an engine
   and runs there: its source format's engine when that is rxode2 or
   mrgsolve, and rxode2 otherwise.
 
@@ -116,7 +116,7 @@ or non-finite prediction never agrees. Residual error is off.
 ## Against NONMEM output
 
 Either side can be tables from
-[`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md)
+[`pmx_read_tables()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_tables.md)
 instead of a model. The other side's typical subject, every random
 effect at zero, is then simulated on the tables' own records, with
 covariates from their columns, and compared with the prediction column
@@ -131,19 +131,19 @@ with a `reason` and no predictions.
 
 ## See also
 
-[`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
 writes a comparison as Markdown.
 
 Other comparison:
-[`pmx_design()`](https://pedrobtz.github.io/zufapmx/reference/pmx_design.md),
-[`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
+[`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md),
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "onecmt-oral", "model.ctl",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 model <- pmx_read_nonmem(path)
 # Check the NONMEM writer. Both sides run on rxode2, since NONMEM is not
@@ -151,9 +151,9 @@ model <- pmx_read_nonmem(path)
 written <- pmx_write_nonmem(model)
 cmp <- pmx_compare(model, written, pmx_design(n = 2, regimens = "single"))
 cmp
-#> <zufapmx comparison> pass
-#> a: nonmem model, written to rxode2 by zufapmx, on rxode2 5.1.8
-#> b: nonmem text, written to rxode2 by zufapmx, on rxode2 5.1.8
+#> <zupmxio comparison> pass
+#> a: nonmem model, written to rxode2 by zupmxio, on rxode2 5.1.8
+#> b: nonmem text, written to rxode2 by zupmxio, on rxode2 5.1.8
 #> Tolerance: relative 1e-06, absolute 1e-09.
 #> 0 of 24 predictions disagree.
 #> Worst: single, subject 1, time 0.5: 0.77012778 against 0.77012778 (abs 0, rel 0).

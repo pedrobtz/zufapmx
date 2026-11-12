@@ -18,10 +18,10 @@ pmx_read_rxode2(model)
 
 ## Value
 
-A `zufapmx_model`; see
-[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+A `zupmxio_model`; see
+[pmx_inspect](https://pedrobtz.github.io/zupmxio/reference/pmx_inspect.md)
 and
-[`pmx_write_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_rxode2.md).
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_rxode2.md).
 
 ## Details
 
@@ -32,7 +32,7 @@ blocks; statements built from the function table; `linCmt()`; `d/dt()`;
 `dur()` and initial amounts (`depot(0) <-`); time as `t` or `time`; and
 residual models `add()`, `prop()`, `add() + prop()`, `lnorm()` and
 `pow()` whose parameters are `ini()` parameters or `model()` variables.
-Anything else is refused with an error of class `zufapmx_parse_error`.
+Anything else is refused with an error of class `zupmxio_parse_error`.
 
 Recorded as losses of the read: `label()`s, `description` and other
 top-level metadata such as `reference` or `units`, and `ini()` values
@@ -43,14 +43,14 @@ time is continuous; a `linCmt()` model refuses them.
 
 ## See also
 
-[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+[pmx_inspect](https://pedrobtz.github.io/zupmxio/reference/pmx_inspect.md)
 for the model's parts.
 
 Other readers:
-[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),
-[`pmx_read_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_nonmem.md),
-[`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md),
-[`pmx_write_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_mrgsolve.md),
+[`pmx_read_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_nonmem.md),
+[`pmx_read_tables()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_tables.md),
+[`pmx_write_json()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_json.md)
 
 ## Examples
 
@@ -72,7 +72,7 @@ one_cmt <- function() {
   })
 }
 pmx_read_rxode2(one_cmt)
-#> <zufapmx_model> read from rxode2
+#> <zupmxio_model> read from rxode2
 #> Structure: one-compartment closed form, first-order input (ADVAN2 TRANS2)
 #> Parameters: 4, initial values only
 #> Random effects: eta.cl on cl (exp)

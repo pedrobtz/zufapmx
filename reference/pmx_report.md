@@ -16,7 +16,7 @@ pmx_report(comparison, file = NULL, max_points = 20)
 - comparison:
 
   A comparison from
-  [`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md).
+  [`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md).
 
 - file:
 
@@ -34,15 +34,15 @@ The report's lines, invisibly.
 ## See also
 
 Other comparison:
-[`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md),
-[`pmx_design()`](https://pedrobtz.github.io/zufapmx/reference/pmx_design.md)
+[`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md),
+[`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "onecmt-oral", "model.ctl",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 model <- pmx_read_nonmem(path)
 cmp <- pmx_compare(
@@ -61,8 +61,8 @@ cat(readLines(file, n = 12), sep = "\n")
 #> 
 #> | Side | Simulated | Engine | Source |
 #> | --- | --- | --- | --- |
-#> | a | nonmem model, written to rxode2 by zufapmx | rxode2 5.1.8 | nonmem, `model.ctl` |
-#> | b | nonmem text, written to rxode2 by zufapmx | rxode2 5.1.8 | written nonmem, fidelity exact |
+#> | a | nonmem model, written to rxode2 by zupmxio | rxode2 5.1.8 | nonmem, `model.ctl` |
+#> | b | nonmem text, written to rxode2 by zupmxio | rxode2 5.1.8 | written nonmem, fidelity exact |
 #> 
 #> ## Design
 ```

@@ -24,10 +24,10 @@ pmx_read_nonmem(file, estimates = c("auto", "xml", "ext", "lst", "none"))
 
 ## Value
 
-A `zufapmx_model`; see
-[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+A `zupmxio_model`; see
+[pmx_inspect](https://pedrobtz.github.io/zupmxio/reference/pmx_inspect.md)
 and
-[`pmx_write_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_nonmem.md).
+[`pmx_write_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_nonmem.md).
 
 ## Details
 
@@ -42,7 +42,7 @@ comparisons, `EXP`, `LOG`, `LOG10`, `SQRT` and `ABS`.
 Verbatim Fortran, `$INFN`, `$PRED`, `$MIX`, `$PRIOR`, user subroutines,
 dosing or scale assignments inside `IF`, undeclared `THETA`/`ETA`/`EPS`
 indices and anything else outside that subset are refused with an error
-of class `zufapmx_parse_error` naming the file and, where it can, the
+of class `zupmxio_parse_error` naming the file and, where it can, the
 line and column.
 
 Recorded as losses of the read: the title, `$SIZES`, data records,
@@ -60,24 +60,24 @@ endpoint `Y`.
 
 ## See also
 
-[pmx_inspect](https://pedrobtz.github.io/zufapmx/reference/pmx_inspect.md)
+[pmx_inspect](https://pedrobtz.github.io/zupmxio/reference/pmx_inspect.md)
 for the model's parts.
 
 Other readers:
-[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),
-[`pmx_read_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_rxode2.md),
-[`pmx_read_tables()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_tables.md),
-[`pmx_write_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_mrgsolve.md),
+[`pmx_read_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_rxode2.md),
+[`pmx_read_tables()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_tables.md),
+[`pmx_write_json()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_json.md)
 
 ## Examples
 
 ``` r
 path <- system.file(
   "corpus", "twocmt-bolus", "model.ctl",
-  package = "zufapmx"
+  package = "zupmxio"
 )
 pmx_read_nonmem(path)
-#> <zufapmx_model> read from nonmem
+#> <zupmxio_model> read from nonmem
 #> Structure: two-compartment closed form, direct input (ADVAN3 TRANS4)
 #> Parameters: 4, initial values only
 #> Random effects: ETA1 on CL (exp), ETA2 on V1 (exp)

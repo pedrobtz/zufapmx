@@ -24,7 +24,7 @@ pmx_read_tables(file, prediction = "PRED")
 
 ## Value
 
-A `zufapmx_tables` object: a list with `records`, a data frame with
+A `zupmxio_tables` object: a list with `records`, a data frame with
 columns `id`, `time`, `evid`, `amt`, `cmt`, `rate`, `ii`, `addl`, `ss`
 and `pred` followed by the table's other columns under their own names;
 `prediction`, the column read as `pred`; `digits`, the significant
@@ -58,14 +58,14 @@ base R otherwise; both give the same result.
 
 ## See also
 
-[`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md)
+[`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md)
 compares a model with the tables.
 
 Other readers:
-[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_mrgsolve.md),
-[`pmx_read_nonmem()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_nonmem.md),
-[`pmx_read_rxode2()`](https://pedrobtz.github.io/zufapmx/reference/pmx_read_rxode2.md),
-[`pmx_write_json()`](https://pedrobtz.github.io/zufapmx/reference/pmx_write_json.md)
+[`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_mrgsolve.md),
+[`pmx_read_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_nonmem.md),
+[`pmx_read_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_rxode2.md),
+[`pmx_write_json()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_json.md)
 
 ## Examples
 
@@ -78,7 +78,7 @@ writeLines(c(
   "  1.0000E+00  1.0000E+00  0.0000E+00  0.0000E+00  1.8187E+00"
 ), file)
 pmx_read_tables(file)
-#> <zufapmx tables> 1 subject, 1 dose and 1 observation records
+#> <zupmxio tables> 1 subject, 1 dose and 1 observation records
 #> Prediction: `PRED`, 5 significant digits.
-#> From file194e3ef2450b.tab.
+#> From file19854775defd.tab.
 ```

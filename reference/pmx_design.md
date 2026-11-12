@@ -1,7 +1,7 @@
 # A simulation design for comparing models
 
 Describes what
-[`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md)
+[`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md)
 simulates: the regimens, the subjects and the covariate values. Each
 regimen doses compartment `cmt` (by position, as NONMEM numbers
 compartments) with 100 units and observes at fixed times:
@@ -49,7 +49,7 @@ pmx_design(
 
 ## Value
 
-A `zufapmx_design`: a list with the arguments and `events`, a data frame
+A `zupmxio_design`: a list with the arguments and `events`, a data frame
 of the dose and observation records of every regimen with columns
 `regimen`, `id`, `time`, `evid`, `amt`, `rate`, `ii`, `addl` and `ss`.
 
@@ -82,17 +82,17 @@ always off: a comparison is of predictions, not of noise.
 ## See also
 
 Other comparison:
-[`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md),
-[`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
+[`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md),
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
 
 ## Examples
 
 ``` r
 pmx_design()
-#> <zufapmx design> single, infusion, multiple, ss, dosing compartment 1
+#> <zupmxio design> single, infusion, multiple, ss, dosing compartment 1
 #> The typical subject and 20 with random effects (seed 1).
 pmx_design(n = 5, regimens = c("single", "ss"), covariates = list(WT = 70))
-#> <zufapmx design> single, ss, dosing compartment 1
+#> <zupmxio design> single, ss, dosing compartment 1
 #> The typical subject and 5 with random effects (seed 1).
 #> Covariates: WT = 70.
 ```

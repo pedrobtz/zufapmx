@@ -7,16 +7,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/pedrobtz/zufapmx/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/pedrobtz/zupmxio/blob/main/DESCRIPTION)
 
-Baltazar P (2026). *zufapmx: Read, Write and Check Equivalence of
+Baltazar P (2026). *zupmxio: Read, Write and Check Equivalence of
 Pharmacometric Models*. R package version 0.0.0.9000,
-<https://github.com/pedrobtz/zufapmx>.
+<https://github.com/pedrobtz/zupmxio>.
 
     @Manual{,
-      title = {zufapmx: Read, Write and Check Equivalence of Pharmacometric Models},
+      title = {zupmxio: Read, Write and Check Equivalence of Pharmacometric Models},
       author = {Pedro Baltazar},
       year = {2026},
       note = {R package version 0.0.0.9000},
-      url = {https://github.com/pedrobtz/zufapmx},
+      url = {https://github.com/pedrobtz/zupmxio},
     }

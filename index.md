@@ -1,4 +1,4 @@
-# zufapmx
+# zupmxio
 
 A population PK/PD model often has to move between tools: a NONMEM run
 becomes an nlmixr2 model for a new analysis, or an mrgsolve model for
@@ -6,13 +6,13 @@ simulation. Converters exist, but a translated model is usually trusted
 on sight, and a slip in a volume or a residual model shows up much
 later, if at all.
 
-zufapmx makes the translation checkable. It reads a model from NONMEM,
+zupmxio makes the translation checkable. It reads a model from NONMEM,
 rxode2/nlmixr2 or mrgsolve into one R object, writes it to any of the
 three, and proves that two models are the same model by simulating both
 and comparing their predictions.
 
 - **The check is the product.**
-  [`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md)
+  [`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md)
   simulates both models on a canonical design (single dose, infusion,
   multiple doses and steady state, for a typical subject and subjects
   with random effects) and reports the worst deviation against a
@@ -26,7 +26,7 @@ and comparing their predictions.
   predictions refuses the model, and every write reports its fidelity:
   `exact`, `equivalent` or `lossy`, with what was lost.
 - **Against NONMEM’s own output.**
-  [`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md)
+  [`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md)
   also takes the tables a NONMEM run wrote, and checks a translation
   against the run’s `PRED`.
 - **A corpus with oracles.** Every shipped model is checked against
@@ -35,15 +35,15 @@ and comparing their predictions.
 
 ## Installation
 
-zufapmx is not on CRAN yet. Install the development version from GitHub:
+zupmxio is not on CRAN yet. Install the development version from GitHub:
 
 ``` r
 
 # install.packages("pak")
-pak::pak("pedrobtz/zufapmx")
+pak::pak("pedrobtz/zupmxio")
 ```
 
-zufapmx itself has no dependencies. Comparisons need the engines,
+zupmxio itself has no dependencies. Comparisons need the engines,
 [rxode2](https://CRAN.R-project.org/package=rxode2) and
 [mrgsolve](https://CRAN.R-project.org/package=mrgsolve), which need a C
 and C++ compiler to build models.
@@ -52,7 +52,7 @@ and C++ compiler to build models.
 
 ``` r
 
-library(zufapmx)
+library(zupmxio)
 ```
 
 Read a model. This one is a two-compartment model with first-order
@@ -60,10 +60,10 @@ absorption, from the corpus that ships with the package:
 
 ``` r
 
-path <- system.file("corpus", "twocmt-oral", "model.ctl", package = "zufapmx")
+path <- system.file("corpus", "twocmt-oral", "model.ctl", package = "zupmxio")
 model <- pmx_read_nonmem(path)
 model
-#> <zufapmx_model> read from nonmem
+#> <zupmxio_model> read from nonmem
 #> Structure: two-compartment closed form, first-order input (ADVAN4 TRANS4)
 #> Parameters: 5, initial values only
 #> Random effects: ETA1 on CL (exp), ETA2 on V2 (exp)
@@ -87,8 +87,8 @@ written, on rxode2, and every one of the predictions agrees:
 ``` r
 
 pmx_compare(model, rx)
-#> <zufapmx comparison> pass
-#> a: nonmem model, written to mrgsolve by zufapmx, on mrgsolve 2.0.1
+#> <zupmxio comparison> pass
+#> a: nonmem model, written to mrgsolve by zupmxio, on mrgsolve 2.0.1
 #> b: rxode2 text, simulated as written, on rxode2 5.1.8
 #> Tolerance: relative 1e-06, absolute 1e-09.
 #> 0 of 735 predictions disagree.
@@ -108,8 +108,8 @@ of 20, and the comparison says where the predictions part:
 slip <- rx
 slip$text <- sub("THETA3 <- c(0, 20)", "THETA3 <- c(0, 21)", slip$text, fixed = TRUE)
 pmx_compare(model, slip)
-#> <zufapmx comparison> FAIL
-#> a: nonmem model, written to mrgsolve by zufapmx, on mrgsolve 2.0.1
+#> <zupmxio comparison> FAIL
+#> a: nonmem model, written to mrgsolve by zupmxio, on mrgsolve 2.0.1
 #> b: rxode2 text, simulated as written, on rxode2 5.1.8
 #> Tolerance: relative 1e-06, absolute 1e-09.
 #> 735 of 735 predictions disagree.
@@ -121,36 +121,36 @@ pmx_compare(model, slip)
 #>        ss    147    147   0.119  0.0404
 ```
 
-[`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
 writes a comparison as Markdown, with the design, the deviations and
 both model texts, for a reviewer to read without running anything.
 
 Functions are named by what they do: `pmx_read_*()` and `pmx_write_*()`
 for each format, and
-[`pmx_design()`](https://pedrobtz.github.io/zufapmx/reference/pmx_design.md),
-[`pmx_compare()`](https://pedrobtz.github.io/zufapmx/reference/pmx_compare.md)
+[`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md),
+[`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md)
 and
-[`pmx_report()`](https://pedrobtz.github.io/zufapmx/reference/pmx_report.md)
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
 for the check.
 
 ## Learn more
 
 - [Validating a
-  translation](https://pedrobtz.github.io/zufapmx/articles/validating-a-translation.html)
+  translation](https://pedrobtz.github.io/zupmxio/articles/validating-a-translation.html)
   walks through a check end to end, and shows how to read a report.
-- The [reference](https://pedrobtz.github.io/zufapmx/reference/) lists
+- The [reference](https://pedrobtz.github.io/zupmxio/reference/) lists
   the readers, the writers and the comparison functions.
-- [`zufapmx_corpus()`](https://pedrobtz.github.io/zufapmx/reference/zufapmx_corpus.md)
+- [`zupmxio_corpus()`](https://pedrobtz.github.io/zupmxio/reference/zupmxio_corpus.md)
   lists the shipped models.
 
 ## Related work
 
-zufapmx is checked against
+zupmxio is checked against
 [nonmem2rx](https://CRAN.R-project.org/package=nonmem2rx), which
 translates NONMEM to rxode2, and
 [amp.sim](https://CRAN.R-project.org/package=amp.sim), which translates
 it to mrgsolve;
-[oracle-agreement.md](https://github.com/pedrobtz/zufapmx/blob/main/.agents/oracle-agreement.md)
+[oracle-agreement.md](https://github.com/pedrobtz/zupmxio/blob/main/.agents/oracle-agreement.md)
 records where they agree. The
 [nlmixr2lib](https://CRAN.R-project.org/package=nlmixr2lib) model
 library is read in its tests. Its tables and run files are read with
