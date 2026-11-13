@@ -344,3 +344,22 @@ test_that("a covariate rxode2 reads as an event item is refused (#181)", {
   m <- read_ctl(ctl_onecmt(pk = "CLI = CL * TLAST"))
   expect_error(pmx_write_rxode2(m), class = "zupmxio_write_error")
 })
+
+test_that("unused parameters and random effects are dropped, as a loss (#183)", {
+  m <- read_ctl(sub(
+    "$OMEGA 0.09 0.09",
+    "$OMEGA 0.09 0.09 0.04",
+    sub("$THETA (0, 1) (0, 4) (0, 50)", "$THETA (0, 1) (0, 4) (0, 50) (0, 7)", ctl_onecmt(), fixed = TRUE),
+    fixed = TRUE
+  ))
+  expect_equal(nrow(pmx_parameters(m)), 4)
+
+  w <- pmx_write_rxode2(m)
+
+  expect_equal(pmx_fidelity(w), "lossy")
+  expect_true(any(grepl("THETA4", pmx_losses(w))))
+  expect_true(any(grepl("ETA3", pmx_losses(w))))
+  expect_false(any(grepl("\\b(THETA4|ETA3)\\b", w$text)))
+  skip_if_no_engine("rxode2")
+  expect_no_error(suppressMessages(rxode2::rxode2(eval(parse(text = w$text)[[1]]))))
+})

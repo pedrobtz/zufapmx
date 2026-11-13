@@ -31,8 +31,13 @@
 #' pmx_write_rxode2(pmx_read_rxode2(fun))
 pmx_write_rxode2 <- function(model) {
   check_model(model)
-  m <- unclass(model)
-  losses <- character()
+  # rxode2 refuses an ini() entry model() never uses; such entries cannot
+  # change predictions, so they are dropped as a loss, and the write is
+  # checked against the model without them (#183).
+  unused <- rxode2_write_drop_unused(unclass(model))
+  source <- structure(unused$m, class = class(model))
+  m <- unused$m
+  losses <- unused$losses
 
   m <- rxode2_write_sd_from_sigma(m)
   m <- model_map(m, rxode2_write_powers)
@@ -81,7 +86,7 @@ pmx_write_rxode2 <- function(model) {
   new_written(
     text = text,
     format = "rxode2",
-    fidelity = written_fidelity(losses, model, back),
+    fidelity = written_fidelity(losses, source, back),
     losses = losses
   )
 }
@@ -485,6 +490,60 @@ rxode2_write_powers <- function(x) {
     x[[3]] <- call("(", x[[3]])
   }
   x
+}
+
+rxode2_write_drop_unused <- function(m) {
+  used <- unique(c(
+    unlist(lapply(model_expressions(m), all.vars)),
+    if (identical(m$structure$type, "closed")) unname(m$structure$parameters),
+    unlist(lapply(m$observations, function(o) o$residual$parameters))
+  ))
+  drop_params <- setdiff(m$parameters$name, used)
+  drop_blocks <- function(blocks, what) {
+    keep <- list()
+    dropped <- character()
+    for (b in blocks) {
+      unused_names <- setdiff(b$names, used)
+      if (length(unused_names) == 0) {
+        keep[[length(keep) + 1]] <- b
+      } else if (length(unused_names) == length(b$names)) {
+        dropped <- c(dropped, b$names)
+      } else {
+        write_error(
+          sprintf(
+            "the unused %s `%s`, correlated with used ones",
+            what,
+            unused_names[[1]]
+          ),
+          sprintf("random_effects$%s", what),
+          formats = c("nonmem", "mrgsolve"),
+          call = NULL
+        )
+      }
+    }
+    list(blocks = keep, dropped = dropped)
+  }
+  omega <- drop_blocks(m$random_effects$omega, "omega")
+  sigma <- drop_blocks(m$random_effects$sigma, "sigma")
+  dropped <- c(drop_params, omega$dropped, sigma$dropped)
+  if (length(dropped) == 0) {
+    return(list(m = m, losses = character()))
+  }
+  m$parameters <- m$parameters[!m$parameters$name %in% drop_params, ]
+  rownames(m$parameters) <- NULL
+  m$random_effects$omega <- omega$blocks
+  m$random_effects$sigma <- sigma$blocks
+  m$random_effects$attach <- m$random_effects$attach[
+    !m$random_effects$attach$eta %in% omega$dropped,
+  ]
+  rownames(m$random_effects$attach) <- NULL
+  list(
+    m = m,
+    losses = sprintf(
+      "unused parameters and random effects, which rxode2 refuses: %s",
+      paste(dropped, collapse = ", ")
+    )
+  )
 }
 
 rxode2_write_stmt_lines <- function(stmts) {
