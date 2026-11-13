@@ -10,13 +10,13 @@ Source:
 [`DESCRIPTION`](https://github.com/pedrobtz/zupmxio/blob/main/DESCRIPTION)
 
 Baltazar P (2026). *zupmxio: Read, Write and Check Equivalence of
-Pharmacometric Models*. R package version 0.0.0.9000,
+Pharmacometric Models*. R package version 0.1.0,
 <https://github.com/pedrobtz/zupmxio>.
 
     @Manual{,
       title = {zupmxio: Read, Write and Check Equivalence of Pharmacometric Models},
       author = {Pedro Baltazar},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.0},
       url = {https://github.com/pedrobtz/zupmxio},
     }
