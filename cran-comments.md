@@ -12,7 +12,7 @@
 * macOS (latest), R release
 * Windows (latest), R release and R-devel
 * Ubuntu (latest), R release and R oldrel-1
-* R-devel containers from r-hub: clang 23, Ubuntu clang, Ubuntu gcc 16
+* R-devel container from r-hub: clang 23
 * R-devel without long double (`nold`)
 * R release without Suggests installed (`_R_CHECK_FORCE_SUGGESTS_=false`)
 
