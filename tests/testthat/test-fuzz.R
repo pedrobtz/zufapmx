@@ -44,3 +44,21 @@ test_that("fuzz bytes become valid text", {
   expect_identical(fuzz_text(as.raw(c(0x41, 0x00, 0x42))), "AB")
   expect_true(validUTF8(fuzz_text(as.raw(c(0x41, 0xff, 0x42)))))
 })
+
+test_that("seeds with CRLF line endings read as the same models", {
+  # A Windows checkout gives the corpus CRLF line endings; readLines()
+  # drops the CR, and so must the fuzz targets.
+  for (format in c("nonmem", "mrgsolve", "rxode2")) {
+    for (seed in fuzz_seeds(format)) {
+      lf <- seed[seed != as.raw(13)]
+      crlf <- charToRaw(gsub("\n", "\r\n", rawToChar(lf), fixed = TRUE))
+      from_crlf <- fuzz_target(crlf, format)
+      expect_false(is.null(from_crlf))
+      # The models, not their provenance, which names a temporary file.
+      expect_identical(
+        model_content(from_crlf),
+        model_content(fuzz_target(lf, format))
+      )
+    }
+  }
+})
