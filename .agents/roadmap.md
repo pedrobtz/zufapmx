@@ -27,7 +27,7 @@ design's stage 0 is Stage 1 here, and its stage 7 is split between Stage 9
 | 8 | [Tables, JSON and property tests](#stage-8--tables-json-and-property-tests) | quick | [#10](https://github.com/pedrobtz/zupmxio/issues/10) | [#131](https://github.com/pedrobtz/zupmxio/pull/131) | 2026-11-12 |
 | 9 | [README and article](#stage-9--readme-and-article) | quick | [#11](https://github.com/pedrobtz/zupmxio/issues/11) | [#133](https://github.com/pedrobtz/zupmxio/pull/133) | 2026-11-12 |
 | 10 | [Full CI](#stage-10--full-ci) | full | [#12](https://github.com/pedrobtz/zupmxio/issues/12) | [#145](https://github.com/pedrobtz/zupmxio/pull/145) | 2026-11-12 |
-| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#13](https://github.com/pedrobtz/zupmxio/issues/13) | | |
+| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#13](https://github.com/pedrobtz/zupmxio/issues/13) | [#178](https://github.com/pedrobtz/zupmxio/pull/178) | 2026-11-13 |
 
 ## Stage 0 — Package identity
 
@@ -443,8 +443,10 @@ default branch's code.
 - `Version: 0.1.0` and the matching `NEWS.md` heading.
 - `cran-comments.md` listing the r-actions CI legs as test environments.
 - Every `Suggests` entry is on CRAN.
-- `pmx_report()` output for one corpus model reviewed by one
-  pharmacometrician outside the family, and the review recorded (§12, Q4).
+- ~~`pmx_report()` output for one corpus model reviewed by one
+  pharmacometrician outside the family, and the review recorded (§12,
+  Q4).~~ Dropped (2026-11-13): the maintainer settled Q4 as D27, submitting
+  without it.
 - `pkg-critical-review` run; blocking and required findings fixed.
 - `pkg-cran-review` run; every finding resolved.
 - `urlchecker::url_check()` and `spelling::spell_check_package()` clean.
@@ -483,7 +485,5 @@ blocks Stage 7.
 
 - **Q2, blocks Stage 1.** May the corpus carry open-access published models
   whose licence is silent? The design says no.
-- **Q4, blocks Stage 11.** Is the external pharmacometrician's review
-  required before submission? The design says yes.
 - The design's decisions marked (C), D3 and D6 above all, are still the
   maintainer's to confirm.

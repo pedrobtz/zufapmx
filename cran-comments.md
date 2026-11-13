@@ -1,0 +1,38 @@
+## R CMD check results
+
+0 errors | 0 warnings | 1 note
+
+* This is a new release.
+
+## Test environments
+
+`R CMD check --as-cran` on GitHub Actions
+(pedrobtz/r-actions `r-cmd-check.yml`):
+
+* macOS (latest), R release
+* Windows (latest), R release and R-devel
+* Ubuntu (latest), R release and R oldrel-1
+* R-devel container from r-hub: clang 23
+* R-devel without long double (`nold`)
+* R release without Suggests installed (`_R_CHECK_FORCE_SUGGESTS_=false`)
+
+## Notes for the reviewer
+
+* The package has no hard dependencies. The simulation engines (rxode2,
+  mrgsolve), the converters it is checked against (nonmem2rx, amp.sim) and
+  the readers of optional files (zuxml, zucsv, zujson) are in Suggests, and
+  every use is guarded. Tests that need an engine skip on CRAN.
+* The examples of `pmx_compare()` and `pmx_report()` compile one rxode2
+  model, which takes about 3 seconds; they run only when rxode2 is
+  installed.
+
+## Method references
+
+There is no published reference describing the methods of this package.
+It translates model code between three formats and checks a translation by
+simulating both models with existing engines (rxode2, mrgsolve) and
+comparing their predictions point by point.
+
+## Reverse dependencies
+
+None: this is a new package.

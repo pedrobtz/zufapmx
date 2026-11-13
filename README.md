@@ -42,7 +42,13 @@ and comparing their predictions.
 
 ## Installation
 
-zupmxio is not on CRAN yet. Install the development version from GitHub:
+Install zupmxio from CRAN:
+
+``` r
+install.packages("zupmxio")
+```
+
+Or the development version from GitHub:
 
 ``` r
 # install.packages("pak")
