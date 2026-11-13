@@ -759,3 +759,52 @@ test_that("an ODE endpoint reassigned inside an if stays a statement (#77)", {
   expect_true("cp" %in% stmt_targets(unclass(m)$structure$statements))
   expect_faithful(pmx_write_rxode2(m))
 })
+
+test_that("linCmt() spellings the reader cannot map are refused (#180)", {
+  lincmt <- function(...) {
+    stmts <- c(
+      vapply(
+        list(...),
+        function(n) sprintf("%s <- %s", n, "1"),
+        character(1)
+      ),
+      "cp <- linCmt()",
+      "cp ~ prop(sd)"
+    )
+    f <- eval(parse(text = sprintf(
+      "function() { ini({ sd <- 0.1 }); model({ %s }) }",
+      paste(stmts, collapse = "; ")
+    )))
+    f
+  }
+  # rxode2 reads each of these as two or three compartments.
+  for (names in list(
+    c("CL", "V", "Q", "V2"),
+    c("cl", "v", "q", "v2"),
+    c("cl", "vc", "q", "vt"),
+    c("cl", "vc", "q", "vp1"),
+    c("cl", "v", "q1", "vp"),
+    c("cl", "v", "q", "v2", "q2", "v3"),
+    c("ka", "cl", "v", "q", "v3"),
+    c("cl", "v", "q")
+  )) {
+    expect_error(
+      pmx_read_rxode2(do.call(lincmt, as.list(names))),
+      class = "zupmxio_parse_error",
+      label = paste(names, collapse = ",")
+    )
+  }
+  # The spellings the reader maps still read.
+  for (names in list(
+    c("cl", "v"),
+    c("cl", "v", "q", "vp"),
+    c("cl", "v", "q", "vp", "q2", "vp2", "ka"),
+    c("CL", "V2", "Q", "V3", "KA"),
+    c("CL", "V1", "Q2", "V2", "Q3", "V3")
+  )) {
+    expect_s3_class(
+      pmx_read_rxode2(do.call(lincmt, as.list(names))),
+      "zupmxio_model"
+    )
+  }
+})

@@ -528,6 +528,37 @@ rxode2_read_residual <- function(x, stmt, reader) {
   )
 }
 
+# Names rxode2's linCmt() reads beside a clearance and a volume, probed
+# with rxode2 5.1.8: each changes its solution or makes it refuse.
+rxode2_lincmt_reads <- c(
+  "cl",
+  "v",
+  "vc",
+  "v1",
+  "v2",
+  "v3",
+  "v4",
+  "vp",
+  "vp1",
+  "vp2",
+  "vt",
+  "vt1",
+  "vt2",
+  "vss",
+  "q",
+  "q1",
+  "q2",
+  "q3",
+  "q4",
+  "cld",
+  "cld1",
+  "cld2",
+  "ke",
+  "kel",
+  "k10",
+  "ka"
+)
+
 rxode2_read_lincmt <- function(targets, reader) {
   lower <- tolower(targets)
   found <- lapply(rxode2_lincmt_aliases(lower), function(alias) {
@@ -546,6 +577,21 @@ rxode2_read_lincmt <- function(targets, reader) {
     all(c("q2", "vp2") %in% names(found))
   keep <- c("cl", "v", "q", "vp", "q2", "vp2")[seq_len(2 * ncmt)]
   depot <- "ka" %in% names(found)
+  # rxode2 reads more spellings than the aliases map (cl, v, q, v2 is two
+  # compartments to it). A name it would read that the closed form does
+  # not hold changes the model, so it is refused (#180).
+  used <- found[c(keep, if (depot) "ka")]
+  unread <- targets[lower %in% rxode2_lincmt_reads & !targets %in% used]
+  if (length(unread) > 0) {
+    reader$refuse(
+      as.symbol(unread[[1]]),
+      sprintf(
+        "linCmt() parameters spelled as one of rxode2's styles (`%s` is read by linCmt() but not as any of %s)",
+        unread[[1]],
+        paste(used, collapse = ", ")
+      )
+    )
+  }
   list(
     type = "closed",
     ncmt = ncmt,
