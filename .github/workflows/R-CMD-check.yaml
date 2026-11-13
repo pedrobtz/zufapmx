@@ -42,6 +42,10 @@ jobs:
       # about 16 minutes. Pull requests check Ubuntu R-release only and the
       # containers run in the full profile on main (roadmap Stage 1).
       quick-containers: '[]'
+      # One R-devel container: zupmxio has no compiled code, so the other
+      # compilers add little. clang23 keeps Linux R-devel and compiles the
+      # C++ and C the writers emit, which the engine tests build (#157).
+      containers: '["clang23"]'
       # A runner leg where an engine or oracle failed to install fails
       # instead of skipping their tests (tests/testthat/helper-engines.R).
       # NOT_CRAN=true makes the containers and nold run the engine tests
