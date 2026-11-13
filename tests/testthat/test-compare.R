@@ -616,3 +616,49 @@ test_that("a fixed-format small value does not loosen the other points (#147)", 
   expect_false(cmp$pass)
   expect_equal(cmp$predictions$pass, c(FALSE, FALSE, FALSE, TRUE))
 })
+
+test_that("the endpoint column is matched exactly (#152)", {
+  local_fake_engines()
+  testthat::local_mocked_bindings(
+    engine_rxode2 = function(text, data, etas) {
+      obs <- data[data$evid == 0, ]
+      data.frame(id = obs$id, time = obs$time, y = 1000, Y = obs$time)
+    }
+  )
+  m <- read_ctl(ctl_advan1())
+
+  cmp <- pmx_compare(m, m, pmx_design(n = 0, regimens = "single"))
+
+  expect_true(cmp$pass)
+  expect_equal(cmp$predictions$a, cmp$predictions$time)
+})
+
+test_that("tables with no observation records fail with a reason (#156)", {
+  local_fake_engines()
+  df <- table_single_dose(numeric(), numeric())
+  tables <- pmx_read_tables(local_nm_table(df))
+
+  cmp <- expect_no_warning(pmx_compare(tables, read_ctl(ctl_advan1())))
+
+  expect_false(cmp$pass)
+  expect_match(cmp$reason, "no observation")
+})
+
+test_that("a passing comparison reports its largest relative deviation as worst (#161)", {
+  local_fake_engines(
+    mrgsolve = function(time, id) {
+      time * (1 + c(2e-7, 5e-7, 1e-7)[(time %% 3) + 1])
+    }
+  )
+  m <- read_ctl(ctl_advan1())
+
+  cmp <- pmx_compare(
+    m,
+    pmx_write_rxode2(m),
+    pmx_design(n = 0, regimens = "single")
+  )
+
+  expect_true(cmp$pass)
+  expect_true(all(cmp$predictions$abs > cmp$atol))
+  expect_equal(cmp$worst$rel, max(cmp$predictions$rel))
+})

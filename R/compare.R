@@ -232,8 +232,11 @@ compare_tables <- function(t, side, at, tol, atol) {
     ncol(omega),
     dimnames = list(NULL, colnames(omega))
   )
-  model <- engine_simulate(side, data, etas)
   obs <- r[r$evid == 0, ]
+  if (nrow(obs) == 0) {
+    return(compare_failure("The tables hold no observation records."))
+  }
+  model <- engine_simulate(side, data, etas)
   table <- obs$pred
   points <- compare_points(
     "table",
