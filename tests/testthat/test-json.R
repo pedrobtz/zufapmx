@@ -247,3 +247,45 @@ test_that("non-ASCII names survive JSON in any locale", {
     }
   }
 })
+
+test_that("components of the wrong JSON type are parse errors (#151)", {
+  skip_if_no_engine("zujson")
+  good <- pmx_write_json(model_onecmt_mm(), pretty = FALSE)
+  cases <- c(
+    parameters = '{"zufapmx":"model","version":1,"parameters":5}',
+    random_effects = sub(
+      '"random_effects":\\{.*?"iov":\\{[^}]*\\}\\}',
+      '"random_effects":"x"',
+      good,
+      perl = TRUE
+    ),
+    structure = sub(
+      '"structure":\\{[^}]*\\{[^}]*\\}\\}',
+      '"structure":"x"',
+      good,
+      perl = TRUE
+    ),
+    individual = sub(
+      '"individual":\\[[^]]*\\]',
+      '"individual":{"a":1}',
+      good,
+      perl = TRUE
+    )
+  )
+  cases[["parameters"]] <- sub(
+    '"zufapmx"',
+    '"zupmxio"',
+    cases[["parameters"]],
+    fixed = TRUE
+  )
+  for (case in names(cases)) {
+    expect_false(identical(cases[[case]], good), label = case)
+    file <- withr::local_tempfile(fileext = ".json")
+    writeLines(cases[[case]], file)
+    expect_error(
+      pmx_read_json(file),
+      class = "zupmxio_parse_error",
+      label = case
+    )
+  }
+})

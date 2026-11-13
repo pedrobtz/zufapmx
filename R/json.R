@@ -64,9 +64,18 @@ pmx_read_json <- function(file) {
       json_error(file, sprintf("not JSON (%s)", conditionMessage(e)))
     }
   )
+  # Any failure to build the model from the document is the document's:
+  # indexing a component of the wrong JSON type raises base errors (#151).
   model <- tryCatch(
     json_unmodel(x, file),
-    zupmxio_model_error = function(e) json_error(file, conditionMessage(e))
+    zupmxio_parse_error = function(e) stop(e),
+    zupmxio_model_error = function(e) json_error(file, conditionMessage(e)),
+    error = function(e) {
+      json_error(
+        file,
+        sprintf("not a zupmxio model (%s)", conditionMessage(e))
+      )
+    }
   )
   model
 }
