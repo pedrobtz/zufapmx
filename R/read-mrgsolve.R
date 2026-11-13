@@ -314,7 +314,9 @@ mrg_read <- function(file) {
       estimates = estimates,
       hash = unname(tools::md5sum(file)),
       fidelity = if (length(losses) == 0) "exact" else "lossy",
-      losses = unique(losses)
+      losses = unique(losses),
+      # The text read, which pmx_compare() can simulate as it is (D26).
+      source = lines
     )
   )
 }

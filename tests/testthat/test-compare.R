@@ -727,3 +727,31 @@ test_that("a translation off by ten times tol fails through the engines (#165)",
     pmx_compare(m, w, pmx_design(n = 0, regimens = "single"), tol = 1e-4)$pass
   )
 })
+
+test_that("a model runs its own source when its engine may run it (#170)", {
+  local_fake_engines()
+  file <- corpus_file("onecmt-oral", "model.cpp")
+  mrg <- pmx_read_mrgsolve(file)
+  rx <- corpus_rxode2_model("onecmt-oral")
+  d <- pmx_design(n = 0, regimens = "single")
+
+  cmp <- pmx_compare(mrg, pmx_write_rxode2(mrg), d)
+  expect_equal(cmp$sides$a$engine, "mrgsolve")
+  expect_match(cmp$sides$a$origin, "mrgsolve source, simulated as read")
+  expect_identical(cmp$sides$a$text, readLines(file))
+
+  cmp <- pmx_compare(rx, pmx_write_mrgsolve(rx), d)
+  expect_match(cmp$sides$a$origin, "rxode2 source, simulated as read")
+
+  # D4: not on the engine of the writer under test.
+  cmp <- pmx_compare(mrg, pmx_write_mrgsolve(mrg), d)
+  expect_equal(cmp$sides$a$engine, "rxode2")
+  expect_match(cmp$sides$a$origin, "written to rxode2 by zupmxio")
+
+  # An edited model is not its source any more.
+  edited <- unclass(mrg)
+  edited$parameters$init[[1]] <- edited$parameters$init[[1]] * 2
+  edited <- do.call(new_model, edited)
+  cmp <- pmx_compare(edited, pmx_write_rxode2(edited), d)
+  expect_match(cmp$sides$a$origin, "written to mrgsolve by zupmxio")
+})

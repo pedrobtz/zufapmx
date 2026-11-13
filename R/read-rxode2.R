@@ -122,7 +122,9 @@ rxode2_read_body <- function(code_body, source) {
       estimates = NA_character_,
       hash = NA_character_,
       fidelity = if (length(reader$losses()) == 0) "exact" else "lossy",
-      losses = reader$losses()
+      losses = reader$losses(),
+      # The function read, which pmx_compare() can simulate as it is (D26).
+      source = c("function()", deparse(code_body, width.cutoff = 500L))
     )
   )
 }
