@@ -771,10 +771,12 @@ test_that("linCmt() spellings the reader cannot map are refused (#180)", {
       "cp <- linCmt()",
       "cp ~ prop(sd)"
     )
-    f <- eval(parse(text = sprintf(
-      "function() { ini({ sd <- 0.1 }); model({ %s }) }",
-      paste(stmts, collapse = "; ")
-    )))
+    f <- eval(parse(
+      text = sprintf(
+        "function() { ini({ sd <- 0.1 }); model({ %s }) }",
+        paste(stmts, collapse = "; ")
+      )
+    ))
     f
   }
   # rxode2 reads each of these as two or three compartments.

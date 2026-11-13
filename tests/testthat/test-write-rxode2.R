@@ -330,13 +330,19 @@ test_that("names rxode2 gives a meaning of its own are renamed (#181)", {
   expect_false(any(grepl("^ *TLAST <-", w$text)))
   expect_true(any(grepl("x_TLAST <-", w$text, fixed = TRUE)))
 
-  mrg <- read_cpp(cpp_onecmt(extra = "$PARAM DV = 2", main = "double CLX = CL * DV;"))
+  mrg <- read_cpp(cpp_onecmt(
+    extra = "$PARAM DV = 2",
+    main = "double CLX = CL * DV;"
+  ))
   expect_true(any(grepl("x_DV", pmx_write_rxode2(mrg)$text, fixed = TRUE)))
 
   skip_on_cran()
   skip_if_no_engine("rxode2")
   skip_if_no_engine("mrgsolve")
-  m <- read_ctl(ctl_advan1(cl = "TLAST = THETA(1)", pk = "CL = TLAST * EXP(ETA(1))"))
+  m <- read_ctl(ctl_advan1(
+    cl = "TLAST = THETA(1)",
+    pk = "CL = TLAST * EXP(ETA(1))"
+  ))
   expect_true(pmx_compare(m, pmx_write_rxode2(m), pmx_design(n = 1))$pass)
 })
 
@@ -349,7 +355,12 @@ test_that("unused parameters and random effects are dropped, as a loss (#183)", 
   m <- read_ctl(sub(
     "$OMEGA 0.09 0.09",
     "$OMEGA 0.09 0.09 0.04",
-    sub("$THETA (0, 1) (0, 4) (0, 50)", "$THETA (0, 1) (0, 4) (0, 50) (0, 7)", ctl_onecmt(), fixed = TRUE),
+    sub(
+      "$THETA (0, 1) (0, 4) (0, 50)",
+      "$THETA (0, 1) (0, 4) (0, 50) (0, 7)",
+      ctl_onecmt(),
+      fixed = TRUE
+    ),
     fixed = TRUE
   ))
   expect_equal(nrow(pmx_parameters(m)), 4)
@@ -361,5 +372,7 @@ test_that("unused parameters and random effects are dropped, as a loss (#183)", 
   expect_true(any(grepl("ETA3", pmx_losses(w))))
   expect_false(any(grepl("\\b(THETA4|ETA3)\\b", w$text)))
   skip_if_no_engine("rxode2")
-  expect_no_error(suppressMessages(rxode2::rxode2(eval(parse(text = w$text)[[1]]))))
+  expect_no_error(suppressMessages(rxode2::rxode2(eval(parse(text = w$text)[[
+    1
+  ]]))))
 })
