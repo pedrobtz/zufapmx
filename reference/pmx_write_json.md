@@ -4,7 +4,7 @@
 `pmx_read_json()` reads one back. The document holds the model's seven
 components as data, so a model read from JSON is the model that was
 written: the same parameters, statements, provenance and all. It is
-zupmxio's own representation, not a file standard (design D3).
+zupmxio's own representation, not a file standard.
 
 ## Usage
 
@@ -53,6 +53,12 @@ Other readers:
 [`pmx_read_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_nonmem.md),
 [`pmx_read_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_rxode2.md),
 [`pmx_read_tables()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_tables.md)
+
+Other writers:
+[`pmx_fidelity()`](https://pedrobtz.github.io/zupmxio/reference/pmx_fidelity.md),
+[`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_mrgsolve.md),
+[`pmx_write_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_nonmem.md),
+[`pmx_write_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_rxode2.md)
 
 ## Examples
 

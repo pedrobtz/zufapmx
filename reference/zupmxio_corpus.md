@@ -46,6 +46,13 @@ A data frame with one row per entry, ordered by `id`:
 
   The entry's directory.
 
+## See also
+
+Other comparison:
+[`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md),
+[`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md),
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
+
 ## Examples
 
 ``` r

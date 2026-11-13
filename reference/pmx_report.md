@@ -35,7 +35,8 @@ The report's lines, invisibly.
 
 Other comparison:
 [`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md),
-[`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md)
+[`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md),
+[`zupmxio_corpus()`](https://pedrobtz.github.io/zupmxio/reference/zupmxio_corpus.md)
 
 ## Examples
 

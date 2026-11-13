@@ -83,7 +83,8 @@ always off: a comparison is of predictions, not of noise.
 
 Other comparison:
 [`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md),
-[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md),
+[`zupmxio_corpus()`](https://pedrobtz.github.io/zupmxio/reference/zupmxio_corpus.md)
 
 ## Examples
 

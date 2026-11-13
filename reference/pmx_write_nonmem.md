@@ -46,6 +46,7 @@ lists the standard data items and the model's covariates. No
 
 Other writers:
 [`pmx_fidelity()`](https://pedrobtz.github.io/zupmxio/reference/pmx_fidelity.md),
+[`pmx_write_json()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_json.md),
 [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_mrgsolve.md),
 [`pmx_write_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_rxode2.md)
 

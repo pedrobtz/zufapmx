@@ -38,6 +38,7 @@ stops with an error of class `zupmxio_write_error` instead.
 ## See also
 
 Other writers:
+[`pmx_write_json()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_json.md),
 [`pmx_write_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_mrgsolve.md),
 [`pmx_write_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_nonmem.md),
 [`pmx_write_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_rxode2.md)

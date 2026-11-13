@@ -25,10 +25,11 @@ pmx_read_tables(file, prediction = "PRED")
 ## Value
 
 A `zupmxio_tables` object: a list with `records`, a data frame with
-columns `id`, `time`, `evid`, `amt`, `cmt`, `rate`, `ii`, `addl`, `ss`
-and `pred` followed by the table's other columns under their own names;
-`prediction`, the column read as `pred`; `digits`, the significant
-digits of the prediction column; and `files`.
+columns `id`, `time`, `evid`, `amt`, `cmt`, `rate`, `ii`, `addl`, `ss`,
+`pred` and `resolution` (half a unit in the last place each prediction
+is printed to), followed by the table's other columns under their own
+names; `prediction`, the column read as `pred`; `digits`, the fewest
+significant digits a non-zero prediction is printed with; and `files`.
 
 ## Details
 
@@ -42,16 +43,19 @@ The records need `ID`, `TIME` and the prediction column. `AMT`, `EVID`,
 `MDV`, `CMT`, `RATE`, `II`, `ADDL` and `SS` are read when present, with
 NONMEM's defaults when not. Without `EVID`, a record with a positive
 `AMT` is a dose and any other record with `MDV` 0 (or no `MDV`) is an
-observation. Records that are neither are dropped, and `EVID` 3 and 4
-(resets) are refused. Every other column is kept, so the model's
+observation. Other records (`EVID` 2) are kept: a time-varying covariate
+can change on one, and the engines read it there, as NONMEM does. `EVID`
+3 and 4 (resets) are refused. Every other column is kept, so the model's
 covariates can come from the table. Column names match without regard to
 case.
 
 The prediction column should be `PRED`, NONMEM's population prediction:
 the comparison simulates the model's typical subject, every random
-effect at zero (design Q1). NONMEM prints a fixed number of significant
-digits, 5 by default; the reader records it, and the comparison accepts
-a prediction that rounds to the table's value.
+effect at zero; individual predictions are not compared. NONMEM prints a
+fixed number of significant digits, 5 by default; the reader records
+each value's precision, and the comparison accepts a prediction that
+rounds to that value. Fortran's exponent forms (`1.2D+00`, `1.2345-100`)
+are read too.
 
 Tables are read with the zucsv package when it is installed, and with
 base R otherwise; both give the same result.
@@ -80,5 +84,5 @@ writeLines(c(
 pmx_read_tables(file)
 #> <zupmxio tables> 1 subject, 1 dose and 1 observation records
 #> Prediction: `PRED`, 5 significant digits.
-#> From file18784b026723.tab.
+#> From file188c668b994a.tab.
 ```

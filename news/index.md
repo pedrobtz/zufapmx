@@ -2,6 +2,63 @@
 
 ## zupmxio 0.0.0.9000
 
+- Readers refuse more models whose meaning they could not keep:
+
+  - a name reassigned after a derivative, dosing attribute or scale
+    reads it, whose value the representation could not hold
+    ([\#146](https://github.com/pedrobtz/zupmxio/issues/146));
+  - a format’s built-in names (`NEWIND`, `ICALL`, `EVID`, `tad`, …) read
+    as covariates, and NM-TRAN’s `CALLFL`
+    ([\#149](https://github.com/pedrobtz/zupmxio/issues/149)); `pi`,
+    `M_PI` and C++ `true` and `false` read as numbers;
+  - omega and sigma blocks that are not positive semi-definite
+    ([\#150](https://github.com/pedrobtz/zupmxio/issues/150));
+  - a NONMEM ODE model scaling a compartment it does not observe, since
+    without `DEFOBS` NONMEM observes compartment 1
+    ([\#148](https://github.com/pedrobtz/zupmxio/issues/148));
+  - an undeclared `EPS(n)` in a residual model
+    ([\#30](https://github.com/pedrobtz/zupmxio/issues/30)), unknown
+    mrgsolve `@options`
+    ([\#154](https://github.com/pedrobtz/zupmxio/issues/154)), and
+    `$PKMODEL advan = 2.9`
+    ([\#155](https://github.com/pedrobtz/zupmxio/issues/155)).
+
+- [`pmx_write_nonmem()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_nonmem.md)
+  marks the observed compartment of an ODE model with `DEFOBS`
+  ([\#148](https://github.com/pedrobtz/zupmxio/issues/148)), and
+  [`pmx_write_rxode2()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_rxode2.md)
+  writes ADVAN12 under names rxode2 simulates
+  ([\#176](https://github.com/pedrobtz/zupmxio/issues/176)).
+
+- [`pmx_read_mrgsolve()`](https://pedrobtz.github.io/zupmxio/reference/pmx_read_mrgsolve.md)
+  reads `$INIT` compartments
+  ([\#153](https://github.com/pedrobtz/zupmxio/issues/153)),
+  `$PARAM `[`@covariates`](https://github.com/covariates)
+  ([\#154](https://github.com/pedrobtz/zupmxio/issues/154)) and
+  multi-line `/* */` comments
+  ([\#68](https://github.com/pedrobtz/zupmxio/issues/68)).
+
+- [`pmx_compare()`](https://pedrobtz.github.io/zupmxio/reference/pmx_compare.md)
+  simulates a model’s own rxode2 function or mrgsolve file when it can
+  ([\#170](https://github.com/pedrobtz/zupmxio/issues/170)), keeps the
+  caller’s random numbers
+  ([\#162](https://github.com/pedrobtz/zupmxio/issues/162)), matches the
+  endpoint column exactly
+  ([\#152](https://github.com/pedrobtz/zupmxio/issues/152)), and
+  documents the errors it raises
+  ([\#163](https://github.com/pedrobtz/zupmxio/issues/163)). Against
+  tables, each value keeps its own printed precision, so a fixed-format
+  small value no longer loosens the rest
+  ([\#147](https://github.com/pedrobtz/zupmxio/issues/147)); EVID 2
+  records reach the engines
+  ([\#169](https://github.com/pedrobtz/zupmxio/issues/169)); and tables
+  without observations fail with a reason
+  ([\#156](https://github.com/pedrobtz/zupmxio/issues/156)).
+
+- [`pmx_read_json()`](https://pedrobtz.github.io/zupmxio/reference/pmx_write_json.md)
+  raises only parse errors for malformed documents
+  ([\#151](https://github.com/pedrobtz/zupmxio/issues/151)).
+
 - The package is renamed zupmxio, from zufapmx (design D24). Condition
   classes are `zupmxio_*_error` and the corpus is
   [`zupmxio_corpus()`](https://pedrobtz.github.io/zupmxio/reference/zupmxio_corpus.md);

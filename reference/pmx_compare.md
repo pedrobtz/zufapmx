@@ -129,6 +129,21 @@ the result says where the models differ. Models that cannot be compared
 point by point, because their numbers of random effects differ, fail
 with a `reason` and no predictions.
 
+## Errors
+
+A comparison never fails by raising an error, but these do raise one:
+
+- `zupmxio_engine_error`: an engine is not installed, or fails,
+  including on a written text that does not compile.
+
+- `zupmxio_write_error`: no engine's writer can hold a model that has to
+  be written to run.
+
+- `zupmxio_model_error`: an argument is invalid; a model has more than
+  one endpoint; the design doses a compartment a model lacks; the design
+  (or the tables) holds no value for a model's covariate; a table record
+  names a compartment the model lacks.
+
 ## See also
 
 [`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
@@ -136,7 +151,8 @@ writes a comparison as Markdown.
 
 Other comparison:
 [`pmx_design()`](https://pedrobtz.github.io/zupmxio/reference/pmx_design.md),
-[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md)
+[`pmx_report()`](https://pedrobtz.github.io/zupmxio/reference/pmx_report.md),
+[`zupmxio_corpus()`](https://pedrobtz.github.io/zupmxio/reference/zupmxio_corpus.md)
 
 ## Examples
 

@@ -74,9 +74,11 @@ observations.</p>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>zupmxio_tables</code> object: a list with <code>records</code>, a data frame
 with columns <code>id</code>, <code>time</code>, <code>evid</code>, <code>amt</code>, <code>cmt</code>, <code>rate</code>, <code>ii</code>, <code>addl</code>,
-<code>ss</code> and <code>pred</code> followed by the table's other columns under their own
-names; <code>prediction</code>, the column read as <code>pred</code>; <code>digits</code>, the
-significant digits of the prediction column; and <code>files</code>.</p>
+<code>ss</code>, <code>pred</code> and <code>resolution</code> (half a unit in the last place each
+prediction is printed to), followed by the table's other columns under
+their own names; <code>prediction</code>, the column read as <code>pred</code>; <code>digits</code>, the
+fewest significant digits a non-zero prediction is printed with; and
+<code>files</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -89,15 +91,17 @@ one file must hold the same values in each.</p>
 <code>MDV</code>, <code>CMT</code>, <code>RATE</code>, <code>II</code>, <code>ADDL</code> and <code>SS</code> are read when present, with
 NONMEM's defaults when not. Without <code>EVID</code>, a record with a positive
 <code>AMT</code> is a dose and any other record with <code>MDV</code> 0 (or no <code>MDV</code>) is an
-observation. Records that are neither are dropped, and <code>EVID</code> 3 and 4
-(resets) are refused. Every other column is kept, so the model's
+observation. Other records (<code>EVID</code> 2) are kept: a time-varying covariate
+can change on one, and the engines read it there, as NONMEM does. <code>EVID</code>
+3 and 4 (resets) are refused. Every other column is kept, so the model's
 covariates can come from the table. Column names match without regard
 to case.</p>
 <p>The prediction column should be <code>PRED</code>, NONMEM's population prediction:
 the comparison simulates the model's typical subject, every random
-effect at zero (design Q1). NONMEM prints a fixed number of significant
-digits, 5 by default; the reader records it, and the comparison accepts
-a prediction that rounds to the table's value.</p>
+effect at zero; individual predictions are not compared. NONMEM prints a fixed number of significant
+digits, 5 by default; the reader records each value's precision, and
+the comparison accepts a prediction that rounds to that value. Fortran's
+exponent forms (<code>1.2D+00</code>, <code>1.2345-100</code>) are read too.</p>
 <p>Tables are read with the zucsv package when it is installed, and with
 base R otherwise; both give the same result.</p>
     </div>
@@ -123,7 +127,7 @@ base R otherwise; both give the same result.</p>
 <span class="r-in"><span><span class="fu">pmx_read_tables</span><span class="op">(</span><span class="va">file</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zupmxio tables&gt; 1 subject, 1 dose and 1 observation records</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Prediction: `PRED`, 5 significant digits.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> From file18784b026723.tab.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> From file188c668b994a.tab.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
