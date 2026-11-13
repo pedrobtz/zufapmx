@@ -710,3 +710,33 @@ test_that("mrgsolve's built-in names are refused or mapped, not covariates (#149
   expect_true(list(call("<-", quote(X), call("*", 2, pi))) %in% stmts)
   expect_true(list(call("<-", quote(B), 1)) %in% stmts)
 })
+
+test_that("$INIT declares compartments, in file order (#153)", {
+  model <- function(init, odes) {
+    c(
+      "$PARAM CL = 1, V = 10, KP = 0.1",
+      init,
+      "$CMT CENT",
+      "$ODE",
+      odes,
+      "dxdt_CENT = -CL / V * CENT;",
+      "$SIGMA 0.04",
+      "$TABLE",
+      "double IPRED = CENT / V;",
+      "double Y = IPRED * (1 + EPS(1));"
+    )
+  }
+  m <- read_cpp(model("$INIT PER = 0", "dxdt_PER = -KP * PER;"))
+  expect_equal(unclass(m)$structure$compartments, c("PER", "CENT"))
+  expect_null(unclass(m)$dosing$PER$initial)
+
+  m <- read_cpp(model("$INIT PER = 5", "dxdt_PER = -KP * PER;"))
+  expect_equal(unclass(m)$dosing$PER$initial, 5)
+  expect_equal(pmx_fidelity(pmx_write_mrgsolve(m)), "exact")
+
+  # A compartment with no derivative is refused, not dropped.
+  expect_error(
+    read_cpp(model("$INIT PER = 0", character())),
+    class = "zupmxio_parse_error"
+  )
+})

@@ -158,9 +158,11 @@ mrg_read <- function(file) {
   parameters <- rbind(params$parameters, thetas)
   losses <- c(losses, params$losses)
 
+  # $CMT and $INIT both declare compartments, numbered in file order
+  # (#153).
   layout <- mrg_compartments(
     block("PKMODEL"),
-    block("CMT"),
+    block("CMT", "INIT"),
     file,
     length(lines)
   )
@@ -922,7 +924,9 @@ mrg_random_effects <- function(blocks, thetas, file) {
 # The compartments: a $PKMODEL's canonical ones, with `rename` from the
 # file's names (DEPOT CENT) to them, or an ODE model's $CMT.
 mrg_compartments <- function(pkmodel, cmt_blocks, file, last_line) {
-  cmt_names <- unlist(lapply(cmt_blocks, mrg_cmt_names))
+  cmt_names <- unique(unlist(lapply(cmt_blocks, function(b) {
+    if (b$name == "INIT") names(mrg_assignments(b, file)) else mrg_cmt_names(b)
+  })))
   pkmodel_spec <- NULL
   if (length(pkmodel) > 0) {
     pkmodel_spec <- mrg_pkmodel(pkmodel[[1]], file)
