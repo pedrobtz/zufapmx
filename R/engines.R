@@ -145,7 +145,10 @@ engine_simulate <- function(side, data, etas) {
     zupmxio_error = function(e) stop(e),
     error = function(e) engine_error(side$engine, e, call = NULL)
   )
-  names(out) <- tolower(names(out))
+  # Engines spell id and time in either case; the endpoint is matched as
+  # spelled, so a variable `y` beside endpoint `Y` is not read (#152).
+  folded <- tolower(names(out)) %in% c("id", "time")
+  names(out)[folded] <- tolower(names(out)[folded])
   if (!"id" %in% names(out) && length(unique(data$id)) == 1) {
     # rxode2 leaves out the id of a single subject.
     out$id <- rep(data$id[[1]], nrow(out))
@@ -159,7 +162,7 @@ engine_simulate <- function(side, data, etas) {
     k <- sprintf("%d|%.15g", as.integer(id), time)
     paste(k, stats::ave(seq_along(k), k, FUN = seq_along))
   }
-  column <- tolower(endpoint)
+  column <- endpoint
   if (!column %in% names(out)) {
     return(rep(NA_real_, nrow(obs)))
   }
