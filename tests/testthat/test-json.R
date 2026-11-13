@@ -289,3 +289,26 @@ test_that("components of the wrong JSON type are parse errors (#151)", {
     )
   }
 })
+
+test_that("JSON counts straddle the integer range without a warning (#141)", {
+  skip_if_no_engine("zujson")
+  good <- pmx_write_json(model_twocmt_oral(), pretty = FALSE)
+  read_text <- function(text) {
+    file <- withr::local_tempfile(fileext = ".json")
+    writeLines(text, file)
+    pmx_read_json(file)
+  }
+  big <- .Machine$integer.max
+  for (v in c(big - 1, big, big + 1)) {
+    text <- sub('"version":1', sprintf('"version":%.0f', v), good, fixed = TRUE)
+    expect_no_warning(
+      expect_error(read_text(text), class = "zupmxio_parse_error"),
+      message = NULL
+    )
+    text <- sub('"ncmt":2', sprintf('"ncmt":%.0f', v), good, fixed = TRUE)
+    expect_no_warning(expect_error(
+      read_text(text),
+      class = "zupmxio_parse_error"
+    ))
+  }
+})
