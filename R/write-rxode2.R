@@ -35,6 +35,7 @@ pmx_write_rxode2 <- function(model) {
   losses <- character()
 
   m <- rxode2_write_sd_from_sigma(m)
+  m <- model_map(m, rxode2_write_powers)
   m <- rxode2_write_lincmt_parameters(m)
   m <- rxode2_write_lincmt_numbering(m)
   m <- rxode2_write_free_lincmt(m)
@@ -269,7 +270,9 @@ rxode2_write_ini <- function(m) {
   etas <- vapply(
     m$random_effects$omega,
     function(block) {
-      values <- block$matrix[upper.tri(block$matrix, diag = TRUE)]
+      # Estimates where the model has them, as for thetas (#182).
+      m <- block$estimate %||% block$matrix
+      values <- m[upper.tri(m, diag = TRUE)]
       paste(
         paste(block$names, collapse = " + "),
         "~",
@@ -281,8 +284,17 @@ rxode2_write_ini <- function(m) {
   c(params, etas)
 }
 
+# Exact digits: a standard deviation written for a sigma is squared when
+# read back, which doubles its rounding error (#182).
 rxode2_write_values <- function(values, fixed) {
-  text <- vapply(values, num_text, character(1))
+  text <- vapply(
+    values,
+    function(v) {
+      t <- as.character(v)
+      if (identical(as.numeric(t), v)) t else sprintf("%.17g", v)
+    },
+    character(1)
+  )
   if (fixed) {
     return(sprintf("fix(%s)", paste(text, collapse = ", ")))
   }
@@ -381,6 +393,19 @@ rxode2_write_residual <- function(residual, endpoint) {
       call = NULL
     )
   )
+}
+
+# rxode2's grammar refuses a^b^c, which R deparses for a^(b^c) since `^`
+# is right-associative; an explicit `(` keeps the parentheses (#187).
+rxode2_write_powers <- function(x) {
+  if (!is.call(x)) {
+    return(x)
+  }
+  x[-1] <- lapply(as.list(x)[-1], rxode2_write_powers)
+  if (is_call(x, "^") && is_call(x[[3]], "^")) {
+    x[[3]] <- call("(", x[[3]])
+  }
+  x
 }
 
 rxode2_write_stmt_lines <- function(stmts) {

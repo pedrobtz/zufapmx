@@ -119,7 +119,8 @@ as_written <- function(model, values, fixed_blocks) {
     has <- !is.na(p$estimate)
     p$init[has] <- p$estimate[has]
   }
-  p$estimate <- NA_real_
+  # rep(): a model with no parameters has no rows to assign (#185).
+  p$estimate <- rep(NA_real_, nrow(p))
   m$parameters <- p
   block <- function(b) {
     if (values == "final" && !is.null(b$estimate)) {

@@ -765,3 +765,14 @@ test_that("a table's subject IDs need not be integers (#173)", {
   expect_output(print(cmp), "subject 1.5")
   expect_true(any(grepl("subject 1.5", pmx_report(cmp))))
 })
+
+test_that("a NONMEM model with estimates compares with its translations (#182)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run2.ctl"))
+  d <- pmx_design(n = 2, regimens = c("single", "ss"))
+
+  expect_true(pmx_compare(m, pmx_write_mrgsolve(m), d)$pass)
+  expect_true(pmx_compare(m, pmx_write_rxode2(m), d)$pass)
+})

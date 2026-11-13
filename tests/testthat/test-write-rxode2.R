@@ -294,3 +294,29 @@ test_that("ADVAN12 is written under names rxode2's linCmt() reads (#176)", {
   skip_if_no_engine("mrgsolve")
   expect_true(pmx_compare(m, w, pmx_design(n = 1))$pass)
 })
+
+test_that("omega estimates are written, not initial values (#182)", {
+  m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run2.ctl"))
+  est <- pmx_omega(m, "estimate")
+  expect_false(isTRUE(all.equal(est, pmx_omega(m, "init"))))
+
+  w <- pmx_write_rxode2(m)
+
+  # The estimates are written, so the initial values are what is lost.
+  expect_equal(pmx_fidelity(w), "lossy")
+  back <- pmx_read_rxode2(eval(parse(text = w$text)[[1]]))
+  expect_equal(unname(pmx_omega(back, "init")), unname(est))
+})
+
+test_that("a chained power is written so rxode2 parses it (#187)", {
+  m <- read_ctl(ctl_onecmt(pk = "K2 = 2**3**2"))
+
+  w <- pmx_write_rxode2(m)
+
+  expect_faithful(w)
+  expect_true(any(grepl("2^(3^2)", w$text, fixed = TRUE)))
+  skip_if_no_engine("rxode2")
+  expect_no_error(suppressMessages(rxode2::rxode2(eval(parse(text = w$text)[[
+    1
+  ]]))))
+})

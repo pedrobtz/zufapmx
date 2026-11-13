@@ -335,6 +335,12 @@ validate_parameters <- function(x) {
       )
     }
   }
+  if (!all(is.finite(x$init))) {
+    model_abort(
+      "Parameter `%s` has an initial value that is not a finite number.",
+      x$name[!is.finite(x$init)][[1]]
+    )
+  }
   if (anyDuplicated(x$name)) {
     model_abort(
       "Parameter `%s` is defined twice.",
@@ -388,6 +394,12 @@ validate_block <- function(block) {
   }
   # A covariance matrix: semi-definite, so a variance fixed at zero is
   # allowed and a negative one, or a correlation past 1, is not (#150).
+  if (!all(is.finite(m))) {
+    model_abort(
+      "The block for %s holds a value that is not a finite number.",
+      paste(block$names, collapse = ", ")
+    )
+  }
   if (!block_semidefinite(m)) {
     model_abort(
       "The block for %s is not positive semi-definite.",
