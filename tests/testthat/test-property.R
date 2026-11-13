@@ -103,3 +103,33 @@ test_that("one- and two-compartment typical predictions are the closed forms", {
     expect_equal(cmp$predictions$b, expected, tolerance = 1e-7)
   }
 })
+
+test_that("rxode2 parses every rxode2 text the writer reports faithful (#183)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  withr::local_seed(20261116)
+  parses <- function(w, label) {
+    err <- tryCatch(
+      {
+        suppressMessages(rxode2::rxode2(eval(parse(text = w$text)[[1]])))
+        NULL
+      },
+      error = function(e) conditionMessage(e)
+    )
+    expect(is.null(err), sprintf("%s: rxode2 refuses the text: %s", label, err))
+  }
+  corpus <- zupmxio_corpus()
+  for (i in seq_len(nrow(corpus))) {
+    models <- corpus_models(corpus$path[[i]], corpus$id[[i]])
+    for (from in names(models)) {
+      parses(pmx_write_rxode2(models[[from]]), paste(corpus$id[[i]], from))
+    }
+  }
+  for (k in 1:40) {
+    spec <- random_closed_model()
+    parses(
+      pmx_write_rxode2(read_ctl(spec$lines)),
+      sprintf("model %d (ADVAN%d)", k, spec$advan)
+    )
+  }
+})
