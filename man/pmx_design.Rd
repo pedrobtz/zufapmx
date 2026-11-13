@@ -73,6 +73,7 @@ pmx_design(n = 5, regimens = c("single", "ss"), covariates = list(WT = 70))
 \seealso{
 Other comparison:
 \code{\link[=pmx_compare]{pmx_compare()}},
-\code{\link[=pmx_report]{pmx_report()}}
+\code{\link[=pmx_report]{pmx_report()}},
+\code{\link[=zupmxio_corpus]{zupmxio_corpus()}}
 }
 \concept{comparison}

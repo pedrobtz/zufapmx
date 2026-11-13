@@ -27,7 +27,7 @@ model is a \code{zupmxio_parse_error}.
 \code{pmx_read_json()} reads one back. The document holds the model's seven
 components as data, so a model read from JSON is the model that was
 written: the same parameters, statements, provenance and all. It is
-zupmxio's own representation, not a file standard (design D3).
+zupmxio's own representation, not a file standard.
 }
 \details{
 Statements and expressions are R code in strings (\code{"cl <- tcl * exp(eta.cl)"}), constants are numbers. JSON has no infinity, so
@@ -56,5 +56,12 @@ Other readers:
 \code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}},
 \code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}},
 \code{\link[=pmx_read_tables]{pmx_read_tables()}}
+
+Other writers:
+\code{\link[=pmx_fidelity]{pmx_fidelity()}},
+\code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}},
+\code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}},
+\code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}
 }
 \concept{readers}
+\concept{writers}

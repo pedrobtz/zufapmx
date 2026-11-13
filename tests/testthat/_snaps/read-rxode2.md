@@ -20,3 +20,11 @@
       Random effects: eta.vm on vm (exp), eta.v on v (exp)
       Endpoints: cp (proportional)
 
+# a parameter reassigned in model() is refused (#81, #82)
+
+    Code
+      pmx_read_rxode2(with(quote(cl <- cl * exp(eta.cl))))
+    Condition
+      Error:
+      ! with(quote(cl <- cl * exp(eta.cl))):NA:NA: `cl` is a parameter, random effect, compartment or time; it cannot be assigned.
+

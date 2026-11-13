@@ -1,4 +1,4 @@
-# every corpus entry's representation is stable
+# every corpus entry's representation is stable (#59, #93)
 
     Code
       cat(id, "read from", from, "\n")
@@ -1355,7 +1355,7 @@
       losses:
         
 
-# a lossy write prints what it lost
+# a lossy write prints what it lost (#59)
 
     Code
       print(w)

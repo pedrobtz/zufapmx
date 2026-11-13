@@ -121,7 +121,7 @@ test_that("constructs mrgsolve cannot hold are refused", {
   )
 })
 
-test_that("every dosing attribute round-trips through every writer", {
+test_that("every dosing attribute round-trips through every writer (#24, #106)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tka <- c(0, 1)
@@ -173,7 +173,7 @@ test_that("every dosing attribute round-trips through every writer", {
   expect_equal(unclass(back)$dosing, dosing)
 })
 
-test_that("every residual type round-trips through the mrgsolve writer", {
+test_that("every residual type round-trips through the mrgsolve writer (#41)", {
   tables <- list(
     additive = "double Y = IPRED + EPS(1);",
     proportional = "double Y = IPRED * (1 + EPS(1));",
@@ -205,7 +205,7 @@ test_that("written text is stable", {
   ))))
 })
 
-test_that("a lossy write is still checked against its source", {
+test_that("a lossy write is still checked against its source (#74)", {
   m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"), "ext")
   w <- pmx_write_mrgsolve(m)
 
@@ -222,7 +222,7 @@ test_that("a lossy write is still checked against its source", {
   )
 })
 
-test_that("no output holds two operators in a row, and ! binds its call", {
+test_that("no output holds two operators in a row, and ! binds its call (#75, #80)", {
   spelling <- c(cl = "cl", v = "v", wt = "WT")
   expect_equal(cpp_expr(quote(-(-cl) / v), spelling), "-(-cl) / v")
   expect_equal(cpp_expr(quote(cl * -2), spelling), "cl * (-2.0)")
@@ -255,7 +255,7 @@ test_that("no output holds two operators in a row, and ! binds its call", {
   expect_faithful(w)
 })
 
-test_that("C++ increment, decrement and compound assignment are refused", {
+test_that("C++ increment, decrement and compound assignment are refused (#75)", {
   for (main in c(
     "double K = --CL / V;",
     "CL--;",
@@ -270,7 +270,7 @@ test_that("C++ increment, decrement and compound assignment are refused", {
   }
 })
 
-test_that("names C++ or mrgsolve reserve are refused", {
+test_that("names C++ or mrgsolve reserve are refused (#120)", {
   m <- model_onecmt_mm()
   ind <- c(unclass(m)$individual, list(quote(return <- 1)))
   err <- expect_error(

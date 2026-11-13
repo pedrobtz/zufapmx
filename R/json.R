@@ -4,7 +4,7 @@
 #' `pmx_read_json()` reads one back. The document holds the model's seven
 #' components as data, so a model read from JSON is the model that was
 #' written: the same parameters, statements, provenance and all. It is
-#' zupmxio's own representation, not a file standard (design D3).
+#' zupmxio's own representation, not a file standard.
 #'
 #' Statements and expressions are R code in strings (`"cl <- tcl *
 #' exp(eta.cl)"`), constants are numbers. JSON has no infinity, so
@@ -23,6 +23,7 @@
 #'   given. `pmx_read_json()`: a model. A file that is not a zupmxio JSON
 #'   model is a `zupmxio_parse_error`.
 #' @family readers
+#' @family writers
 #' @export
 #' @examplesIf requireNamespace("zujson", quietly = TRUE)
 #' path <- system.file(
@@ -35,15 +36,8 @@
 #' identical(pmx_read_json(file), model)
 pmx_write_json <- function(model, file = NULL, pretty = TRUE) {
   check_model(model)
-  if (
-    !is.null(file) &&
-      (!is.character(file) || length(file) != 1 || is.na(file) || !nzchar(file))
-  ) {
-    zupmxio_abort("`file` must be a path or NULL.", "model")
-  }
-  if (!is.logical(pretty) || length(pretty) != 1 || is.na(pretty)) {
-    zupmxio_abort("`pretty` must be TRUE or FALSE.", "model")
-  }
+  check_path_or_null(file)
+  check_flag(pretty)
   json_require()
   text <- zujson::json_write(json_utf8(json_model(model)), pretty = pretty)
   if (is.null(file)) {
@@ -64,9 +58,18 @@ pmx_read_json <- function(file) {
       json_error(file, sprintf("not JSON (%s)", conditionMessage(e)))
     }
   )
+  # Any failure to build the model from the document is the document's:
+  # indexing a component of the wrong JSON type raises base errors (#151).
   model <- tryCatch(
     json_unmodel(x, file),
-    zupmxio_model_error = function(e) json_error(file, conditionMessage(e))
+    zupmxio_parse_error = function(e) stop(e),
+    zupmxio_model_error = function(e) json_error(file, conditionMessage(e)),
+    error = function(e) {
+      json_error(
+        file,
+        sprintf("not a zupmxio model (%s)", conditionMessage(e))
+      )
+    }
   )
   model
 }

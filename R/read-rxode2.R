@@ -122,7 +122,9 @@ rxode2_read_body <- function(code_body, source) {
       estimates = NA_character_,
       hash = NA_character_,
       fidelity = if (length(reader$losses()) == 0) "exact" else "lossy",
-      losses = reader$losses()
+      losses = reader$losses(),
+      # The function read, which pmx_compare() can simulate as it is (D26).
+      source = c("function()", deparse(code_body, width.cutoff = 500L))
     )
   )
 }
@@ -288,7 +290,8 @@ rxode2_lincmt_aliases <- function(lower) {
       v = "v2",
       q = c("q", "q3"),
       vp = "v3",
-      q2 = "q4",
+      # The writer spells ADVAN12's Q4 as Q2, which linCmt() reads (#176).
+      q2 = c("q4", "q2"),
       vp2 = "v4",
       ka = "ka"
     ))
@@ -321,6 +324,20 @@ rxode2_read_model <- function(stmts, reader) {
   assigns <- list()
   lincmt <- NULL
 
+  refuse_later_reads(
+    stmts,
+    function(x) rxode2_read_is_ddt(x[[2]]) || rxode2_read_is_dosing(x[[2]]),
+    function(name, x) {
+      reader$refuse(
+        as.symbol(name),
+        sprintf(
+          "no assignment of `%s` after `%s` reads it",
+          name,
+          expr_text(x[[2]])
+        )
+      )
+    }
+  )
   for (x in stmts) {
     if (is_call(x, "~")) {
       if (!is.symbol(x[[2]])) {
@@ -376,7 +393,13 @@ rxode2_read_model <- function(stmts, reader) {
   # It is taken out as the prediction only when nothing reads the endpoint
   # and no `if` reassigns it; otherwise the assignments stay statements and
   # the prediction is the endpoint itself.
-  read_elsewhere <- stmt_reads(assigns)
+  # Derivatives and dosing attributes read it too: `d/dt(effect)` over the
+  # concentration keeps the concentration a statement (#146).
+  read_elsewhere <- c(
+    stmt_reads(assigns),
+    unlist(lapply(derivatives, all.vars)),
+    unlist(lapply(dosing, function(d) lapply(d, all.vars)))
+  )
   conditional <- unlist(lapply(
     Filter(function(x) is_call(x, "if"), assigns),
     function(x) stmt_targets(list(x))

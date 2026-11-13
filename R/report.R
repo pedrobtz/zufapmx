@@ -36,12 +36,7 @@ pmx_report <- function(comparison, file = NULL, max_points = 20) {
       "model"
     )
   }
-  if (
-    !is.null(file) &&
-      (!is.character(file) || length(file) != 1 || is.na(file) || !nzchar(file))
-  ) {
-    zupmxio_abort("`file` must be a path or NULL.", "model")
-  }
+  check_path_or_null(file)
   check_count(max_points, 0, .Machine$integer.max)
 
   x <- comparison
@@ -136,11 +131,11 @@ report_results <- function(x, max_points) {
       out,
       sprintf(
         paste(
-          "Worst point: %s, subject %d, time %s: %s (a) against %s (b),",
+          "Worst point: %s, subject %s, time %s: %s (a) against %s (b),",
           "absolute deviation %s, relative %s."
         ),
         w$regimen,
-        w$id,
+        md_num(w$id, 15),
         md_num(w$time, 15),
         md_num(w$a, 10),
         md_num(w$b, 10),

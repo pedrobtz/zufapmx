@@ -1,7 +1,7 @@
 # Design §9: every corpus entry is a snapshot test of its representation,
 # as read from each format it is written in.
 
-test_that("every corpus entry's representation is stable", {
+test_that("every corpus entry's representation is stable (#59, #93)", {
   for (id in zupmxio_corpus()$id) {
     models <- corpus_models(dirname(corpus_file(id, "entry.dcf")), id)
     for (from in names(models)) {
@@ -14,7 +14,7 @@ test_that("every corpus entry's representation is stable", {
   }
 })
 
-test_that("a lossy write prints what it lost", {
+test_that("a lossy write prints what it lost (#59)", {
   m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run1.ctl"), "ext")
   w <- pmx_write_nonmem(m)
 

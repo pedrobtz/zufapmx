@@ -69,6 +69,15 @@ mrg_blocks_known <- c(
   "SET"
 )
 
+# The options the reader honours, by block. @correlation, @cor and
+# @cholesky are refused where they are read, with their own message.
+mrg_block_options_known <- list(
+  PARAM = c("@annotated", "@covariates"),
+  CMT = "@annotated",
+  OMEGA = c("@block", "@correlation", "@cor", "@cholesky"),
+  SIGMA = c("@block", "@correlation", "@cor", "@cholesky")
+)
+
 mrg_split <- function(lines, file) {
   lines <- mrg_strip_comments(lines)
   header <- "^\\s*(\\$([A-Za-z]+)|\\[\\s*([A-Za-z]+)\\s*\\])(.*)$"
@@ -106,6 +115,27 @@ mrg_split <- function(lines, file) {
     text <- lines[at]
     text[[1]] <- m[[5]]
     block_options <- regmatches(text, gregexpr("@[A-Za-z_]+", text))
+    # Only the options the reader honours: any other changes what a block
+    # means, and stripping it would read the block as something else (#154).
+    unknown <- setdiff(unlist(block_options), mrg_block_options_known[[name]])
+    if (length(unknown) > 0) {
+      k <- which(vapply(block_options, function(o) unknown[[1]] %in% o, NA))[[
+        1
+      ]]
+      parse_error(
+        file,
+        at[[k]],
+        1L,
+        seen = unknown[[1]],
+        message = sprintf(
+          "not translated: %s in $%s at line %d",
+          unknown[[1]],
+          name,
+          at[[k]]
+        ),
+        call = NULL
+      )
+    }
     list(
       name = name,
       lines = gsub("@[A-Za-z_]+", " ", text),
@@ -119,7 +149,8 @@ mrg_split <- function(lines, file) {
 mrg_strip_comments <- function(lines) {
   text <- paste(lines, collapse = "\n")
   # A /* */ comment keeps its new lines, so later lines keep their numbers.
-  comments <- gregexpr("/\\*.*?\\*/", text, perl = TRUE)
+  # (?s): a comment spans lines, and `.` stops at a newline without it.
+  comments <- gregexpr("(?s)/\\*.*?\\*/", text, perl = TRUE)
   regmatches(text, comments) <- lapply(regmatches(text, comments), function(m) {
     gsub("[^\n]", "", m)
   })
@@ -143,8 +174,17 @@ mrg_read <- function(file) {
   }
   losses <- c(losses, mrg_plugins(block("PLUGIN"), file))
 
-  params <- mrg_params(block("PARAM"), file)
-  losses <- c(losses, mrg_inputs(block("INPUT"), file))
+  # $PARAM @covariates names data items, as $INPUT does (#154).
+  covariate_blocks <- vapply(
+    blocks,
+    function(b) b$name == "PARAM" && "@covariates" %in% b$options,
+    logical(1)
+  )
+  params <- mrg_params(blocks[block_names == "PARAM" & !covariate_blocks], file)
+  losses <- c(
+    losses,
+    mrg_inputs(blocks[block_names == "INPUT" | covariate_blocks], file)
+  )
   thetas <- mrg_thetas(block("THETA"), file)
   random <- mrg_random_effects(
     block("OMEGA", "SIGMA", "NMXML", "NMEXT"),
@@ -158,9 +198,11 @@ mrg_read <- function(file) {
   parameters <- rbind(params$parameters, thetas)
   losses <- c(losses, params$losses)
 
+  # $CMT and $INIT both declare compartments, numbered in file order
+  # (#153).
   layout <- mrg_compartments(
     block("PKMODEL"),
-    block("CMT"),
+    block("CMT", "INIT"),
     file,
     length(lines)
   )
@@ -272,7 +314,9 @@ mrg_read <- function(file) {
       estimates = estimates,
       hash = unname(tools::md5sum(file)),
       fidelity = if (length(losses) == 0) "exact" else "lossy",
-      losses = unique(losses)
+      losses = unique(losses),
+      # The text read, which pmx_compare() can simulate as it is (D26).
+      source = lines
     )
   )
 }
@@ -433,7 +477,11 @@ mrg_inputs <- function(blocks, file) {
     items <- mrg_assignments(b, file, missing = TRUE)
     defaults <- defaults || any(!is.na(unlist(items)))
   }
-  if (defaults) "covariate default values ($INPUT)" else character()
+  if (defaults) {
+    "covariate default values ($INPUT, $PARAM @covariates)"
+  } else {
+    character()
+  }
 }
 
 # `name = value` pairs separated by commas or new lines, values numeric.
@@ -623,16 +671,30 @@ mrg_pkmodel <- function(b, file) {
   } else {
     strsplit(trimws(args$cmt), "[[:space:],]+")[[1]]
   }
+  # Whole numbers: as.integer() would read advan = 2.9 as ADVAN2 (#155).
+  whole <- function(x) {
+    is.numeric(x) && length(x) == 1 && is.finite(x) && x == round(x)
+  }
   if (!is.null(args$advan)) {
-    advan <- as.integer(args$advan)
-  } else {
-    ncmt <- as.integer(args$ncmt %||% 1L)
-    if (is.na(ncmt) || !ncmt %in% 1:3) {
+    if (!whole(args$advan)) {
       parse_error(
         file,
         b$line[[1]],
         1L,
-        seen = sprintf("ncmt = %s", args$ncmt),
+        seen = sprintf("advan = %s", format(args$advan)),
+        expected = "advan 1, 2, 3, 4, 11 or 12",
+        call = NULL
+      )
+    }
+    advan <- as.integer(args$advan)
+  } else {
+    ncmt <- args$ncmt %||% 1L
+    if (!whole(ncmt) || !ncmt %in% 1:3) {
+      parse_error(
+        file,
+        b$line[[1]],
+        1L,
+        seen = sprintf("ncmt = %s", format(args$ncmt)),
         expected = "ncmt 1, 2 or 3",
         call = NULL
       )
@@ -761,7 +823,7 @@ mrg_nonmem <- function(b, file) {
     )
   }
   est <- if (b$name == "NMXML") {
-    if (!has_zuxml()) {
+    if (!engine_available("zuxml")) {
       engine_error("zuxml", call = NULL)
     }
     nm_estimates_xml(path)
@@ -806,6 +868,17 @@ mrg_main <- function(stmts, compartments, rename, file, record) {
   macro_pattern <- paste(mrg_dosing_macros, collapse = "|")
   file_names <- c(names(rename), setdiff(compartments, rename))
   to_model <- function(cmt) rename[cmt] %|NA|% cmt
+  macro_or_init <- sprintf(
+    "^(%s)_(%s)$|^(%s)_0$",
+    macro_pattern,
+    paste(file_names, collapse = "|"),
+    paste(file_names, collapse = "|")
+  )
+  refuse_later_reads(
+    stmts,
+    function(x) grepl(macro_or_init, as.character(x[[2]])),
+    later_read_error(file, record)
+  )
   for (x in stmts) {
     target <- if (is_call(x, "<-")) as.character(x[[2]]) else ""
     m <- regmatches(
@@ -832,7 +905,7 @@ mrg_main <- function(stmts, compartments, rename, file, record) {
     paste(file_names, collapse = "|"),
     paste(file_names, collapse = "|")
   )
-  check_dosing_names(individual, function(n) grepl(pattern, n), file, record)
+  refuse_dosing_reads(individual, function(n) grepl(pattern, n), file, record)
   list(individual = individual, dosing = dosing)
 }
 
@@ -897,7 +970,9 @@ mrg_random_effects <- function(blocks, thetas, file) {
 # The compartments: a $PKMODEL's canonical ones, with `rename` from the
 # file's names (DEPOT CENT) to them, or an ODE model's $CMT.
 mrg_compartments <- function(pkmodel, cmt_blocks, file, last_line) {
-  cmt_names <- unlist(lapply(cmt_blocks, mrg_cmt_names))
+  cmt_names <- unique(unlist(lapply(cmt_blocks, function(b) {
+    if (b$name == "INIT") names(mrg_assignments(b, file)) else mrg_cmt_names(b)
+  })))
   pkmodel_spec <- NULL
   if (length(pkmodel) > 0) {
     pkmodel_spec <- mrg_pkmodel(pkmodel[[1]], file)

@@ -108,7 +108,7 @@ test_that("$THETA, $OMEGA and $SIGMA forms read", {
   expect_true(re$sigma[[1]]$fixed)
 })
 
-test_that("dosing attributes and IF blocks in $PK read", {
+test_that("dosing attributes and IF blocks in $PK read (#54, #106)", {
   m <- read_ctl(ctl_onecmt(
     pk = c(
       "ALAG1 = THETA(1) / 10",
@@ -129,7 +129,7 @@ test_that("dosing attributes and IF blocks in $PK read", {
   expect_true(is_call(unclass(m)$individual[[5]], "if"))
   expect_contains(
     unclass(m)$provenance$losses,
-    "values kept from earlier records by variables assigned only inside IF (D14)"
+    "values kept from earlier records by variables assigned only inside IF"
   )
 })
 
@@ -205,7 +205,7 @@ test_that("auto prefers run.xml through zuxml", {
 })
 
 test_that("auto falls back to .ext without zuxml", {
-  local_mocked_bindings(has_zuxml = function() FALSE)
+  local_mocked_bindings(engine_available = function(engine) engine != "zuxml")
   ctl <- test_path("fixtures", "nonmem", "run1.ctl")
 
   m <- pmx_read_nonmem(ctl)
@@ -223,7 +223,7 @@ test_that("auto reads no estimates when there are no output files", {
   )
 })
 
-test_that("dosing and scale assignments inside IF, or read as variables, are refused", {
+test_that("dosing and scale assignments inside IF, or read as variables, are refused (#25, #92)", {
   refused <- function(pk, seen) {
     # Statements point at their record, $PK on line 3.
     expect_refused(read_ctl(ctl_onecmt(pk = pk)), seen, 3)
@@ -235,7 +235,7 @@ test_that("dosing and scale assignments inside IF, or read as variables, are ref
   refused("A_0(5) = 1", "A_0(5)")
 })
 
-test_that("$ERROR uses the definitions in force where Y is assigned", {
+test_that("$ERROR uses the definitions in force where Y is assigned (#39)", {
   m <- read_ctl(ctl_onecmt(
     error = c("IPRED = F", "Y = IPRED * (1 + EPS(1))", "IPRED = 0")
   ))
@@ -246,7 +246,7 @@ test_that("$ERROR uses the definitions in force where Y is assigned", {
   )
 })
 
-test_that("$SIZES and $ERROR (ONLY OBSERVATIONS) are read as losses", {
+test_that("$SIZES and $ERROR (ONLY OBSERVATIONS) are read as losses (#48)", {
   lines <- ctl_onecmt()
   lines <- c(
     "$SIZES PD=50",
@@ -259,17 +259,17 @@ test_that("$SIZES and $ERROR (ONLY OBSERVATIONS) are read as losses", {
   expect_true("record options ($ERROR (ONLY OBSERVATIONS))" %in% losses)
 })
 
-test_that("estimate matrices keep their orientation from .ext and .lst", {
+test_that("estimate matrices keep their orientation from .ext and .lst (#42)", {
   expect_run2_estimates("ext")
   expect_run2_estimates("lst")
 })
 
-test_that("estimate matrices keep their orientation from run.xml", {
+test_that("estimate matrices keep their orientation from run.xml (#42, #121)", {
   skip_if_no_engine("zuxml")
   expect_run2_estimates("xml")
 })
 
-test_that("Y is assigned once, outside IF", {
+test_that("Y is assigned once, outside IF (#79)", {
   expect_error(
     read_ctl(ctl_onecmt(
       error = c("IPRED = F", "Y = IPRED * (1 + EPS(1))", "IF (KA.GT.100) Y = 0")
@@ -284,7 +284,7 @@ test_that("Y is assigned once, outside IF", {
   )
 })
 
-test_that("a Y that does not use F names its own prediction", {
+test_that("a Y that does not use F names its own prediction (#85)", {
   lines <- ctl_onecmt(error = c("IPRED = A(2) / V", "Y = IPRED * (1 + EPS(1))"))
   m <- read_ctl(lines[lines != "S2 = V"])
   y <- unclass(m)$observations$Y
@@ -297,7 +297,7 @@ test_that("a Y that does not use F names its own prediction", {
   )
 })
 
-test_that("scale and dosing names are assigned once", {
+test_that("scale and dosing names are assigned once (#84)", {
   for (pk in list(
     "S2 = S2 / 1000",
     c("ALAG1 = 1", "ALAG1 = 2"),
@@ -311,7 +311,7 @@ test_that("scale and dosing names are assigned once", {
   }
 })
 
-test_that("TSCALE, XSCALE and INITIALOFF are refused", {
+test_that("TSCALE, XSCALE and INITIALOFF are refused (#87)", {
   for (pk in c("TSCALE = 60", "XSCALE = 1000")) {
     expect_refused(read_ctl(ctl_onecmt(pk = pk)), sub(" .*", "", pk), info = pk)
   }
@@ -326,7 +326,7 @@ test_that("TSCALE, XSCALE and INITIALOFF are refused", {
   expect_equal(err$seen, "INITIALOFF")
 })
 
-test_that("time is T in $DES and TIME elsewhere", {
+test_that("time is T in $DES and TIME elsewhere (#83)", {
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   des <- sub("C2 = A(2) / V", "C2 = A(2) / V * TIME", lines, fixed = TRUE)
   err <- expect_error(read_ctl(des), class = "zupmxio_parse_error")
@@ -337,7 +337,7 @@ test_that("time is T in $DES and TIME elsewhere", {
   expect_false("t" %in% all.vars(unclass(m)$individual))
 })
 
-test_that("a derivative inside IF, or a scale of no compartment, is refused", {
+test_that("a derivative inside IF, or a scale of no compartment, is refused (#105)", {
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   expect_refused(
     read_ctl(sub(
@@ -356,12 +356,12 @@ test_that("a derivative inside IF, or a scale of no compartment, is refused", {
   )
 })
 
-test_that("other free symbols are recorded as covariates", {
+test_that("other free symbols are recorded as covariates (#30)", {
   m <- read_ctl(ctl_onecmt(pk = "X = WT / 70"))
   expect_equal(unclass(m)$provenance$covariates, "WT")
 })
 
-test_that("time is one symbol, spelled for each format and block (D15)", {
+test_that("time is one symbol, spelled for each format and block (D15) (#31)", {
   lines <- readLines(corpus_file("onecmt-oral-mm", "model.ctl"))
   lines <- sub(
     "VM = THETA(2) * EXP(ETA(1))",
@@ -389,7 +389,7 @@ test_that("time is one symbol, spelled for each format and block (D15)", {
   expect_error(pmx_write_rxode2(m), class = "zupmxio_write_error")
 })
 
-test_that("NONMEM records are refused with their position", {
+test_that("NONMEM records are refused with their position (#44, #45, #92)", {
   base <- ctl_onecmt()
 
   expect_refused(read_ctl(c("CL = 1", base)), "CL = 1", 1)
@@ -453,7 +453,7 @@ test_that("a combined F + F*EPS + EPS residual is recognised", {
   )
 })
 
-test_that("$THETA values must be in bound order", {
+test_that("$THETA values must be in bound order (#36)", {
   expect_refused(
     read_ctl(sub(
       "^\\$THETA .*",
@@ -464,7 +464,7 @@ test_that("$THETA values must be in bound order", {
   )
 })
 
-test_that("malformed control streams are parse errors, never bare R errors", {
+test_that("malformed control streams are parse errors, never bare R errors (#34, #35)", {
   expect_error(read_ctl(character()), class = "zupmxio_parse_error")
   expect_refused(read_ctl(ctl_onecmt(pk = "S0 = V")), "S0", 3)
   expect_refused(read_ctl(ctl_onecmt(pk = "DADT(1) = 1")), "DADT(1)", 3)
@@ -477,7 +477,7 @@ test_that("malformed control streams are parse errors, never bare R errors", {
   expect_refused(read_ctl(sub("DADT\\(2\\)", "DADT(3)", lines)), "DADT(3)", 14)
 })
 
-test_that("undeclared or fractional THETA and ETA indices are refused", {
+test_that("undeclared or fractional THETA and ETA indices are refused (#30)", {
   expect_error(
     read_ctl(ctl_onecmt(pk = "X = THETA(9)")),
     class = "zupmxio_parse_error"
@@ -489,5 +489,98 @@ test_that("undeclared or fractional THETA and ETA indices are refused", {
   expect_error(
     read_ctl(ctl_onecmt(pk = "X = THETA(1.5)")),
     class = "zupmxio_parse_error"
+  )
+})
+
+test_that("a name reassigned after a derivative, dosing attribute or scale reads it is refused (#146)", {
+  des <- c(
+    "$PROBLEM order",
+    "$SUBROUTINES ADVAN13 TOL=9",
+    "$MODEL COMP=(CENT, DEFDOSE, DEFOBS)",
+    "$PK",
+    "CL = THETA(1)",
+    "V = THETA(2)",
+    "S1 = V",
+    "$DES",
+    "K = CL / V",
+    "DADT(1) = -K * A(1)",
+    "K = 100",
+    "$ERROR",
+    "Y = F * (1 + EPS(1))",
+    "$THETA (0, 1) (0, 10)",
+    "$SIGMA 0.04"
+  )
+  expect_refused(read_ctl(des), seen = "K")
+  expect_refused(
+    read_ctl(ctl_onecmt(pk = c("FB = 0.5", "F1 = FB", "FB = 1"))),
+    seen = "FB"
+  )
+  expect_refused(read_ctl(ctl_onecmt(pk = "V = 2 * V")), seen = "V")
+  expect_s3_class(
+    read_ctl(ctl_onecmt(pk = c("FB = 0.5", "FB = 1", "F1 = FB"))),
+    "zupmxio_model"
+  )
+})
+
+test_that("an ODE model observes its DEFOBS compartment, or compartment 1 (#148)", {
+  ode <- function(model, scale) {
+    c(
+      "$PROBLEM defobs",
+      "$SUBROUTINES ADVAN13 TOL=9",
+      model,
+      "$PK",
+      "KA = THETA(1)",
+      "CL = THETA(2)",
+      "V = THETA(3)",
+      scale,
+      "$DES",
+      "DADT(1) = -KA * A(1)",
+      "DADT(2) = KA * A(1) - CL / V * A(2)",
+      "$ERROR",
+      "Y = F * (1 + EPS(1))",
+      "$THETA (0, 1) (0, 4) (0, 50)",
+      "$SIGMA 0.04"
+    )
+  }
+  # Without DEFOBS NONMEM observes compartment 1, unless the data's CMT says
+  # otherwise; a scale on compartment 2 relies on the data, so it is refused.
+  expect_refused(
+    read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT)", "S2 = V")),
+    seen = "S2"
+  )
+  expect_refused(
+    read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)", "S1 = V")),
+    seen = "S1"
+  )
+  expect_refused(
+    read_ctl(ode("$MODEL COMP=(DEPOT, DEFOBS) COMP=(CENT, DEFOBS)", "S2 = V")),
+    seen = "DEFOBS"
+  )
+  m <- read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)", "S2 = V"))
+  expect_identical(unclass(m)$observations$Y$prediction, quote(CENT / V))
+  m <- read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT)", "S1 = V"))
+  expect_identical(unclass(m)$observations$Y$prediction, quote(DEPOT / V))
+  m <- read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)", character()))
+  expect_identical(unclass(m)$observations$Y$prediction, quote(CENT))
+})
+
+test_that("NONMEM's built-in names are refused, not read as covariates (#149)", {
+  expect_refused(
+    read_ctl(ctl_onecmt(pk = c("X = 0", "IF (NEWIND.NE.2) X = 2"))),
+    seen = "NEWIND"
+  )
+  expect_refused(read_ctl(ctl_onecmt(pk = "X = ICALL")), seen = "ICALL")
+  expect_refused(read_ctl(ctl_onecmt(pk = "X = AMT")), seen = "AMT")
+  expect_refused(read_ctl(ctl_onecmt(pk = "CALLFL = -2")), seen = "CALLFL")
+  expect_equal(
+    unclass(read_ctl(ctl_onecmt(pk = "X = WT")))$provenance$covariates,
+    "WT"
+  )
+})
+
+test_that("an undeclared EPS index is refused (#30)", {
+  expect_refused(
+    read_ctl(ctl_onecmt(error = c("IPRED = F", "Y = IPRED + EPS(3)"))),
+    seen = "EPS3"
   )
 })

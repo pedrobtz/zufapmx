@@ -60,3 +60,17 @@ Errors:
   compile its own name.
 - **nonmem2mrgsolve** was not installed: installing it from GitHub needs
   the user's go-ahead. Its column fills when it is.
+
+## nonmem2rx and DEFOBS (2026-11-13)
+
+nonmem2rx 0.1.12 ignores `DEFOBS` in `$MODEL`: its parser stores it as the
+dose compartment
+([nlmixr2/nonmem2rx#289](https://github.com/nlmixr2/nonmem2rx/issues/289)).
+It then observes a compartment named `central`, or else compartment 1.
+NONMEM observes the `DEFOBS` compartment, and compartment 1 without one.
+The corpus's ODE entry names its observed compartment `CENTRAL`, so
+nonmem2rx agrees there. But nonmem2rx is not an oracle for zupmxio's NONMEM
+writer when the observed compartment has another name, as it does for a
+model read from mrgsolve (`CENT`). The writer marks the compartment with
+`DEFOBS` (#148), which NONMEM honours and nonmem2rx does not. #135 waits on
+the upstream fix, or on an oracle that reads `DEFOBS`.

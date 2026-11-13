@@ -2,7 +2,7 @@
 # with a parse error naming the construct. The models are GPL and are read
 # from the installed package, never copied into the corpus.
 
-test_that("nlmixr2lib models round-trip exactly or are refused", {
+test_that("nlmixr2lib models round-trip exactly or are refused (#56)", {
   # The sweep follows whatever nlmixr2lib CRAN has, so it runs off CRAN.
   skip_on_cran()
   skip_if_no_engine("nlmixr2lib")

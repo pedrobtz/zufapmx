@@ -78,7 +78,7 @@ test_that("DADT and A_0 are statement targets", {
   )
 })
 
-test_that("verbatim code is refused with its line", {
+test_that("verbatim code is refused with its line (#46)", {
   err <- expect_error(
     nm_parse_lines(c("CL = 1", "\"  CALL FOO")),
     class = "zupmxio_parse_error"
@@ -133,7 +133,7 @@ test_that("records split on $ and accept abbreviations", {
   )
 })
 
-test_that("NM-TRAN names are case-insensitive", {
+test_that("NM-TRAN names are case-insensitive (#28)", {
   expect_equal(
     nm_parse_lines(c("Cl = Theta(2) * exp(Eta(1))", "k = CL / v")),
     list(quote(CL <- THETA2 * exp(ETA1)), quote(K <- CL / V))
@@ -148,7 +148,7 @@ test_that("NM-TRAN names are case-insensitive", {
   )
 })
 
-test_that("record names need three letters, and an ambiguous one says so", {
+test_that("record names need three letters, and an ambiguous one says so (#49)", {
   expect_error(
     nm_split(c("$PROB x", "$OM 0.1"), "t.ctl"),
     class = "zupmxio_parse_error"
@@ -165,7 +165,7 @@ test_that("record names need three letters, and an ambiguous one says so", {
   expect_equal(err$seen, "$SI")
 })
 
-test_that("nothing but ENDIF follows a plain ELSE", {
+test_that("nothing but ENDIF follows a plain ELSE (#86)", {
   expect_error(
     nm_parse_lines(c(
       "IF (KA.GT.1) THEN",
@@ -192,12 +192,12 @@ test_that("nothing but ENDIF follows a plain ELSE", {
   )
 })
 
-test_that("compartment indices are whole numbers", {
+test_that("compartment indices are whole numbers (#86)", {
   expect_error(nm_parse_lines("DADT(1.7) = 0"), class = "zupmxio_parse_error")
   expect_error(nm_parse_lines("A_0(1.0) = 0"), class = "zupmxio_parse_error")
 })
 
-test_that("abbreviated code is refused with its position", {
+test_that("abbreviated code is refused with its position (#44)", {
   err <- expect_error(
     nm_parse_lines(c("X = 1", "ELSE")),
     class = "zupmxio_parse_error"

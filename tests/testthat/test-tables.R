@@ -32,6 +32,7 @@ test_that("a NONMEM table reads into records, with its precision", {
       "addl",
       "ss",
       "pred",
+      "resolution",
       "WT",
       "DV"
     )
@@ -83,16 +84,18 @@ test_that("without EVID, AMT and MDV say what a record is", {
 
   r <- pmx_read_tables(local_nm_table(df))$records
 
-  # The MDV 1 record without a dose is neither, and is dropped.
-  expect_equal(r$time, c(0, 1, 3))
-  expect_equal(r$evid, c(1L, 0L, 0L))
-  expect_equal(r$pred, c(0, 1, 2))
+  # The MDV 1 record without a dose is neither: EVID 2, kept (#169).
+  expect_equal(r$time, c(0, 1, 2, 3))
+  expect_equal(r$evid, c(1L, 0L, 2L, 0L))
+  expect_equal(r$pred, c(0, 1, 9, 2))
 })
 
-test_that("EVID 2 records are dropped and resets refused", {
+test_that("EVID 2 records are kept and resets refused (#169)", {
   df <- table_single_dose(c(1, 2), c(1, 2))
   df$EVID[[2]] <- 2
-  expect_equal(pmx_read_tables(local_nm_table(df))$records$time, c(0, 2))
+  r <- pmx_read_tables(local_nm_table(df))$records
+  expect_equal(r$time, c(0, 1, 2))
+  expect_equal(r$evid, c(1L, 2L, 0L))
 
   df$EVID[[2]] <- 3
   expect_error(
@@ -204,4 +207,34 @@ test_that("a table prints its subjects, records and precision", {
   path <- file.path(withr::local_tempdir(), "sdtab1")
   writeLines(nm_table_lines(table_single_dose(c(1, 2), c(1, 2))), path)
   expect_snapshot(pmx_read_tables(path))
+})
+
+test_that("each prediction keeps its own printed precision (#147)", {
+  file <- withr::local_tempfile(fileext = ".tab")
+  writeLines(
+    c(
+      "ID TIME AMT PRED",
+      "1 0 100 0",
+      "1 1 0 1.6070368",
+      "1 2 0 1.2345E+00",
+      "1 3 0 0.0000002",
+      "1 4 0 2.50",
+      "1 5 0 1.2345-100",
+      "1 6 0 12"
+    ),
+    file
+  )
+
+  t <- pmx_read_tables(file)
+
+  expect_equal(
+    t$records$pred,
+    c(0, 1.6070368, 1.2345, 2e-7, 2.5, 1.2345e-100, 12)
+  )
+  expect_equal(
+    t$records$resolution,
+    0.5 * c(1, 1e-7, 1e-4, 1e-7, 1e-2, 1e-104, 1)
+  )
+  # The fewest significant digits among non-zero values: 0.0000002 has 1.
+  expect_equal(t$digits, 1)
 })

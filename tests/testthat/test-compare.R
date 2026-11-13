@@ -344,7 +344,7 @@ test_that("both sides draw the same etas from the seed, and leave the RNG alone"
   dimnames(omega) <- list(c("ETA1", "ETA2"), c("ETA1", "ETA2"))
   d <- pmx_design(n = 3, seed = 5)
 
-  set.seed(99)
+  withr::local_seed(99)
   before <- .Random.seed
   etas <- compare_etas(list(a = omega, b = omega * 4), d)
   expect_identical(.Random.seed, before)
@@ -535,10 +535,9 @@ test_that("tables carry their subjects, covariates and repeated times", {
 
 test_that("a point agrees when the model rounds to the table's value", {
   expect_equal(
-    table_resolution(c(1.2345, -0.012345, 0), 5),
-    c(5e-5, 5e-7, 5e-5) * (1 + 1e-9)
+    table_resolution(c("1.2345E+00", "-1.2345E-02", "0.0000E+00", "12", "NaN")),
+    c(5e-5, 5e-7, 5e-5, 0.5, NA)
   )
-  expect_equal(table_resolution(1, NA), 0)
   obs <- data.frame(id = 1L, time = 1:3)
 
   p <- compare_points(
@@ -548,7 +547,7 @@ test_that("a point agrees when the model rounds to the table's value", {
     c(1.23455, 1.2344501, 1.234551),
     1e-7,
     0,
-    resolution = table_resolution(rep(1.2345, 3), 5)
+    resolution = table_resolution(rep("1.2345E+00", 3)) * (1 + 1e-9)
   )
 
   expect_equal(p$pass, c(TRUE, TRUE, FALSE))
@@ -593,4 +592,176 @@ test_that("a comparison with tables prints and reports its source", {
     cmp
     writeLines(utils::head(pmx_report(cmp), 32))
   })
+})
+
+test_that("a fixed-format small value does not loosen the other points (#147)", {
+  local_fake_engines(rxode2 = function(time, id) {
+    c(1.2070368, 1.5582794, 1.5387683, 2e-7)[time]
+  })
+  file <- withr::local_tempfile(fileext = ".tab")
+  writeLines(
+    c(
+      "ID TIME AMT EVID PRED",
+      "1 0 100 1 0",
+      "1 1 0 0 1.6070368",
+      "1 2 0 0 1.9582794",
+      "1 3 0 0 1.9387683",
+      "1 4 0 0 0.0000002"
+    ),
+    file
+  )
+
+  cmp <- pmx_compare(pmx_read_tables(file), read_ctl(ctl_advan1()))
+
+  expect_false(cmp$pass)
+  expect_equal(cmp$predictions$pass, c(FALSE, FALSE, FALSE, TRUE))
+})
+
+test_that("the endpoint column is matched exactly (#152)", {
+  local_fake_engines()
+  testthat::local_mocked_bindings(
+    engine_rxode2 = function(text, data, etas) {
+      obs <- data[data$evid == 0, ]
+      data.frame(id = obs$id, time = obs$time, y = 1000, Y = obs$time)
+    }
+  )
+  m <- read_ctl(ctl_advan1())
+
+  cmp <- pmx_compare(m, m, pmx_design(n = 0, regimens = "single"))
+
+  expect_true(cmp$pass)
+  expect_equal(cmp$predictions$a, cmp$predictions$time)
+})
+
+test_that("tables with no observation records fail with a reason (#156)", {
+  local_fake_engines()
+  df <- table_single_dose(numeric(), numeric())
+  tables <- pmx_read_tables(local_nm_table(df))
+
+  cmp <- expect_no_warning(pmx_compare(tables, read_ctl(ctl_advan1())))
+
+  expect_false(cmp$pass)
+  expect_match(cmp$reason, "no observation")
+})
+
+test_that("a passing comparison reports its largest relative deviation as worst (#161)", {
+  local_fake_engines(
+    mrgsolve = function(time, id) {
+      time * (1 + c(2e-7, 5e-7, 1e-7)[(time %% 3) + 1])
+    }
+  )
+  m <- read_ctl(ctl_advan1())
+
+  cmp <- pmx_compare(
+    m,
+    pmx_write_rxode2(m),
+    pmx_design(n = 0, regimens = "single")
+  )
+
+  expect_true(cmp$pass)
+  expect_true(all(cmp$predictions$abs > cmp$atol))
+  expect_equal(cmp$worst$rel, max(cmp$predictions$rel))
+})
+
+test_that("pmx_compare() leaves the caller's random number stream as it was (#162)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1())
+  w <- pmx_write_mrgsolve(m)
+  withr::local_seed(42)
+  before <- .Random.seed
+
+  pmx_compare(m, w, pmx_design(n = 2, regimens = "single"))
+
+  expect_identical(.Random.seed, before)
+})
+
+test_that("EVID 2 records carry time-varying covariates to the engines (#169)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1(
+    cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"
+  ))
+  k <- function(wt) 4 * (wt / 70)^0.75 / 50
+  # NONMEM integrates each interval with the next record's values: WT 140
+  # on (2, 3] from the EVID 2 record, then WT 70 on (3, 4].
+  c2 <- 2 * exp(-2 * k(70))
+  c4 <- c2 * exp(-k(140)) * exp(-k(70))
+  df <- data.frame(
+    ID = 1,
+    TIME = c(0, 2, 3, 4),
+    AMT = c(100, 0, 0, 0),
+    EVID = c(1, 0, 2, 0),
+    WT = c(70, 70, 140, 70),
+    PRED = c(0, c2, 0, c4)
+  )
+  tables <- pmx_read_tables(local_nm_table(df, digits = 9))
+  expect_equal(tables$records$evid, c(1L, 0L, 2L, 0L))
+
+  expect_true(pmx_compare(tables, m)$pass)
+  expect_true(pmx_compare(tables, pmx_write_mrgsolve(m))$pass)
+})
+
+test_that("a translation off by ten times tol fails through the engines (#165)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1())
+  w <- pmx_write_rxode2(m)
+  # V 50 to 50.0005: predictions move by about 1e-5 relative.
+  w$text <- sub(
+    "THETA2 <- c(0, 50)",
+    "THETA2 <- c(0, 50.0005)",
+    w$text,
+    fixed = TRUE
+  )
+
+  cmp <- pmx_compare(m, w, pmx_design(n = 0, regimens = "single"))
+
+  expect_false(cmp$pass)
+  expect_lt(cmp$worst$rel, 1e-4)
+  expect_gt(cmp$worst$rel, 1e-6)
+  expect_true(
+    pmx_compare(m, w, pmx_design(n = 0, regimens = "single"), tol = 1e-4)$pass
+  )
+})
+
+test_that("a model runs its own source when its engine may run it (#170)", {
+  local_fake_engines()
+  file <- corpus_file("onecmt-oral", "model.cpp")
+  mrg <- pmx_read_mrgsolve(file)
+  rx <- corpus_rxode2_model("onecmt-oral")
+  d <- pmx_design(n = 0, regimens = "single")
+
+  cmp <- pmx_compare(mrg, pmx_write_rxode2(mrg), d)
+  expect_equal(cmp$sides$a$engine, "mrgsolve")
+  expect_match(cmp$sides$a$origin, "mrgsolve source, simulated as read")
+  expect_identical(cmp$sides$a$text, readLines(file))
+
+  cmp <- pmx_compare(rx, pmx_write_mrgsolve(rx), d)
+  expect_match(cmp$sides$a$origin, "rxode2 source, simulated as read")
+
+  # D4: not on the engine of the writer under test.
+  cmp <- pmx_compare(mrg, pmx_write_mrgsolve(mrg), d)
+  expect_equal(cmp$sides$a$engine, "rxode2")
+  expect_match(cmp$sides$a$origin, "written to rxode2 by zupmxio")
+
+  # An edited model is not its source any more.
+  edited <- unclass(mrg)
+  edited$parameters$init[[1]] <- edited$parameters$init[[1]] * 2
+  edited <- do.call(new_model, edited)
+  cmp <- pmx_compare(edited, pmx_write_rxode2(edited), d)
+  expect_match(cmp$sides$a$origin, "written to mrgsolve by zupmxio")
+})
+
+test_that("a table's subject IDs need not be integers (#173)", {
+  local_fake_engines(rxode2 = function(time, id) time * 2)
+  tables <- pmx_read_tables(local_nm_table(table_single_dose(1, 1, id = 1.5)))
+  cmp <- pmx_compare(tables, read_ctl(ctl_advan1()))
+
+  expect_false(cmp$pass)
+  expect_output(print(cmp), "subject 1.5")
+  expect_true(any(grepl("subject 1.5", pmx_report(cmp))))
 })

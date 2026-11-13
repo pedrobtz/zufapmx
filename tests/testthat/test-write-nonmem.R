@@ -157,7 +157,7 @@ test_that("constructs NM-TRAN cannot hold are refused", {
   )
 })
 
-test_that("variables PREDPP reserves are renamed", {
+test_that("variables PREDPP reserves are renamed (#27)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tka <- c(0, 1)
@@ -185,7 +185,7 @@ test_that("variables PREDPP reserves are renamed", {
   expect_false(any(grepl("^F1 =", text)))
 })
 
-test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
+test_that("mrgsolve models written to NONMEM and on to rxode2 still predict (#32)", {
   skip_on_cran()
   skip_if_no_engine("rxode2")
   corpus <- zupmxio_corpus()
@@ -207,7 +207,7 @@ test_that("mrgsolve models written to NONMEM and on to rxode2 still predict", {
   }
 })
 
-test_that("whole numbers in NM-TRAN expressions carry a point", {
+test_that("whole numbers in NM-TRAN expressions carry a point (#53)", {
   expect_equal(nm_expr(quote(3 / 4 * x), c(x = "X")), "3.0 / 4.0 * X")
 })
 
@@ -218,7 +218,7 @@ test_that("written text is stable", {
   ))))
 })
 
-test_that("$INPUT lists the covariates", {
+test_that("$INPUT lists the covariates (#98)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -237,7 +237,7 @@ test_that("$INPUT lists the covariates", {
   )
 })
 
-test_that("bounds on a residual standard deviation are a loss in $SIGMA", {
+test_that("bounds on a residual standard deviation are a loss in $SIGMA (#100)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -261,7 +261,7 @@ test_that("bounds on a residual standard deviation are a loss in $SIGMA", {
   }
 })
 
-test_that("a residual standard deviation is written as its variance", {
+test_that("a residual standard deviation is written as its variance (#90)", {
   parts <- unclass(pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -281,19 +281,23 @@ test_that("a residual standard deviation is written as its variance", {
   expect_true("$SIGMA 0.04" %in% pmx_write_nonmem(m, "initial")$text)
 })
 
-test_that("a residual parameter that is not a fixed effect is refused", {
+test_that("a residual parameter that is not a fixed effect is refused (#105)", {
   parts <- unclass(model_twocmt_oral())
-  parts$observations$cp$residual$parameters <- "nope"
+  # A standard deviation the model computes: valid, but without a sigma.
+  parts$individual <- c(parts$individual, list(quote(sdv <- 0.1 * tv)))
+  parts$observations$cp$residual$parameters <- "sdv"
   parts$random_effects$sigma <- list()
   err <- expect_error(
     pmx_write_nonmem(do.call(new_model, parts)),
     class = "zupmxio_write_error"
   )
   expect_equal(err$location, "observations$cp$residual")
-  expect_equal(err$formats, character())
+  # A name nothing declares is refused by the validator (#30).
+  parts$observations$cp$residual$parameters <- "nope"
+  expect_error(do.call(new_model, parts), class = "zupmxio_model_error")
 })
 
-test_that("a model without random effects writes to every format", {
+test_that("a model without random effects writes to every format (#121)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -313,7 +317,7 @@ test_that("a model without random effects writes to every format", {
   expect_false(any(grepl("^\\$OMEGA", pmx_write_nonmem(m)$text)))
 })
 
-test_that("writer refusals name the construct and where to take it", {
+test_that("writer refusals name the construct and where to take it (#121)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -330,4 +334,14 @@ test_that("writer refusals name the construct and where to take it", {
   })
   expect_snapshot(pmx_write_nonmem(m), error = TRUE)
   expect_snapshot(pmx_write_mrgsolve(m), error = TRUE)
+})
+
+test_that("an ODE model is written with DEFOBS on its observed compartment (#148)", {
+  m <- pmx_read_mrgsolve(corpus_file("onecmt-oral-mm", "model.cpp"))
+
+  w <- pmx_write_nonmem(m)
+
+  expect_true("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)" %in% w$text)
+  expect_true("S2 = V" %in% w$text)
+  expect_faithful(w)
 })
