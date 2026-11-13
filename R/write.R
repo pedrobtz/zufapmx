@@ -189,6 +189,7 @@ sigma_from_sd <- function(m) {
       }
       row <- m$parameters[m$parameters$name == sd_name, ]
       if (nrow(row) != 1) {
+        # A standard deviation the model computes has no sigma form.
         write_error(
           sprintf(
             "the residual parameter `%s`, which is not a fixed effect",

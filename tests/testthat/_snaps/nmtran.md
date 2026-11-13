@@ -1,4 +1,4 @@
-# verbatim code is refused with its line
+# verbatim code is refused with its line (#46)
 
     Code
       cat(conditionMessage(err))

@@ -230,6 +230,7 @@ validate_model <- function(model) {
   )
   validate_dosing(model$dosing, compartments)
   validate_observations(model$observations)
+  validate_residual_parameters(model)
   validate_assignments(model, compartments)
   model
 }
@@ -454,6 +455,32 @@ validate_dosing <- function(x, compartments) {
       model_abort("`%s` is not a dosing attribute.", bad[[1]])
     }
     lapply(Filter(Negate(is.null), x[[cmt]]), expr_check)
+  }
+}
+
+# A residual model's parameters are its sigmas, or for rxode2 standard
+# deviations it declares as parameters or computes: never a name nothing
+# declares (#30's EPS(3) beside one $SIGMA).
+validate_residual_parameters <- function(model) {
+  # rxode2 also takes a standard deviation the model computes
+  # (`addSd <- ...; Cc ~ add(addSd)`).
+  declared <- c(
+    unlist(lapply(model$random_effects$sigma, `[[`, "names")),
+    model$parameters$name,
+    stmt_targets(c(model$individual, model$structure$statements))
+  )
+  for (endpoint in names(model$observations)) {
+    unknown <- setdiff(
+      model$observations[[endpoint]]$residual$parameters,
+      declared
+    )
+    if (length(unknown) > 0) {
+      model_abort(
+        "The residual model of `%s` uses `%s`, which no sigma or parameter declares.",
+        endpoint,
+        unknown[[1]]
+      )
+    }
   }
 }
 

@@ -7,7 +7,7 @@ test_that("an ODE model prints its summary", {
   expect_snapshot(print(model_onecmt_mm()))
 })
 
-test_that("the representation's structure is stable", {
+test_that("the representation's structure is stable (#93)", {
   expect_snapshot(str_full(unclass(model_twocmt_oral())))
   expect_snapshot(str_full(unclass(model_onecmt_mm())))
 })
@@ -202,7 +202,7 @@ test_that("a missing component is an error", {
   expect_error(do.call(new_model, parts), class = "zupmxio_model_error")
 })
 
-test_that("parameters, random effects, compartments and time are not assigned", {
+test_that("parameters, random effects, compartments and time are not assigned (#82)", {
   m <- model_onecmt_mm()
   ind <- unclass(m)$individual
   for (target in c("tka", "eta.vm", "eps.prop", "central", "t")) {
@@ -215,20 +215,20 @@ test_that("parameters, random effects, compartments and time are not assigned", 
   }
 })
 
-test_that("ODE code may not reassign an individual name", {
+test_that("ODE code may not reassign an individual name (#81)", {
   m <- model_onecmt_mm()
   s <- unclass(m)$structure
   s$statements <- c(s$statements, list(quote(vm <- vm / 2)))
   expect_error(model_with(m, structure = s), class = "zupmxio_model_error")
 })
 
-test_that("individual statements may not read compartment amounts (D18)", {
+test_that("individual statements may not read compartment amounts (D18) (#99)", {
   m <- model_onecmt_mm()
   ind <- c(unclass(m)$individual, list(quote(k <- central / 100)))
   expect_error(model_with(m, individual = ind), class = "zupmxio_model_error")
 })
 
-test_that("a name assigned inside if needs a value before it (D14)", {
+test_that("a name assigned inside if needs a value before it (D14) (#54, #76, #112)", {
   m <- model_onecmt_mm()
   ind <- c(
     unclass(m)$individual,
@@ -244,7 +244,7 @@ test_that("a name assigned inside if needs a value before it (D14)", {
   expect_s3_class(model_with(m, individual = ind), "zupmxio_model")
 })
 
-test_that("a choice argument outside its documented strings is a model error", {
+test_that("a choice argument outside its documented strings is a model error (#68, #88, #118)", {
   ctl <- corpus_file("onecmt-oral", "model.ctl")
   m <- model_twocmt_oral()
   for (bad in list("EXT", "bogus", NA, c("final", "initial", "x"), 1)) {
@@ -264,7 +264,7 @@ test_that("a choice argument outside its documented strings is a model error", {
   expect_equal(pmx_omega(m, "init"), pmx_omega(m))
 })
 
-test_that("a file argument must name one existing file", {
+test_that("a file argument must name one existing file (#118)", {
   for (bad in list(NA_character_, character(), c("a", "b"), tempdir(), 1)) {
     info <- deparse(bad)
     expect_error(
@@ -280,7 +280,7 @@ test_that("a file argument must name one existing file", {
   }
 })
 
-test_that("an edited model is validated again before use", {
+test_that("an edited model is validated again before use (#88)", {
   m <- model_twocmt_oral()
   edits <- list(
     function(x) {
@@ -318,7 +318,7 @@ test_that("a model without endpoints is valid but not written to one-endpoint fo
   expect_equal(err$location, "observations")
 })
 
-test_that("the validator refuses malformed components", {
+test_that("the validator refuses malformed components (#45)", {
   m <- model_twocmt_oral()
   parts <- unclass(m)
 

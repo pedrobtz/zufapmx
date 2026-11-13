@@ -61,7 +61,7 @@
       $SIGMA 0.04
       # nonmem, fidelity: equivalent
 
-# writer refusals name the construct and where to take it
+# writer refusals name the construct and where to take it (#121)
 
     Code
       pmx_write_nonmem(m)

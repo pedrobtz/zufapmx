@@ -806,7 +806,16 @@ model_covariates <- function(source, parts) {
       call = NULL
     )
   }
-  undeclared <- grep("^(THETA|ETA|EPS)[0-9]+$", free, value = TRUE)
+  # Residual parameters too: Y = F + EPS(3) beside one $SIGMA (#30).
+  residual <- setdiff(
+    unlist(lapply(parts$observations, function(o) o$residual$parameters)),
+    defined
+  )
+  undeclared <- grep(
+    "^(THETA|ETA|EPS)[0-9]+$",
+    union(free, residual),
+    value = TRUE
+  )
   if (length(undeclared) > 0) {
     parse_error(
       source,

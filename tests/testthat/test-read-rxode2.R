@@ -332,7 +332,7 @@ test_that("linCmt() reads NONMEM's numbered names", {
   )
 })
 
-test_that("statements reassigning a name the ODE code uses move into it", {
+test_that("statements reassigning a name the ODE code uses move into it (#76, #78)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -380,7 +380,7 @@ test_that("statements reassigning a name the ODE code uses move into it", {
   expect_true(any(grepl("$DES", pmx_write_nonmem(m)$text, fixed = TRUE)))
 })
 
-test_that("an endpoint another statement reads stays a statement", {
+test_that("an endpoint another statement reads stays a statement (#77)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -407,7 +407,7 @@ test_that("an endpoint another statement reads stays a statement", {
   expect_equal(pmx_fidelity(pmx_write_rxode2(m)), "exact")
 })
 
-test_that("a parameter reassigned in model() is refused", {
+test_that("a parameter reassigned in model() is refused (#81, #82)", {
   # An ODE model, so that the reassignment is all that is wrong with it:
   # under linCmt() the refusal was linCmt()'s own (#158).
   with <- function(stmt) {
@@ -444,7 +444,7 @@ test_that("a parameter reassigned in model() is refused", {
   )
 })
 
-test_that("a linCmt() endpoint that is reassigned or read is refused", {
+test_that("a linCmt() endpoint that is reassigned or read is refused (#77)", {
   expect_refused(
     pmx_read_rxode2(function() {
       ini({
@@ -464,7 +464,7 @@ test_that("a linCmt() endpoint that is reassigned or read is refused", {
   )
 })
 
-test_that("ini() takes = and combined2(), and refuses combined1()", {
+test_that("ini() takes = and combined2(), and refuses combined1() (#120)", {
   reads <- function(residual) {
     f <- function() NULL
     body(f) <- call(
@@ -497,7 +497,7 @@ test_that("ini() takes = and combined2(), and refuses combined1()", {
   )
 })
 
-test_that("an ini() value cannot run code", {
+test_that("an ini() value cannot run code (#91)", {
   marker <- withr::local_tempfile()
   f <- function() NULL
   body(f) <- call(
@@ -522,7 +522,7 @@ test_that("an ini() value cannot run code", {
   expect_false(file.exists(marker))
 })
 
-test_that("residual error parameters must be ini() parameters", {
+test_that("residual error parameters must be ini() parameters (#37)", {
   expect_refused(
     pmx_read_rxode2(function() {
       ini({
@@ -539,7 +539,7 @@ test_that("residual error parameters must be ini() parameters", {
   )
 })
 
-test_that("rxode2 statements that read time belong to the ODE structure", {
+test_that("rxode2 statements that read time belong to the ODE structure (#31)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tk <- 0.1
@@ -560,7 +560,7 @@ test_that("rxode2 statements that read time belong to the ODE structure", {
   expect_true(any(grepl("$DES", pmx_write_nonmem(m)$text, fixed = TRUE)))
 })
 
-test_that("rxode2 models are refused for the constructs they lack", {
+test_that("rxode2 models are refused for the constructs they lack (#45)", {
   model <- function(stmts, ini = list(quote(sd <- 0.1))) {
     f <- function() NULL
     body(f) <- call(
@@ -599,7 +599,7 @@ test_that("rxode2 models are refused for the constructs they lack", {
   )
 })
 
-test_that("initial values need one to three values in bound order", {
+test_that("initial values need one to three values in bound order (#36)", {
   ini_model <- function(value) {
     f <- function() NULL
     body(f) <- call(
@@ -734,4 +734,28 @@ test_that("rxode2's built-in names are refused or mapped, not covariates (#149)"
   expect_true(
     list(call("<-", quote(x), call("*", 2, pi))) %in% unclass(m)$individual
   )
+})
+
+test_that("an ODE endpoint reassigned inside an if stays a statement (#77)", {
+  m <- pmx_read_rxode2(function() {
+    ini({
+      tcl <- c(0, 4)
+      tv <- c(0, 10)
+      sd <- 0.1
+    })
+    model({
+      cl <- tcl
+      v <- tv
+      d / dt(central) <- -cl / v * central
+      cp <- central / v
+      if (cp > 5) {
+        cp <- 5
+      }
+      cp ~ add(sd)
+    })
+  })
+
+  expect_identical(unclass(m)$observations$cp$prediction, quote(cp))
+  expect_true("cp" %in% stmt_targets(unclass(m)$structure$statements))
+  expect_faithful(pmx_write_rxode2(m))
 })

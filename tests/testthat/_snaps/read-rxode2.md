@@ -20,7 +20,7 @@
       Random effects: eta.vm on vm (exp), eta.v on v (exp)
       Endpoints: cp (proportional)
 
-# a parameter reassigned in model() is refused
+# a parameter reassigned in model() is refused (#81, #82)
 
     Code
       pmx_read_rxode2(with(quote(cl <- cl * exp(eta.cl))))

@@ -149,7 +149,8 @@ mrg_split <- function(lines, file) {
 mrg_strip_comments <- function(lines) {
   text <- paste(lines, collapse = "\n")
   # A /* */ comment keeps its new lines, so later lines keep their numbers.
-  comments <- gregexpr("/\\*.*?\\*/", text, perl = TRUE)
+  # (?s): a comment spans lines, and `.` stops at a newline without it.
+  comments <- gregexpr("(?s)/\\*.*?\\*/", text, perl = TRUE)
   regmatches(text, comments) <- lapply(regmatches(text, comments), function(m) {
     gsub("[^\n]", "", m)
   })

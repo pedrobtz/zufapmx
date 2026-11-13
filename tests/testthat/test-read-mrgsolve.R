@@ -190,7 +190,7 @@ test_that("code outside mrgsolve's documented C++ is refused", {
   )
 })
 
-test_that("dosing macros under $PKMODEL use the file's compartment names", {
+test_that("dosing macros under $PKMODEL use the file's compartment names (#24)", {
   m <- pmx_read_mrgsolve(corpus_file("onecmt-oral-lag", "model.cpp"))
 
   expect_equal(
@@ -202,7 +202,7 @@ test_that("dosing macros under $PKMODEL use the file's compartment names", {
   ))
 })
 
-test_that("dosing macros inside if, or read as variables, are refused", {
+test_that("dosing macros inside if, or read as variables, are refused (#25)", {
   # Statements point at their record, $MAIN on line 3.
   expect_refused(
     read_cpp(cpp_onecmt(main = "if (CL > 1) F_CENT = 0.5;")),
@@ -216,7 +216,7 @@ test_that("dosing macros inside if, or read as variables, are refused", {
   )
 })
 
-test_that("the $TABLE prediction is the term in F's place, fully expanded", {
+test_that("the $TABLE prediction is the term in F's place, fully expanded (#26)", {
   m <- read_cpp(cpp_onecmt(
     table = c(
       "double CP = CENT / V;",
@@ -238,7 +238,7 @@ test_that("the $TABLE prediction is the term in F's place, fully expanded", {
   )
 })
 
-test_that("$PKMODEL parameters can come straight from $PARAM", {
+test_that("$PKMODEL parameters can come straight from $PARAM (#47)", {
   lines <- c(
     "$PARAM CL = 4, V = 50, KA = 1",
     "$PKMODEL ncmt = 1, depot = TRUE, cmt = \"GUT CENT\"",
@@ -269,7 +269,7 @@ test_that("$PKMODEL parameters can come straight from $PARAM", {
   expect_lte(corpus_max_rel_dev(got, expected), 1e-6)
 })
 
-test_that("Y is matched exactly in $TABLE", {
+test_that("Y is matched exactly in $TABLE (#50)", {
   expect_error(
     read_cpp(cpp_onecmt(
       table = c(
@@ -281,7 +281,7 @@ test_that("Y is matched exactly in $TABLE", {
   )
 })
 
-test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order", {
+test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order (#52)", {
   dir <- withr::local_tempdir()
   file.copy(test_path("fixtures", "nonmem", "run1.ext"), dir)
   lines <- c(
@@ -328,7 +328,7 @@ test_that("$NMXML needs zuxml", {
   )
 })
 
-test_that("a directory is not a model file", {
+test_that("a directory is not a model file (#51)", {
   expect_error(
     pmx_read_mrgsolve(withr::local_tempdir()),
     class = "zupmxio_model_error"
@@ -339,7 +339,7 @@ test_that("a directory is not a model file", {
   )
 })
 
-test_that("time is SOLVERTIME in $ODE and TIME elsewhere", {
+test_that("time is SOLVERTIME in $ODE and TIME elsewhere (#83)", {
   err <- expect_error(
     read_cpp(cpp_onecmt(main = "double K = SOLVERTIME;")),
     class = "zupmxio_parse_error"
@@ -352,7 +352,7 @@ test_that("time is SOLVERTIME in $ODE and TIME elsewhere", {
   expect_equal(err$seen, "TIME")
 })
 
-test_that("$ODE beside $PKMODEL is refused", {
+test_that("$ODE beside $PKMODEL is refused (#120)", {
   err <- expect_error(
     read_cpp(c(
       "$PARAM CL = 1, V = 20, KA = 1, KE0 = 0.5",
@@ -370,7 +370,7 @@ test_that("$ODE beside $PKMODEL is refused", {
   expect_equal(err$line, 4)
 })
 
-test_that("$PARAM values written as expressions are evaluated, with a loss", {
+test_that("$PARAM values written as expressions are evaluated, with a loss (#114)", {
   m <- read_cpp(sub(
     "TVCL = 4",
     "TVCL = 4 * log(2)",
@@ -383,7 +383,7 @@ test_that("$PARAM values written as expressions are evaluated, with a loss", {
   expect_length(unclass(read_cpp(cpp_onecmt()))$provenance$losses, 0)
 })
 
-test_that("$NMXML and $NMEXT refuse options the reader does not honour", {
+test_that("$NMXML and $NMEXT refuse options the reader does not honour (#97, #120)", {
   for (option in c("omega = FALSE", "tname = \"x\"", "path = 1")) {
     err <- expect_error(
       read_cpp(c(sprintf("$NMEXT run = 1, %s", option), cpp_onecmt()[-1])),
@@ -399,7 +399,7 @@ test_that("$NMXML and $NMEXT refuse options the reader does not honour", {
   expect_equal(err$line, 1)
 })
 
-test_that("C++ comparisons are ints, and wide int literals are refused", {
+test_that("C++ comparisons are ints, and wide int literals are refused (#101)", {
   expect_error(
     read_cpp(cpp_onecmt(main = "double K = TVCL + (1 > 0) / 2;")),
     class = "zupmxio_parse_error"
@@ -415,7 +415,7 @@ test_that("C++ comparisons are ints, and wide int literals are refused", {
   expect_equal(err$seen, "3000000000")
 })
 
-test_that("a $PARAM value cannot run code", {
+test_that("a $PARAM value cannot run code (#91)", {
   marker <- withr::local_tempfile()
   lines <- sub(
     "TVCL = 4",
@@ -430,7 +430,7 @@ test_that("a $PARAM value cannot run code", {
   expect_false(file.exists(marker))
 })
 
-test_that("$PKMODEL refuses an unknown advan or trans", {
+test_that("$PKMODEL refuses an unknown advan or trans (#105)", {
   pkmodel <- function(spec) {
     read_cpp(c(
       "$PARAM CL = 1, V = 2",
@@ -444,7 +444,7 @@ test_that("$PKMODEL refuses an unknown advan or trans", {
   expect_refused(pkmodel("advan = 1, trans = 9"), "trans = 9", 2)
 })
 
-test_that("a $PARAM item without = is refused", {
+test_that("a $PARAM item without = is refused (#105)", {
   expect_refused(
     read_cpp(sub("TVCL = 4", "TVCL 4", cpp_onecmt(), fixed = TRUE)),
     "TVCL 4",
@@ -452,11 +452,12 @@ test_that("a $PARAM item without = is refused", {
   )
 })
 
-test_that("$PKMODEL takes its compartment names from $CMT", {
+test_that("$PKMODEL takes its compartment names from $CMT (#105)", {
   m <- read_cpp(c(
     "$PARAM CL = 1, V = 20, KA = 1",
     "$CMT GUT CENT",
     "$PKMODEL ncmt = 1, depot = TRUE",
+    "$SIGMA 0.04",
     "$TABLE",
     "double IPRED = CENT / V;",
     "double Y = IPRED * (1 + EPS(1));"
@@ -468,7 +469,7 @@ test_that("$PKMODEL takes its compartment names from $CMT", {
   expect_equal(unclass(m)$observations$Y$prediction, quote(central / V))
 })
 
-test_that("annotated parameter names must be names", {
+test_that("annotated parameter names must be names (#38)", {
   expect_error(
     read_cpp(c(
       "$PARAM @annotated",
@@ -479,7 +480,7 @@ test_that("annotated parameter names must be names", {
   )
 })
 
-test_that("C++ integer division and int declarations are refused", {
+test_that("C++ integer division and int declarations are refused (#33)", {
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = pow(CL / 70.0, 3 / 4);")),
     class = "zupmxio_parse_error"
@@ -500,7 +501,7 @@ test_that("C++ integer division and int declarations are refused", {
   expect_identical(unclass(m)$individual[[4]][[3]][[2]], 2)
 })
 
-test_that("mrgsolve blocks are refused with their position", {
+test_that("mrgsolve blocks are refused with their position (#45)", {
   base <- cpp_onecmt()
 
   expect_refused(
@@ -572,7 +573,7 @@ test_that("$PARAM bounds must be in order", {
   )
 })
 
-test_that("malformed model files are parse errors, never bare R errors", {
+test_that("malformed model files are parse errors, never bare R errors (#34, #35)", {
   expect_error(read_cpp(character()), class = "zupmxio_parse_error")
   pkmodel <- function(ncmt) {
     c(
@@ -595,7 +596,7 @@ test_that("malformed model files are parse errors, never bare R errors", {
   )
 })
 
-test_that("an undeclared ETA index is refused", {
+test_that("an undeclared ETA index is refused (#30)", {
   expect_error(
     read_cpp(cpp_onecmt(main = "double X = ETA(4);")),
     class = "zupmxio_parse_error"
@@ -772,5 +773,34 @@ test_that("unknown block options are refused, and @covariates is read (#154)", {
       fixed = TRUE
     )),
     "zupmxio_model"
+  )
+})
+
+test_that("a multi-line comment keeps the lines after it (#68)", {
+  err <- expect_error(
+    read_cpp(c(
+      "$PARAM CL = 4, V = 50",
+      "/* one",
+      "   two",
+      "   three */",
+      "$CMT CENT",
+      "$MAIN",
+      "double X = 5 $ 2;"
+    )),
+    class = "zupmxio_parse_error"
+  )
+  expect_equal(err$line, 7L)
+})
+
+test_that("a conditional Y in $TABLE is refused (#79)", {
+  expect_error(
+    read_cpp(cpp_onecmt(
+      table = c(
+        "double IPRED = CENT / V;",
+        "double Y = IPRED * (1 + EPS(1));",
+        "if (CL > 100) Y = 0;"
+      )
+    )),
+    class = "zupmxio_parse_error"
   )
 })

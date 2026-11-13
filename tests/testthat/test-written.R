@@ -1,4 +1,4 @@
-test_that("only names assigned once are substituted as aliases", {
+test_that("only names assigned once are substituted as aliases (#95)", {
   m <- model_twocmt_oral()
   alias <- model_with(
     m,
@@ -30,7 +30,7 @@ test_that("only names assigned once are substituted as aliases", {
   expect_true(same_content(normalise_model(once), normalise_model(direct)))
 })
 
-test_that("covariates that differ only in case are not folded together", {
+test_that("covariates that differ only in case are not folded together (#96)", {
   m <- model_twocmt_oral()
   with_covariates <- function(first, second) {
     model_with(
@@ -50,7 +50,7 @@ test_that("covariates that differ only in case are not folded together", {
   expect_true(same_content(upper, lower))
 })
 
-test_that("a writer whose text does not read back raises a write error", {
+test_that("a writer whose text does not read back raises a write error (#38)", {
   m <- model_twocmt_oral()
   p <- pmx_parameters(m)
   p$name[[1]] <- "if"
@@ -102,4 +102,14 @@ test_that("a closed-form parameter aliased to a covariate writes (#130)", {
   for (writer in list(pmx_write_nonmem, pmx_write_rxode2, pmx_write_mrgsolve)) {
     expect_faithful(writer(m))
   }
+})
+
+test_that("an error in a writer's read-back that is not a refusal propagates (#113)", {
+  testthat::local_mocked_bindings(mrg_read = function(file) stop("reader bug"))
+  m <- read_ctl(ctl_onecmt())
+
+  err <- tryCatch(pmx_write_mrgsolve(m), error = function(e) e)
+
+  expect_false(inherits(err, "zupmxio_write_error"))
+  expect_equal(conditionMessage(err), "reader bug")
 })
