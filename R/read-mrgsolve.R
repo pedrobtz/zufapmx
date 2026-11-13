@@ -69,6 +69,15 @@ mrg_blocks_known <- c(
   "SET"
 )
 
+# The options the reader honours, by block. @correlation, @cor and
+# @cholesky are refused where they are read, with their own message.
+mrg_block_options_known <- list(
+  PARAM = c("@annotated", "@covariates"),
+  CMT = "@annotated",
+  OMEGA = c("@block", "@correlation", "@cor", "@cholesky"),
+  SIGMA = c("@block", "@correlation", "@cor", "@cholesky")
+)
+
 mrg_split <- function(lines, file) {
   lines <- mrg_strip_comments(lines)
   header <- "^\\s*(\\$([A-Za-z]+)|\\[\\s*([A-Za-z]+)\\s*\\])(.*)$"
@@ -106,6 +115,27 @@ mrg_split <- function(lines, file) {
     text <- lines[at]
     text[[1]] <- m[[5]]
     block_options <- regmatches(text, gregexpr("@[A-Za-z_]+", text))
+    # Only the options the reader honours: any other changes what a block
+    # means, and stripping it would read the block as something else (#154).
+    unknown <- setdiff(unlist(block_options), mrg_block_options_known[[name]])
+    if (length(unknown) > 0) {
+      k <- which(vapply(block_options, function(o) unknown[[1]] %in% o, NA))[[
+        1
+      ]]
+      parse_error(
+        file,
+        at[[k]],
+        1L,
+        seen = unknown[[1]],
+        message = sprintf(
+          "not translated: %s in $%s at line %d",
+          unknown[[1]],
+          name,
+          at[[k]]
+        ),
+        call = NULL
+      )
+    }
     list(
       name = name,
       lines = gsub("@[A-Za-z_]+", " ", text),
@@ -143,8 +173,17 @@ mrg_read <- function(file) {
   }
   losses <- c(losses, mrg_plugins(block("PLUGIN"), file))
 
-  params <- mrg_params(block("PARAM"), file)
-  losses <- c(losses, mrg_inputs(block("INPUT"), file))
+  # $PARAM @covariates names data items, as $INPUT does (#154).
+  covariate_blocks <- vapply(
+    blocks,
+    function(b) b$name == "PARAM" && "@covariates" %in% b$options,
+    logical(1)
+  )
+  params <- mrg_params(blocks[block_names == "PARAM" & !covariate_blocks], file)
+  losses <- c(
+    losses,
+    mrg_inputs(blocks[block_names == "INPUT" | covariate_blocks], file)
+  )
   thetas <- mrg_thetas(block("THETA"), file)
   random <- mrg_random_effects(
     block("OMEGA", "SIGMA", "NMXML", "NMEXT"),
@@ -435,7 +474,11 @@ mrg_inputs <- function(blocks, file) {
     items <- mrg_assignments(b, file, missing = TRUE)
     defaults <- defaults || any(!is.na(unlist(items)))
   }
-  if (defaults) "covariate default values ($INPUT)" else character()
+  if (defaults) {
+    "covariate default values ($INPUT, $PARAM @covariates)"
+  } else {
+    character()
+  }
 }
 
 # `name = value` pairs separated by commas or new lines, values numeric.

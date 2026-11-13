@@ -740,3 +740,24 @@ test_that("$INIT declares compartments, in file order (#153)", {
     class = "zupmxio_parse_error"
   )
 })
+
+test_that("unknown block options are refused, and @covariates is read (#154)", {
+  m <- read_cpp(cpp_onecmt(
+    main = "double CLI = CL * pow(WT / 70.0, 0.75);",
+    extra = "$PARAM @covariates WT = 70"
+  ))
+  expect_equal(unclass(m)$provenance$covariates, "WT")
+  expect_false("WT" %in% pmx_parameters(m)$name)
+  expect_true(any(grepl("covariate default", unclass(m)$provenance$losses)))
+
+  expect_refused(read_cpp(cpp_onecmt(extra = "$PARAM @name extra\nKX = 1")), seen = "@name")
+  expect_refused(
+    read_cpp(sub("$OMEGA 0.09", "$OMEGA @labels ECL\n0.09", cpp_onecmt(), fixed = TRUE)),
+    seen = "@labels"
+  )
+  # The options the reader honours still read.
+  expect_s3_class(
+    read_cpp(sub("$OMEGA 0.09", "$OMEGA @block\n0.09", cpp_onecmt(), fixed = TRUE)),
+    "zupmxio_model"
+  )
+})
