@@ -558,7 +558,16 @@ model_inputs <- function(m) {
 # `observations = FALSE` leave those parts as they are, for a caller that
 # renamed them itself or keeps the old names as aliases.
 model_rename <- function(m, map, individual = TRUE, observations = TRUE) {
-  rename <- function(x) rename_symbols(x, map)
+  model_map(
+    m,
+    function(x) rename_symbols(x, map),
+    individual = individual,
+    observations = observations
+  )
+}
+
+# Apply `rename` to every expression of a model.
+model_map <- function(m, rename, individual = TRUE, observations = TRUE) {
   if (individual) {
     m$individual <- lapply(m$individual, rename)
   }

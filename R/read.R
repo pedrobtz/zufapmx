@@ -642,6 +642,11 @@ read_model <- function(source, ...) {
       assigned = stmt_targets(parts$individual)
     )
   }
+  format <- parts$provenance$format
+  constants <- format_constants[[format]]
+  if (length(constants) > 0) {
+    parts <- model_map(parts, function(x) substitute_constants(x, constants))
+  }
   parts$provenance$covariates <- model_covariates(source, parts)
   tryCatch(
     do.call(new_model, parts),
@@ -677,6 +682,97 @@ explicit_zero <- function(stmts, assigned = character()) {
   out
 }
 
+# Names each format defines, which a model can read but which are not
+# covariates: record, dose and solver state (#149). NM-TRAN's CALLFL is a
+# directive that changes when $PK runs.
+format_builtins <- list(
+  nonmem = c(
+    "ICALL",
+    "NEWIND",
+    "IREP",
+    "CALLFL",
+    "MIXNUM",
+    "MIXEST",
+    "COMACT",
+    "COMSAV",
+    "MODE",
+    "PCMT",
+    "MNEXT",
+    "MPAST",
+    "MNOW",
+    "NTHETA",
+    "NETA",
+    "NEPS",
+    "IERPRD",
+    "ID",
+    "EVID",
+    "AMT",
+    "RATE",
+    "CMT",
+    "MDV",
+    "II",
+    "SS",
+    "ADDL",
+    "DV",
+    "PRED",
+    "RES",
+    "WRES"
+  ),
+  mrgsolve = c(
+    "ID",
+    "EVID",
+    "CMT",
+    "AMT",
+    "II",
+    "SS",
+    "ADDL",
+    "RATE",
+    "NEWIND",
+    "SS_ADVANCE",
+    "self"
+  ),
+  rxode2 = c(
+    "tad",
+    "tafd",
+    "tlast",
+    "tfirst",
+    "podo",
+    "dose",
+    "dosenum",
+    "newind",
+    "id",
+    "evid",
+    "amt",
+    "cmt",
+    "ii",
+    "ss",
+    "addl",
+    "rate",
+    "dur"
+  )
+)
+
+# Constants a format names, as numbers: C++ booleans are 1 and 0.
+format_constants <- list(
+  mrgsolve = c(M_PI = pi, M_E = exp(1), true = 1, false = 0),
+  rxode2 = c(pi = pi)
+)
+
+substitute_constants <- function(x, constants) {
+  if (is.symbol(x)) {
+    name <- as.character(x)
+    return(if (name %in% names(constants)) constants[[name]] else x)
+  }
+  if (is.call(x)) {
+    if (is_call(x, "<-")) {
+      x[[3]] <- substitute_constants(x[[3]], constants)
+    } else {
+      x[-1] <- lapply(as.list(x)[-1], substitute_constants, constants)
+    }
+  }
+  x
+}
+
 # Free symbols of a model about to be built: what it reads but does not
 # define. Undeclared THETA, ETA and EPS indices are refused; the rest are
 # covariates, recorded in provenance. `t` is time (D15).
@@ -690,6 +786,26 @@ model_covariates <- function(source, parts) {
     unique(unlist(lapply(model_expressions(parts), all.vars))),
     defined
   )
+  # A format's built-in names are not data the model reads: they change
+  # with the record, the solver or the dose, so none is a covariate (#149).
+  builtin <- intersect(
+    c(free, stmt_targets(parts$individual)),
+    format_builtins[[parts$provenance$format]]
+  )
+  if (length(builtin) > 0) {
+    parse_error(
+      source,
+      NA_integer_,
+      NA_integer_,
+      seen = builtin[[1]],
+      message = sprintf(
+        "not translated: `%s`, a name %s gives a meaning of its own",
+        builtin[[1]],
+        parts$provenance$format
+      ),
+      call = NULL
+    )
+  }
   undeclared <- grep("^(THETA|ETA|EPS)[0-9]+$", free, value = TRUE)
   if (length(undeclared) > 0) {
     parse_error(

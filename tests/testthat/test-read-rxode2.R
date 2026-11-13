@@ -689,3 +689,34 @@ test_that("an endpoint a derivative reads stays a statement (#146)", {
   }
   expect_equal(effect(as_rxode2_function(m)), effect(fun), tolerance = 1e-8)
 })
+
+test_that("rxode2's built-in names are refused or mapped, not covariates (#149)", {
+  body_with <- function(stmt) {
+    f <- function() {
+      ini({
+        tcl <- c(0, 4)
+        tv <- c(0, 10)
+      })
+      model({
+        cl <- tcl
+        v <- tv
+        cp <- linCmt()
+      })
+    }
+    b <- body(f)
+    b[[3]][[2]] <- as.call(append(as.list(b[[3]][[2]]), list(stmt), 1))
+    body(f) <- b
+    f
+  }
+  err <- tryCatch(
+    pmx_read_rxode2(body_with(quote(x <- tad))),
+    error = function(e) e
+  )
+  expect_s3_class(err, "zupmxio_parse_error")
+  expect_equal(err$seen, "tad")
+  m <- pmx_read_rxode2(body_with(quote(x <- 2 * pi)))
+  expect_length(unclass(m)$provenance$covariates, 0)
+  expect_true(
+    list(call("<-", quote(x), call("*", 2, pi))) %in% unclass(m)$individual
+  )
+})

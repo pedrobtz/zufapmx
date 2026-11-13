@@ -697,3 +697,16 @@ test_that("$PKMODEL advan and ncmt are whole numbers (#155)", {
     "zupmxio_model"
   )
 })
+
+test_that("mrgsolve's built-in names are refused or mapped, not covariates (#149)", {
+  expect_refused(read_cpp(cpp_onecmt(main = "double X = EVID;")), seen = "EVID")
+  expect_refused(
+    read_cpp(cpp_onecmt(main = "double X = NEWIND;")),
+    seen = "NEWIND"
+  )
+  m <- read_cpp(cpp_onecmt(main = c("double X = 2 * M_PI;", "bool B = true;")))
+  expect_length(unclass(m)$provenance$covariates, 0)
+  stmts <- unclass(m)$individual
+  expect_true(list(call("<-", quote(X), call("*", 2, pi))) %in% stmts)
+  expect_true(list(call("<-", quote(B), 1)) %in% stmts)
+})

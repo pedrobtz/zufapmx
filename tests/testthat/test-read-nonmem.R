@@ -563,3 +563,17 @@ test_that("an ODE model observes its DEFOBS compartment, or compartment 1 (#148)
   m <- read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)", character()))
   expect_identical(unclass(m)$observations$Y$prediction, quote(CENT))
 })
+
+test_that("NONMEM's built-in names are refused, not read as covariates (#149)", {
+  expect_refused(
+    read_ctl(ctl_onecmt(pk = c("X = 0", "IF (NEWIND.NE.2) X = 2"))),
+    seen = "NEWIND"
+  )
+  expect_refused(read_ctl(ctl_onecmt(pk = "X = ICALL")), seen = "ICALL")
+  expect_refused(read_ctl(ctl_onecmt(pk = "X = AMT")), seen = "AMT")
+  expect_refused(read_ctl(ctl_onecmt(pk = "CALLFL = -2")), seen = "CALLFL")
+  expect_equal(
+    unclass(read_ctl(ctl_onecmt(pk = "X = WT")))$provenance$covariates,
+    "WT"
+  )
+})
