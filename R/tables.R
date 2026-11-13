@@ -16,8 +16,9 @@
 #' `MDV`, `CMT`, `RATE`, `II`, `ADDL` and `SS` are read when present, with
 #' NONMEM's defaults when not. Without `EVID`, a record with a positive
 #' `AMT` is a dose and any other record with `MDV` 0 (or no `MDV`) is an
-#' observation. Records that are neither are dropped, and `EVID` 3 and 4
-#' (resets) are refused. Every other column is kept, so the model's
+#' observation. Other records (`EVID` 2) are kept: a time-varying covariate
+#' can change on one, and the engines read it there, as NONMEM does. `EVID`
+#' 3 and 4 (resets) are refused. Every other column is kept, so the model's
 #' covariates can come from the table. Column names match without regard
 #' to case.
 #'
@@ -453,7 +454,6 @@ table_records <- function(columns, prediction, resolution, file) {
   for (name in names(other)) {
     out[[name]] <- other[[name]]
   }
-  out <- out[out$evid != 2, , drop = FALSE]
   rownames(out) <- NULL
   out
 }

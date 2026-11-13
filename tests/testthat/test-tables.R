@@ -84,16 +84,18 @@ test_that("without EVID, AMT and MDV say what a record is", {
 
   r <- pmx_read_tables(local_nm_table(df))$records
 
-  # The MDV 1 record without a dose is neither, and is dropped.
-  expect_equal(r$time, c(0, 1, 3))
-  expect_equal(r$evid, c(1L, 0L, 0L))
-  expect_equal(r$pred, c(0, 1, 2))
+  # The MDV 1 record without a dose is neither: EVID 2, kept (#169).
+  expect_equal(r$time, c(0, 1, 2, 3))
+  expect_equal(r$evid, c(1L, 0L, 2L, 0L))
+  expect_equal(r$pred, c(0, 1, 9, 2))
 })
 
-test_that("EVID 2 records are dropped and resets refused", {
+test_that("EVID 2 records are kept and resets refused (#169)", {
   df <- table_single_dose(c(1, 2), c(1, 2))
   df$EVID[[2]] <- 2
-  expect_equal(pmx_read_tables(local_nm_table(df))$records$time, c(0, 2))
+  r <- pmx_read_tables(local_nm_table(df))$records
+  expect_equal(r$time, c(0, 1, 2))
+  expect_equal(r$evid, c(1L, 2L, 0L))
 
   df$EVID[[2]] <- 3
   expect_error(

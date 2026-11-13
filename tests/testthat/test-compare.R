@@ -676,3 +676,28 @@ test_that("pmx_compare() leaves the caller's random number stream as it was (#16
 
   expect_identical(.Random.seed, before)
 })
+
+test_that("EVID 2 records carry time-varying covariates to the engines (#169)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1(cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"))
+  k <- function(wt) 4 * (wt / 70)^0.75 / 50
+  # NONMEM integrates each interval with the next record's values: WT 140
+  # on (2, 3] from the EVID 2 record, then WT 70 on (3, 4].
+  c2 <- 2 * exp(-2 * k(70))
+  c4 <- c2 * exp(-k(140)) * exp(-k(70))
+  df <- data.frame(
+    ID = 1,
+    TIME = c(0, 2, 3, 4),
+    AMT = c(100, 0, 0, 0),
+    EVID = c(1, 0, 2, 0),
+    WT = c(70, 70, 140, 70),
+    PRED = c(0, c2, 0, c4)
+  )
+  tables <- pmx_read_tables(local_nm_table(df, digits = 9))
+  expect_equal(tables$records$evid, c(1L, 0L, 2L, 0L))
+
+  expect_true(pmx_compare(tables, m)$pass)
+  expect_true(pmx_compare(tables, pmx_write_mrgsolve(m))$pass)
+})

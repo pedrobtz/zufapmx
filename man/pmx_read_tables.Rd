@@ -38,8 +38,9 @@ The records need \code{ID}, \code{TIME} and the prediction column. \code{AMT}, \
 \code{MDV}, \code{CMT}, \code{RATE}, \code{II}, \code{ADDL} and \code{SS} are read when present, with
 NONMEM's defaults when not. Without \code{EVID}, a record with a positive
 \code{AMT} is a dose and any other record with \code{MDV} 0 (or no \code{MDV}) is an
-observation. Records that are neither are dropped, and \code{EVID} 3 and 4
-(resets) are refused. Every other column is kept, so the model's
+observation. Other records (\code{EVID} 2) are kept: a time-varying covariate
+can change on one, and the engines read it there, as NONMEM does. \code{EVID}
+3 and 4 (resets) are refused. Every other column is kept, so the model's
 covariates can come from the table. Column names match without regard
 to case.
 
