@@ -44,5 +44,10 @@ jobs:
       quick-containers: '[]'
       # A runner leg where an engine or oracle failed to install fails
       # instead of skipping their tests (tests/testthat/helper-engines.R).
+      # NOT_CRAN=true makes the containers and nold run the engine tests
+      # too: they install every engine, and nold is the leg whose decimal
+      # parser same_content() exists for (#157). The runner legs set it
+      # already; nosuggests still skips them, having no engines.
       env: |
         ZUPMXIO_REQUIRE_ENGINES=true
+        NOT_CRAN=true
