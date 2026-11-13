@@ -443,8 +443,10 @@ default branch's code.
 - `Version: 0.1.0` and the matching `NEWS.md` heading.
 - `cran-comments.md` listing the r-actions CI legs as test environments.
 - Every `Suggests` entry is on CRAN.
-- `pmx_report()` output for one corpus model reviewed by one
-  pharmacometrician outside the family, and the review recorded (§12, Q4).
+- ~~`pmx_report()` output for one corpus model reviewed by one
+  pharmacometrician outside the family, and the review recorded (§12,
+  Q4).~~ Dropped (2026-11-13): the maintainer settled Q4 as D27, submitting
+  without it.
 - `pkg-critical-review` run; blocking and required findings fixed.
 - `pkg-cran-review` run; every finding resolved.
 - `urlchecker::url_check()` and `spelling::spell_check_package()` clean.
@@ -483,7 +485,5 @@ blocks Stage 7.
 
 - **Q2, blocks Stage 1.** May the corpus carry open-access published models
   whose licence is silent? The design says no.
-- **Q4, blocks Stage 11.** Is the external pharmacometrician's review
-  required before submission? The design says yes.
 - The design's decisions marked (C), D3 and D6 above all, are still the
   maintainer's to confirm.

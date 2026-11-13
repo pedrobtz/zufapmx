@@ -76,6 +76,6 @@ One row per limit the package enforces. "Straddled by" is the test of
 | `tol` positive, `atol` non-negative | relative, absolute deviation | tests/testthat/test-compare.R |
 | a point agrees at relative deviation `tol` or absolute `atol` | relative, absolute deviation | tests/testthat/test-compare.R |
 | a table value agrees within half a unit in its last printed digit | that digit | tests/testthat/test-compare.R |
-| `same_content()` tolerates 4 units in the last place | ulps | gap #140 |
-| JSON counts (`version`, `ncmt`, `advan`, `trans`) within the integer range | whole number | gap #141 |
+| `same_content()` tolerates 4 units in the last place | ulps | tests/testthat/test-written.R |
+| JSON counts (`version`, `ncmt`, `advan`, `trans`) within the integer range | whole number | tests/testthat/test-json.R |
 <!-- markdownlint-enable MD013 -->

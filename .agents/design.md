@@ -383,8 +383,9 @@ shows and how a reviewer reads it.
   that can hold it with `pass` from `pmx_compare()`.
 - `zupmxio` agrees with `nonmem2rx` on every corpus model that
   `nonmem2rx` reads; disagreements are documented, not hidden.
-- `pmx_report()` output for one corpus model is reviewed by one
-  pharmacometrician outside the family and the review is recorded.
+- ~~`pmx_report()` output for one corpus model is reviewed by one
+  pharmacometrician outside the family and the review is recorded.~~
+  Dropped for 0.1.0 by D27.
 - `R CMD check --as-cran` is clean on all r-actions legs; no `Imports`.
 - Eight stages. A stage that needs a second pull request moves scope to
   §14, not the release.
@@ -538,6 +539,11 @@ decides it and the maintainer may overturn it.
   sitting in both sides. A model edited since it was read, or a source
   that does not read back on its own (an `$NMEXT` path relative to its
   file), runs through a writer as before (#170).
+- **D27 (M), 2026-11-13.** Settles Q4: 0.1.0 goes to CRAN without an
+  external pharmacometrician's review of `pmx_report()`. The check stands on
+  its oracles (nonmem2rx, amp.sim, the engines against `expected.csv`, the
+  closed forms) and three critical reviews; an outside review is welcome
+  after release and would feed 0.2.0.
 
 ## 14. Later versions, in the order they are expected
 
@@ -581,6 +587,7 @@ decides it and the maintainer may overturn it.
 - **Q4.** Does the package submit to CRAN at 0.1.0, or wait until one
   external pharmacometrician has used `pmx_report()` on a real
   translation (§12)? This RFC requires the review before submission.
+  **Resolved by D27:** it submits without it.
 - **Q5.** `daffiz` is not on CRAN, and a CRAN package may not list an
   unpublished package in `Suggests`. Either `daffiz` is submitted before
   Stage 5, or `pmx_compare()` carries a minimal alignment-and-tolerance
