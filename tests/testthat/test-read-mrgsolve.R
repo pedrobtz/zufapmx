@@ -750,14 +750,27 @@ test_that("unknown block options are refused, and @covariates is read (#154)", {
   expect_false("WT" %in% pmx_parameters(m)$name)
   expect_true(any(grepl("covariate default", unclass(m)$provenance$losses)))
 
-  expect_refused(read_cpp(cpp_onecmt(extra = "$PARAM @name extra\nKX = 1")), seen = "@name")
   expect_refused(
-    read_cpp(sub("$OMEGA 0.09", "$OMEGA @labels ECL\n0.09", cpp_onecmt(), fixed = TRUE)),
+    read_cpp(cpp_onecmt(extra = "$PARAM @name extra\nKX = 1")),
+    seen = "@name"
+  )
+  expect_refused(
+    read_cpp(sub(
+      "$OMEGA 0.09",
+      "$OMEGA @labels ECL\n0.09",
+      cpp_onecmt(),
+      fixed = TRUE
+    )),
     seen = "@labels"
   )
   # The options the reader honours still read.
   expect_s3_class(
-    read_cpp(sub("$OMEGA 0.09", "$OMEGA @block\n0.09", cpp_onecmt(), fixed = TRUE)),
+    read_cpp(sub(
+      "$OMEGA 0.09",
+      "$OMEGA @block\n0.09",
+      cpp_onecmt(),
+      fixed = TRUE
+    )),
     "zupmxio_model"
   )
 })

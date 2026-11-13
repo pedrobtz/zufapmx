@@ -188,29 +188,24 @@ test_that("constructs outside the supported set are refused", {
     f
   }
 
-  expect_error(
+  # The base model reads: each refusal below is the added statement's
+  # (#158).
+  expect_s3_class(pmx_read_rxode2(base(NULL)), "zupmxio_model")
+  expect_refused(
     pmx_read_rxode2(base(quote(x <- sin(cl)))),
-    class = "zupmxio_parse_error"
+    seen = "x <- sin(cl)"
   )
-  expect_error(
+  expect_refused(
     pmx_read_rxode2(base(quote(x <- ifelse(cl > 1, 1, 2)))),
-    class = "zupmxio_parse_error"
+    seen = "x <- ifelse(cl > 1, 1, 2)"
   )
-  expect_error(
-    pmx_read_rxode2(base(quote(cp ~ t(sd)))),
-    class = "zupmxio_parse_error"
-  )
-  expect_error(
-    pmx_read_rxode2(base(quote(y ~ add(sd)))),
-    class = "zupmxio_parse_error"
-  )
-  expect_error(
-    pmx_read_rxode2(base(quote(alag(gut) <- 1))),
-    class = "zupmxio_parse_error"
-  )
-  expect_error(
+  expect_refused(pmx_read_rxode2(base(quote(cp ~ t(sd)))), seen = "cp ~ t(sd)")
+  expect_refused(pmx_read_rxode2(base(quote(y ~ add(sd)))), seen = "y")
+  expect_refused(pmx_read_rxode2(base(quote(alag(gut) <- 1))), seen = "gut")
+  # linCmt() and d/dt() together.
+  expect_refused(
     pmx_read_rxode2(base(quote(d / dt(central) <- -cl))),
-    class = "zupmxio_parse_error"
+    seen = "linCmt()"
   )
 })
 
@@ -278,7 +273,7 @@ test_that("a compartment can be an endpoint", {
 })
 
 test_that("a construct outside the table in a derivative is a parse error", {
-  expect_error(
+  expect_refused(
     pmx_read_rxode2(function() {
       ini({
         k <- 0.1
@@ -290,7 +285,7 @@ test_that("a construct outside the table in a derivative is a parse error", {
         cp ~ add(sd)
       })
     }),
-    class = "zupmxio_parse_error"
+    seen = "d/dt(a) <- ifelse(a > 1, -k * a, 0)"
   )
 })
 
@@ -413,8 +408,10 @@ test_that("an endpoint another statement reads stays a statement", {
 })
 
 test_that("a parameter reassigned in model() is refused", {
-  expect_error(
-    pmx_read_rxode2(function() {
+  # An ODE model, so that the reassignment is all that is wrong with it:
+  # under linCmt() the refusal was linCmt()'s own (#158).
+  with <- function(stmt) {
+    f <- function() {
       ini({
         cl <- 4
         v <- 50
@@ -422,17 +419,33 @@ test_that("a parameter reassigned in model() is refused", {
         sd <- 0.1
       })
       model({
-        cl <- cl * exp(eta.cl)
-        cp <- linCmt()
+        STMT
+        d / dt(central) <- -cl / v * central
+        cp <- central / v
         cp ~ add(sd)
       })
-    }),
-    class = "zupmxio_parse_error"
+    }
+    b <- body(f)
+    b[[3]][[2]][[2]] <- stmt
+    body(f) <- b
+    f
+  }
+  expect_s3_class(
+    pmx_read_rxode2(with(quote(x <- cl * exp(eta.cl)))),
+    "zupmxio_model"
+  )
+  expect_refused(
+    pmx_read_rxode2(with(quote(cl <- cl * exp(eta.cl)))),
+    seen = "the model as read"
+  )
+  expect_snapshot(
+    pmx_read_rxode2(with(quote(cl <- cl * exp(eta.cl)))),
+    error = TRUE
   )
 })
 
 test_that("a linCmt() endpoint that is reassigned or read is refused", {
-  expect_error(
+  expect_refused(
     pmx_read_rxode2(function() {
       ini({
         tcl <- 4
@@ -447,7 +460,7 @@ test_that("a linCmt() endpoint that is reassigned or read is refused", {
         cp ~ add(sd)
       })
     }),
-    class = "zupmxio_parse_error"
+    seen = "cp"
   )
 })
 
@@ -478,9 +491,9 @@ test_that("ini() takes = and combined2(), and refuses combined1()", {
   m <- reads(quote(add(a) + prop(b) + combined2()))
   expect_equal(pmx_parameters(m)$name[[1]], "tcl")
   expect_equal(unclass(m)$observations$cp$residual$type, "combined")
-  expect_error(
+  expect_refused(
     reads(quote(add(a) + prop(b) + combined1())),
-    class = "zupmxio_parse_error"
+    seen = "cp ~ add(a) + prop(b) + combined1()"
   )
 })
 
@@ -510,7 +523,7 @@ test_that("an ini() value cannot run code", {
 })
 
 test_that("residual error parameters must be ini() parameters", {
-  expect_error(
+  expect_refused(
     pmx_read_rxode2(function() {
       ini({
         tcl <- 1
@@ -522,7 +535,7 @@ test_that("residual error parameters must be ini() parameters", {
         cp ~ prop(prop.sd)
       })
     }),
-    class = "zupmxio_parse_error"
+    seen = "prop.sd"
   )
 })
 
@@ -557,17 +570,17 @@ test_that("rxode2 models are refused for the constructs they lack", {
     )
     f
   }
-  expect_error(
+  expect_refused(
     pmx_read_rxode2(model(list(
       quote(cl <- 1),
       quote(cp <- linCmt()),
       quote(cp ~ add(sd))
     ))),
-    class = "zupmxio_parse_error"
+    seen = "linCmt()"
   )
-  expect_error(
+  expect_refused(
     pmx_read_rxode2(model(list(quote(cp <- 1), quote(cp ~ add(sd))))),
-    class = "zupmxio_parse_error"
+    seen = "model()"
   )
 
   lnorm <- pmx_read_rxode2(model(list(
@@ -602,10 +615,10 @@ test_that("initial values need one to three values in bound order", {
     f
   }
   for (value in list(quote(c(0, 4, 10, 99)), quote(c(10, 5)), quote(c()))) {
-    expect_error(
+    expect_refused(
       pmx_read_rxode2(ini_model(value)),
-      class = "zupmxio_parse_error",
-      label = deparse(value)
+      seen = paste("tcl <-", deparse(value)),
+      info = deparse(value)
     )
   }
 })
