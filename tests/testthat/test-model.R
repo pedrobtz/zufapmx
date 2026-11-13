@@ -354,3 +354,37 @@ test_that("readers refuse a missing file", {
     class = "zupmxio_model_error"
   )
 })
+
+test_that("omega and sigma blocks must be positive semi-definite (#150)", {
+  m <- unclass(model_twocmt_oral())
+  bad <- m
+  bad$random_effects$omega[[1]]$matrix[1, 1] <- -0.09
+  expect_error(do.call(new_model, bad), class = "zupmxio_model_error")
+  bad <- m
+  bad$random_effects$omega[[1]]$matrix[1, 2] <- 0.5
+  bad$random_effects$omega[[1]]$matrix[2, 1] <- 0.5
+  expect_error(do.call(new_model, bad), class = "zupmxio_model_error")
+  bad <- m
+  bad$random_effects$sigma[[1]]$matrix[1, 1] <- -0.04
+  expect_error(do.call(new_model, bad), class = "zupmxio_model_error")
+  # A variance fixed at zero is semi-definite.
+  ok <- m
+  ok$random_effects$omega[[1]]$matrix[2, 2] <- 0
+  expect_s3_class(do.call(new_model, ok), "zupmxio_model")
+})
+
+test_that("readers refuse a negative variance as a parse error (#150)", {
+  expect_error(
+    read_ctl(sub(
+      "$OMEGA 0.09 0.09",
+      "$OMEGA -0.09 0.09",
+      ctl_onecmt(),
+      fixed = TRUE
+    )),
+    class = "zupmxio_parse_error"
+  )
+  expect_error(
+    read_cpp(sub("$OMEGA 0.09", "$OMEGA -0.09", cpp_onecmt(), fixed = TRUE)),
+    class = "zupmxio_parse_error"
+  )
+})

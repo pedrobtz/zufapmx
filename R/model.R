@@ -381,6 +381,14 @@ validate_block <- function(block) {
       paste(block$names, collapse = ", ")
     )
   }
+  # A covariance matrix: semi-definite, so a variance fixed at zero is
+  # allowed and a negative one, or a correlation past 1, is not (#150).
+  if (!block_semidefinite(m)) {
+    model_abort(
+      "The block for %s is not positive semi-definite.",
+      paste(block$names, collapse = ", ")
+    )
+  }
   est <- block$estimate
   if (
     !is.null(est) && (!identical(dim(est), dim(m)) || !isSymmetric(unname(est)))
@@ -390,6 +398,11 @@ validate_block <- function(block) {
       paste(block$names, collapse = ", ")
     )
   }
+}
+
+block_semidefinite <- function(m) {
+  values <- eigen(unname(m), symmetric = TRUE, only.values = TRUE)$values
+  all(values >= -sqrt(.Machine$double.eps) * max(abs(values), 1))
 }
 
 # Returns the structure's compartment names.
