@@ -681,7 +681,9 @@ test_that("EVID 2 records carry time-varying covariates to the engines (#169)", 
   skip_on_cran()
   skip_if_no_engine("rxode2")
   skip_if_no_engine("mrgsolve")
-  m <- read_ctl(ctl_advan1(cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"))
+  m <- read_ctl(ctl_advan1(
+    cl = "CL = THETA(1) * EXP(ETA(1)) * (WT / 70)**0.75"
+  ))
   k <- function(wt) 4 * (wt / 70)^0.75 / 50
   # NONMEM integrates each interval with the next record's values: WT 140
   # on (2, 3] from the EVID 2 record, then WT 70 on (3, 4].
@@ -700,4 +702,28 @@ test_that("EVID 2 records carry time-varying covariates to the engines (#169)", 
 
   expect_true(pmx_compare(tables, m)$pass)
   expect_true(pmx_compare(tables, pmx_write_mrgsolve(m))$pass)
+})
+
+test_that("a translation off by ten times tol fails through the engines (#165)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1())
+  w <- pmx_write_rxode2(m)
+  # V 50 to 50.0005: predictions move by about 1e-5 relative.
+  w$text <- sub(
+    "THETA2 <- c(0, 50)",
+    "THETA2 <- c(0, 50.0005)",
+    w$text,
+    fixed = TRUE
+  )
+
+  cmp <- pmx_compare(m, w, pmx_design(n = 0, regimens = "single"))
+
+  expect_false(cmp$pass)
+  expect_lt(cmp$worst$rel, 1e-4)
+  expect_gt(cmp$worst$rel, 1e-6)
+  expect_true(
+    pmx_compare(m, w, pmx_design(n = 0, regimens = "single"), tol = 1e-4)$pass
+  )
 })
