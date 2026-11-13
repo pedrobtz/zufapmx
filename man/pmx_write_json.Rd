@@ -56,5 +56,12 @@ Other readers:
 \code{\link[=pmx_read_nonmem]{pmx_read_nonmem()}},
 \code{\link[=pmx_read_rxode2]{pmx_read_rxode2()}},
 \code{\link[=pmx_read_tables]{pmx_read_tables()}}
+
+Other writers:
+\code{\link[=pmx_fidelity]{pmx_fidelity()}},
+\code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}},
+\code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}},
+\code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}
 }
 \concept{readers}
+\concept{writers}

@@ -127,6 +127,7 @@ cmp
 
 Other comparison:
 \code{\link[=pmx_design]{pmx_design()}},
-\code{\link[=pmx_report]{pmx_report()}}
+\code{\link[=pmx_report]{pmx_report()}},
+\code{\link[=zupmxio_corpus]{zupmxio_corpus()}}
 }
 \concept{comparison}

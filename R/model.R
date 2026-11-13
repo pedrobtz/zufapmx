@@ -116,7 +116,11 @@ pmx_omega <- function(model, values = c("estimate", "init")) {
 #' @export
 pmx_ode <- function(model) {
   check_model(model)
-  if (identical(model$structure$type, "ode")) model$structure$derivatives
+  if (identical(model$structure$type, "ode")) {
+    model$structure$derivatives
+  } else {
+    NULL
+  }
 }
 
 #' @export

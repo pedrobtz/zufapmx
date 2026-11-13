@@ -344,7 +344,7 @@ test_that("both sides draw the same etas from the seed, and leave the RNG alone"
   dimnames(omega) <- list(c("ETA1", "ETA2"), c("ETA1", "ETA2"))
   d <- pmx_design(n = 3, seed = 5)
 
-  set.seed(99)
+  withr::local_seed(99)
   before <- .Random.seed
   etas <- compare_etas(list(a = omega, b = omega * 4), d)
   expect_identical(.Random.seed, before)
@@ -754,4 +754,14 @@ test_that("a model runs its own source when its engine may run it (#170)", {
   edited <- do.call(new_model, edited)
   cmp <- pmx_compare(edited, pmx_write_rxode2(edited), d)
   expect_match(cmp$sides$a$origin, "written to mrgsolve by zupmxio")
+})
+
+test_that("a table's subject IDs need not be integers (#173)", {
+  local_fake_engines(rxode2 = function(time, id) time * 2)
+  tables <- pmx_read_tables(local_nm_table(table_single_dose(1, 1, id = 1.5)))
+  cmp <- pmx_compare(tables, read_ctl(ctl_advan1()))
+
+  expect_false(cmp$pass)
+  expect_output(print(cmp), "subject 1.5")
+  expect_true(any(grepl("subject 1.5", pmx_report(cmp))))
 })

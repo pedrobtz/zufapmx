@@ -583,9 +583,9 @@ print.zupmxio_comparison <- function(x, ...) {
   w <- x$worst
   if (!is.null(w)) {
     cat(sprintf(
-      "Worst: %s, subject %d, time %s: %s against %s (abs %s, rel %s).\n",
+      "Worst: %s, subject %s, time %s: %s against %s (abs %s, rel %s).\n",
       w$regimen,
-      w$id,
+      format(w$id),
       format(w$time),
       format(w$a, digits = 8),
       format(w$b, digits = 8),

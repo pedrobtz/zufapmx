@@ -131,11 +131,11 @@ report_results <- function(x, max_points) {
       out,
       sprintf(
         paste(
-          "Worst point: %s, subject %d, time %s: %s (a) against %s (b),",
+          "Worst point: %s, subject %s, time %s: %s (a) against %s (b),",
           "absolute deviation %s, relative %s."
         ),
         w$regimen,
-        w$id,
+        md_num(w$id, 15),
         md_num(w$time, 15),
         md_num(w$a, 10),
         md_num(w$b, 10),

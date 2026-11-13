@@ -43,6 +43,7 @@ cat(readLines(file, n = 12), sep = "\n")
 \seealso{
 Other comparison:
 \code{\link[=pmx_compare]{pmx_compare()}},
-\code{\link[=pmx_design]{pmx_design()}}
+\code{\link[=pmx_design]{pmx_design()}},
+\code{\link[=zupmxio_corpus]{zupmxio_corpus()}}
 }
 \concept{comparison}

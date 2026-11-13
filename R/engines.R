@@ -177,6 +177,8 @@ engine_simulate <- function(side, data, etas) {
       rxode2 = engine_rxode2(side$text, data, etas),
       mrgsolve = engine_mrgsolve(side$text, data, etas)
     ),
+    # The package's own conditions (a refusal, an engine error) pass as
+    # they are; only an engine's own failure becomes an engine error.
     zupmxio_error = function(e) stop(e),
     error = function(e) engine_error(side$engine, e, call = NULL)
   )

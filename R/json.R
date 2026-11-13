@@ -23,6 +23,7 @@
 #'   given. `pmx_read_json()`: a model. A file that is not a zupmxio JSON
 #'   model is a `zupmxio_parse_error`.
 #' @family readers
+#' @family writers
 #' @export
 #' @examplesIf requireNamespace("zujson", quietly = TRUE)
 #' path <- system.file(
