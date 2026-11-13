@@ -26,6 +26,13 @@
   model, which takes about 3 seconds; they run only when rxode2 is
   installed.
 
+## Method references
+
+There is no published reference describing the methods of this package.
+It translates model code between three formats and checks a translation by
+simulating both models with existing engines (rxode2, mrgsolve) and
+comparing their predictions point by point.
+
 ## Reverse dependencies
 
 None: this is a new package.
