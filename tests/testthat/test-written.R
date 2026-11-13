@@ -63,7 +63,7 @@ test_that("a writer whose text does not read back raises a write error", {
   )
 })
 
-test_that("same_content() compares attributes as a set, like identical()", {
+test_that("same_content() compares attributes as a set, like identical() (#128)", {
   a <- data.frame(x = c(1, 2), y = c("a", "b"))
   b <- structure(
     list(x = c(1, 2), y = c("a", "b")),

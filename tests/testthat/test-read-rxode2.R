@@ -691,6 +691,8 @@ test_that("an endpoint a derivative reads stays a statement (#146)", {
   skip_on_cran()
   skip_if_no_engine("rxode2")
   effect <- function(f) {
+    # Out of the test's environment, which rxode2 warns it cannot reload.
+    environment(f) <- globalenv()
     sim <- suppressMessages(rxode2::rxSolve(
       f,
       rxode2::et(amt = 100, cmt = "depot") |> rxode2::et(c(1, 4, 12)),
