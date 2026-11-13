@@ -789,7 +789,7 @@ model_covariates <- function(source, parts) {
   # A format's built-in names are not data the model reads: they change
   # with the record, the solver or the dose, so none is a covariate (#149).
   builtin <- intersect(
-    c(free, stmt_targets(parts$individual)),
+    c(free, stmt_targets(parts$individual), parts$parameters$name),
     format_builtins[[parts$provenance$format]]
   )
   if (length(builtin) > 0) {

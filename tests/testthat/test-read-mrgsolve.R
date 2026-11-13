@@ -804,3 +804,12 @@ test_that("a conditional Y in $TABLE is refused (#79)", {
     class = "zupmxio_parse_error"
   )
 })
+
+test_that("a $PARAM named after an mrgsolve data item is refused (#188)", {
+  for (name in c("CMT", "SS", "ADDL", "RATE")) {
+    expect_refused(
+      read_cpp(cpp_onecmt(extra = sprintf("$PARAM %s = 1", name))),
+      seen = name
+    )
+  }
+})

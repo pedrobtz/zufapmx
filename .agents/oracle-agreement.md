@@ -74,3 +74,13 @@ writer when the observed compartment has another name, as it does for a
 model read from mrgsolve (`CENT`). The writer marks the compartment with
 `DEFOBS` (#148), which NONMEM honours and nonmem2rx does not. #135 waits on
 the upstream fix, or on an oracle that reads `DEFOBS`.
+
+## Engines with a lag longer than the dosing interval (2026-11-13)
+
+With an absorption lag longer than the dosing interval (ALAG1 = 13 with
+`ii = 12`), rxode2 and mrgsolve disagree on the same model, so an exact
+write fails `pmx_compare()` there. mrgsolve's closed form returns NaN for
+the multiple-dose regimen, where rxode2 matches analytic superposition. The
+steady-state regimen differs between the engines, and the ODE form makes
+mrgsolve's lsoda abort. This is engine behaviour, not a translation error;
+`pmx_design()`'s regimens assume a lag shorter than 12 (#188).
