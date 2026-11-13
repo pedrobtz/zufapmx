@@ -86,7 +86,9 @@ expr_print <- function(x, spelling, dialect) {
       dialect$operators[[op]],
       wrap(
         x[[3]],
-        right < p || (op %in% c("-", "/") && right == p) || is_unary(x[[3]])
+        right < p ||
+          (op %in% c("-", "/") && right == p) ||
+          is_unary(x[[3]])
       )
     ))
   }

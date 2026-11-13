@@ -388,3 +388,29 @@ test_that("readers refuse a negative variance as a parse error (#150)", {
     class = "zupmxio_parse_error"
   )
 })
+
+test_that("non-finite variances and initial values are refused (#186)", {
+  for (omega in c("$OMEGA 0.09 Inf", "$OMEGA 0.09 -Inf", "$OMEGA 0.09 1e309")) {
+    expect_error(
+      read_ctl(sub("$OMEGA 0.09 0.09", omega, ctl_onecmt(), fixed = TRUE)),
+      class = "zupmxio_parse_error",
+      label = omega
+    )
+  }
+  expect_error(
+    read_cpp(sub("$OMEGA 0.09", "$OMEGA 1e309", cpp_onecmt(), fixed = TRUE)),
+    class = "zupmxio_parse_error"
+  )
+  expect_error(
+    read_ctl(sub(
+      "$THETA (0, 1) (0, 4) (0, 50)",
+      "$THETA (0, Inf) (0, 4) (0, 50)",
+      ctl_onecmt(),
+      fixed = TRUE
+    )),
+    class = "zupmxio_parse_error"
+  )
+  m <- unclass(model_twocmt_oral())
+  m$random_effects$omega[[1]]$matrix[1, 1] <- Inf
+  expect_error(do.call(new_model, m), class = "zupmxio_model_error")
+})

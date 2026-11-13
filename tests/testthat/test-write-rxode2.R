@@ -294,3 +294,85 @@ test_that("ADVAN12 is written under names rxode2's linCmt() reads (#176)", {
   skip_if_no_engine("mrgsolve")
   expect_true(pmx_compare(m, w, pmx_design(n = 1))$pass)
 })
+
+test_that("omega estimates are written, not initial values (#182)", {
+  m <- pmx_read_nonmem(test_path("fixtures", "nonmem", "run2.ctl"))
+  est <- pmx_omega(m, "estimate")
+  expect_false(isTRUE(all.equal(est, pmx_omega(m, "init"))))
+
+  w <- pmx_write_rxode2(m)
+
+  # The estimates are written, so the initial values are what is lost.
+  expect_equal(pmx_fidelity(w), "lossy")
+  back <- pmx_read_rxode2(eval(parse(text = w$text)[[1]]))
+  expect_equal(unname(pmx_omega(back, "init")), unname(est))
+})
+
+test_that("a chained power is written so rxode2 parses it (#187)", {
+  m <- read_ctl(ctl_onecmt(pk = "K2 = 2**3**2"))
+
+  w <- pmx_write_rxode2(m)
+
+  expect_faithful(w)
+  expect_true(any(grepl("2^(3^2)", w$text, fixed = TRUE)))
+  skip_if_no_engine("rxode2")
+  expect_no_error(suppressMessages(rxode2::rxode2(eval(parse(text = w$text)[[
+    1
+  ]]))))
+})
+
+test_that("names rxode2 gives a meaning of its own are renamed (#181)", {
+  m <- read_ctl(ctl_onecmt(pk = c("TLAST = 2", "CLX = CL * TLAST")))
+
+  w <- pmx_write_rxode2(m)
+
+  expect_faithful(w)
+  expect_false(any(grepl("^ *TLAST <-", w$text)))
+  expect_true(any(grepl("x_TLAST <-", w$text, fixed = TRUE)))
+
+  mrg <- read_cpp(cpp_onecmt(
+    extra = "$PARAM DV = 2",
+    main = "double CLX = CL * DV;"
+  ))
+  expect_true(any(grepl("x_DV", pmx_write_rxode2(mrg)$text, fixed = TRUE)))
+
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1(
+    cl = "TLAST = THETA(1)",
+    pk = "CL = TLAST * EXP(ETA(1))"
+  ))
+  expect_true(pmx_compare(m, pmx_write_rxode2(m), pmx_design(n = 1))$pass)
+})
+
+test_that("a covariate rxode2 reads as an event item is refused (#181)", {
+  m <- read_ctl(ctl_onecmt(pk = "CLI = CL * TLAST"))
+  expect_error(pmx_write_rxode2(m), class = "zupmxio_write_error")
+})
+
+test_that("unused parameters and random effects are dropped, as a loss (#183)", {
+  m <- read_ctl(sub(
+    "$OMEGA 0.09 0.09",
+    "$OMEGA 0.09 0.09 0.04",
+    sub(
+      "$THETA (0, 1) (0, 4) (0, 50)",
+      "$THETA (0, 1) (0, 4) (0, 50) (0, 7)",
+      ctl_onecmt(),
+      fixed = TRUE
+    ),
+    fixed = TRUE
+  ))
+  expect_equal(nrow(pmx_parameters(m)), 4)
+
+  w <- pmx_write_rxode2(m)
+
+  expect_equal(pmx_fidelity(w), "lossy")
+  expect_true(any(grepl("THETA4", pmx_losses(w))))
+  expect_true(any(grepl("ETA3", pmx_losses(w))))
+  expect_false(any(grepl("\\b(THETA4|ETA3)\\b", w$text)))
+  skip_if_no_engine("rxode2")
+  expect_no_error(suppressMessages(rxode2::rxode2(eval(parse(text = w$text)[[
+    1
+  ]]))))
+})

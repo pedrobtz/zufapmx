@@ -81,3 +81,20 @@ test_that("writers refuse what their format cannot hold, and say who can (#68, #
   })
   expect_refusal(power, c("nonmem", "mrgsolve"), "observations$cp$residual")
 })
+
+test_that("a model with no parameters writes to every format (#185)", {
+  m <- read_cpp(c(
+    "$CMT CENT",
+    "$ODE",
+    "dxdt_CENT = -0.1 * CENT;",
+    "$SIGMA 0.04",
+    "$TABLE",
+    "double IPRED = CENT / 10.0;",
+    "double Y = IPRED * (1 + EPS(1));"
+  ))
+  expect_equal(nrow(pmx_parameters(m)), 0)
+
+  for (writer in list(pmx_write_nonmem, pmx_write_rxode2, pmx_write_mrgsolve)) {
+    expect_faithful(writer(m))
+  }
+})

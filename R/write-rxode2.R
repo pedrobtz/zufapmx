@@ -31,13 +31,20 @@
 #' pmx_write_rxode2(pmx_read_rxode2(fun))
 pmx_write_rxode2 <- function(model) {
   check_model(model)
-  m <- unclass(model)
-  losses <- character()
+  # rxode2 refuses an ini() entry model() never uses; such entries cannot
+  # change predictions, so they are dropped as a loss, and the write is
+  # checked against the model without them (#183).
+  unused <- rxode2_write_drop_unused(unclass(model))
+  source <- structure(unused$m, class = class(model))
+  m <- unused$m
+  losses <- unused$losses
 
   m <- rxode2_write_sd_from_sigma(m)
+  m <- model_map(m, rxode2_write_powers)
   m <- rxode2_write_lincmt_parameters(m)
   m <- rxode2_write_lincmt_numbering(m)
   m <- rxode2_write_free_lincmt(m)
+  m <- rxode2_write_free_special(m)
   refuse_unwritable(m, one_endpoint = FALSE)
   # The record's time in individual statements (D15) has no rxode2
   # spelling: rxode2 evaluates every statement in continuous time.
@@ -79,7 +86,7 @@ pmx_write_rxode2 <- function(model) {
   new_written(
     text = text,
     format = "rxode2",
-    fidelity = written_fidelity(losses, model, back),
+    fidelity = written_fidelity(losses, source, back),
     losses = losses
   )
 }
@@ -254,6 +261,84 @@ rxode2_write_free_lincmt <- function(m) {
   model_rename(m, map)
 }
 
+# Names rxode2 gives a meaning of its own, matched without regard to case:
+# event and data items it reads from the records, time since dose, and
+# constants it parses. A variable or parameter with one is renamed with an
+# `x_` prefix; a covariate cannot be, since it names a data column (#181).
+rxode2_special_names <- c(
+  "tlast",
+  "tad",
+  "tafd",
+  "tfirst",
+  "podo",
+  "dose",
+  "dosenum",
+  "newind",
+  "rate",
+  "dur",
+  "cmt",
+  "ss",
+  "addl",
+  "ii",
+  "amt",
+  "evid",
+  "id",
+  "dv",
+  "mdv",
+  "time",
+  "m_e",
+  "m_pi",
+  "na",
+  "true",
+  "false",
+  "inf",
+  "nan"
+)
+
+rxode2_write_free_special <- function(m) {
+  covariates <- m$provenance$covariates
+  special_cov <- covariates[tolower(covariates) %in% rxode2_special_names]
+  if (length(special_cov) > 0) {
+    write_error(
+      sprintf(
+        "the covariate `%s`, a name rxode2 reads as its own",
+        special_cov[[1]]
+      ),
+      "provenance$covariates",
+      formats = c("nonmem", "mrgsolve"),
+      call = NULL
+    )
+  }
+  names <- unique(c(
+    m$parameters$name,
+    stmt_targets(m$individual),
+    stmt_targets(m$structure$statements)
+  ))
+  clash <- names[tolower(names) %in% rxode2_special_names]
+  if (length(clash) == 0) {
+    return(m)
+  }
+  taken <- unique(c(names, unlist(lapply(model_expressions(m), all.vars))))
+  map <- stats::setNames(
+    make.unique(c(taken, paste0("x_", clash)))[
+      length(taken) + seq_along(clash)
+    ],
+    clash
+  )
+  m$parameters$name <- map[m$parameters$name] %|NA|% m$parameters$name
+  if (identical(m$structure$type, "closed")) {
+    m$structure$parameters[] <- map[m$structure$parameters] %|NA|%
+      m$structure$parameters
+  }
+  m$observations <- lapply(m$observations, function(o) {
+    o$residual$parameters <- unname(
+      map[o$residual$parameters] %|NA|% o$residual$parameters
+    )
+    o
+  })
+  model_rename(m, map)
+}
+
 rxode2_write_ini <- function(m) {
   p <- m$parameters
   params <- vapply(
@@ -269,7 +354,9 @@ rxode2_write_ini <- function(m) {
   etas <- vapply(
     m$random_effects$omega,
     function(block) {
-      values <- block$matrix[upper.tri(block$matrix, diag = TRUE)]
+      # Estimates where the model has them, as for thetas (#182).
+      m <- block$estimate %||% block$matrix
+      values <- m[upper.tri(m, diag = TRUE)]
       paste(
         paste(block$names, collapse = " + "),
         "~",
@@ -281,8 +368,17 @@ rxode2_write_ini <- function(m) {
   c(params, etas)
 }
 
+# Exact digits: a standard deviation written for a sigma is squared when
+# read back, which doubles its rounding error (#182).
 rxode2_write_values <- function(values, fixed) {
-  text <- vapply(values, num_text, character(1))
+  text <- vapply(
+    values,
+    function(v) {
+      t <- as.character(v)
+      if (identical(as.numeric(t), v)) t else sprintf("%.17g", v)
+    },
+    character(1)
+  )
   if (fixed) {
     return(sprintf("fix(%s)", paste(text, collapse = ", ")))
   }
@@ -379,6 +475,73 @@ rxode2_write_residual <- function(residual, endpoint) {
       sprintf("observations$%s$residual", endpoint),
       formats = residual_formats(residual$type),
       call = NULL
+    )
+  )
+}
+
+# rxode2's grammar refuses a^b^c, which R deparses for a^(b^c) since `^`
+# is right-associative; an explicit `(` keeps the parentheses (#187).
+rxode2_write_powers <- function(x) {
+  if (!is.call(x)) {
+    return(x)
+  }
+  x[-1] <- lapply(as.list(x)[-1], rxode2_write_powers)
+  if (is_call(x, "^") && is_call(x[[3]], "^")) {
+    x[[3]] <- call("(", x[[3]])
+  }
+  x
+}
+
+rxode2_write_drop_unused <- function(m) {
+  used <- unique(c(
+    unlist(lapply(model_expressions(m), all.vars)),
+    if (identical(m$structure$type, "closed")) unname(m$structure$parameters),
+    unlist(lapply(m$observations, function(o) o$residual$parameters))
+  ))
+  drop_params <- setdiff(m$parameters$name, used)
+  drop_blocks <- function(blocks, what) {
+    keep <- list()
+    dropped <- character()
+    for (b in blocks) {
+      unused_names <- setdiff(b$names, used)
+      if (length(unused_names) == 0) {
+        keep[[length(keep) + 1]] <- b
+      } else if (length(unused_names) == length(b$names)) {
+        dropped <- c(dropped, b$names)
+      } else {
+        write_error(
+          sprintf(
+            "the unused %s `%s`, correlated with used ones",
+            what,
+            unused_names[[1]]
+          ),
+          sprintf("random_effects$%s", what),
+          formats = c("nonmem", "mrgsolve"),
+          call = NULL
+        )
+      }
+    }
+    list(blocks = keep, dropped = dropped)
+  }
+  omega <- drop_blocks(m$random_effects$omega, "omega")
+  sigma <- drop_blocks(m$random_effects$sigma, "sigma")
+  dropped <- c(drop_params, omega$dropped, sigma$dropped)
+  if (length(dropped) == 0) {
+    return(list(m = m, losses = character()))
+  }
+  m$parameters <- m$parameters[!m$parameters$name %in% drop_params, ]
+  rownames(m$parameters) <- NULL
+  m$random_effects$omega <- omega$blocks
+  m$random_effects$sigma <- sigma$blocks
+  m$random_effects$attach <- m$random_effects$attach[
+    !m$random_effects$attach$eta %in% omega$dropped,
+  ]
+  rownames(m$random_effects$attach) <- NULL
+  list(
+    m = m,
+    losses = sprintf(
+      "unused parameters and random effects, which rxode2 refuses: %s",
+      paste(dropped, collapse = ", ")
     )
   )
 }
