@@ -39,6 +39,7 @@ pmx_write_rxode2 <- function(model) {
   m <- rxode2_write_lincmt_parameters(m)
   m <- rxode2_write_lincmt_numbering(m)
   m <- rxode2_write_free_lincmt(m)
+  m <- rxode2_write_free_special(m)
   refuse_unwritable(m, one_endpoint = FALSE)
   # The record's time in individual statements (D15) has no rxode2
   # spelling: rxode2 evaluates every statement in continuous time.
@@ -252,6 +253,84 @@ rxode2_write_free_lincmt <- function(m) {
     ],
     clash
   )
+  model_rename(m, map)
+}
+
+# Names rxode2 gives a meaning of its own, matched without regard to case:
+# event and data items it reads from the records, time since dose, and
+# constants it parses. A variable or parameter with one is renamed with an
+# `x_` prefix; a covariate cannot be, since it names a data column (#181).
+rxode2_special_names <- c(
+  "tlast",
+  "tad",
+  "tafd",
+  "tfirst",
+  "podo",
+  "dose",
+  "dosenum",
+  "newind",
+  "rate",
+  "dur",
+  "cmt",
+  "ss",
+  "addl",
+  "ii",
+  "amt",
+  "evid",
+  "id",
+  "dv",
+  "mdv",
+  "time",
+  "m_e",
+  "m_pi",
+  "na",
+  "true",
+  "false",
+  "inf",
+  "nan"
+)
+
+rxode2_write_free_special <- function(m) {
+  covariates <- m$provenance$covariates
+  special_cov <- covariates[tolower(covariates) %in% rxode2_special_names]
+  if (length(special_cov) > 0) {
+    write_error(
+      sprintf(
+        "the covariate `%s`, a name rxode2 reads as its own",
+        special_cov[[1]]
+      ),
+      "provenance$covariates",
+      formats = c("nonmem", "mrgsolve"),
+      call = NULL
+    )
+  }
+  names <- unique(c(
+    m$parameters$name,
+    stmt_targets(m$individual),
+    stmt_targets(m$structure$statements)
+  ))
+  clash <- names[tolower(names) %in% rxode2_special_names]
+  if (length(clash) == 0) {
+    return(m)
+  }
+  taken <- unique(c(names, unlist(lapply(model_expressions(m), all.vars))))
+  map <- stats::setNames(
+    make.unique(c(taken, paste0("x_", clash)))[
+      length(taken) + seq_along(clash)
+    ],
+    clash
+  )
+  m$parameters$name <- map[m$parameters$name] %|NA|% m$parameters$name
+  if (identical(m$structure$type, "closed")) {
+    m$structure$parameters[] <- map[m$structure$parameters] %|NA|%
+      m$structure$parameters
+  }
+  m$observations <- lapply(m$observations, function(o) {
+    o$residual$parameters <- unname(
+      map[o$residual$parameters] %|NA|% o$residual$parameters
+    )
+    o
+  })
   model_rename(m, map)
 }
 
