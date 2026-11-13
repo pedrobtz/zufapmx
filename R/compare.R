@@ -38,6 +38,18 @@
 #' point by point, because their numbers of random effects differ, fail
 #' with a `reason` and no predictions.
 #'
+#' @section Errors:
+#' A comparison never fails by raising an error, but these do raise one:
+#'
+#' * `zupmxio_engine_error`: an engine is not installed, or fails, including
+#'   on a written text that does not compile.
+#' * `zupmxio_write_error`: no engine's writer can hold a model that has to
+#'   be written to run.
+#' * `zupmxio_model_error`: an argument is invalid; a model has more than
+#'   one endpoint; the design doses a compartment a model lacks; the design
+#'   (or the tables) holds no value for a model's covariate; a table
+#'   record names a compartment the model lacks.
+#'
 #' @param a,b The models to compare: each a model read by a `pmx_read_*()`
 #'   function, or a model written by a `pmx_write_*()` function. One of them
 #'   can be tables from [pmx_read_tables()]; see below.
@@ -92,6 +104,9 @@ pmx_compare <- function(
   check_comparable(a, "a")
   check_comparable(b, "b")
   check_design(design)
+  # The engines draw from R's stream as they simulate; the caller's stream
+  # is left as it was (#162).
+  restore_rng(environment())
   check_tolerance(tol, positive = TRUE)
   check_tolerance(atol, positive = FALSE)
   engines <- check_engines(engines)
@@ -374,6 +389,34 @@ omega_root <- function(omega) {
     )
   }
   e$vectors %*% diag(sqrt(pmax(e$values, 0)), length(e$values)) %*% t(e$vectors)
+}
+
+# Put the random number state back when `env` (a caller's frame) exits.
+restore_rng <- function(env) {
+  globals <- globalenv()
+  had <- exists(".Random.seed", envir = globals, inherits = FALSE)
+  old <- if (had) get(".Random.seed", envir = globals, inherits = FALSE)
+  kind <- RNGkind()
+  do.call(
+    on.exit,
+    list(
+      substitute(
+        {
+          RNGkind(KIND[[1]], KIND[[2]], KIND[[3]])
+          if (HAD) {
+            assign(".Random.seed", OLD, envir = globalenv())
+          } else if (
+            exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+          ) {
+            rm(".Random.seed", envir = globalenv())
+          }
+        },
+        list(KIND = kind, HAD = had, OLD = old)
+      ),
+      add = TRUE
+    ),
+    envir = env
+  )
 }
 
 with_seed <- function(seed, expr) {

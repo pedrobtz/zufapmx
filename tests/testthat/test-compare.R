@@ -662,3 +662,17 @@ test_that("a passing comparison reports its largest relative deviation as worst 
   expect_true(all(cmp$predictions$abs > cmp$atol))
   expect_equal(cmp$worst$rel, max(cmp$predictions$rel))
 })
+
+test_that("pmx_compare() leaves the caller's random number stream as it was (#162)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1())
+  w <- pmx_write_mrgsolve(m)
+  withr::local_seed(42)
+  before <- .Random.seed
+
+  pmx_compare(m, w, pmx_design(n = 2, regimens = "single"))
+
+  expect_identical(.Random.seed, before)
+})
