@@ -521,3 +521,45 @@ test_that("a name reassigned after a derivative, dosing attribute or scale reads
     "zupmxio_model"
   )
 })
+
+test_that("an ODE model observes its DEFOBS compartment, or compartment 1 (#148)", {
+  ode <- function(model, scale) {
+    c(
+      "$PROBLEM defobs",
+      "$SUBROUTINES ADVAN13 TOL=9",
+      model,
+      "$PK",
+      "KA = THETA(1)",
+      "CL = THETA(2)",
+      "V = THETA(3)",
+      scale,
+      "$DES",
+      "DADT(1) = -KA * A(1)",
+      "DADT(2) = KA * A(1) - CL / V * A(2)",
+      "$ERROR",
+      "Y = F * (1 + EPS(1))",
+      "$THETA (0, 1) (0, 4) (0, 50)",
+      "$SIGMA 0.04"
+    )
+  }
+  # Without DEFOBS NONMEM observes compartment 1, unless the data's CMT says
+  # otherwise; a scale on compartment 2 relies on the data, so it is refused.
+  expect_refused(
+    read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT)", "S2 = V")),
+    seen = "S2"
+  )
+  expect_refused(
+    read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)", "S1 = V")),
+    seen = "S1"
+  )
+  expect_refused(
+    read_ctl(ode("$MODEL COMP=(DEPOT, DEFOBS) COMP=(CENT, DEFOBS)", "S2 = V")),
+    seen = "DEFOBS"
+  )
+  m <- read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)", "S2 = V"))
+  expect_identical(unclass(m)$observations$Y$prediction, quote(CENT / V))
+  m <- read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT)", "S1 = V"))
+  expect_identical(unclass(m)$observations$Y$prediction, quote(DEPOT / V))
+  m <- read_ctl(ode("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)", character()))
+  expect_identical(unclass(m)$observations$Y$prediction, quote(CENT))
+})

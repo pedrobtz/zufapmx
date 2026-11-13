@@ -233,19 +233,34 @@ nm_structure_lines <- function(m) {
   if (identical(s$type, "closed")) {
     return(sprintf("$SUBROUTINES ADVAN%d TRANS%d", s$advan, s$trans))
   }
+  # DEFOBS on the compartment the prediction reads: without it NONMEM
+  # observes compartment 1 (#148).
+  observed <- nm_observed(m)
   c(
     "$SUBROUTINES ADVAN13 TOL=9",
     paste0(
       "$MODEL ",
       paste(
         sprintf(
-          "COMP=(%s)",
-          nm_spell(s$compartments)
+          "COMP=(%s%s)",
+          nm_spell(s$compartments),
+          ifelse(seq_along(s$compartments) == observed, ", DEFOBS", "")
         ),
         collapse = " "
       )
     )
   )
+}
+
+# The compartment a prediction observes: its amount, or its amount over a
+# scale. Other predictions are refused by nm_scale_lines().
+nm_observed <- function(m) {
+  compartments <- model_compartments(m$structure)
+  pred <- m$observations[[1]]$prediction
+  if (is_call(pred, "/")) {
+    pred <- pred[[2]]
+  }
+  if (is.symbol(pred)) match(as.character(pred), compartments) else NA_integer_
 }
 
 nm_dosing_lines <- function(m, spelling) {

@@ -331,3 +331,13 @@ test_that("writer refusals name the construct and where to take it", {
   expect_snapshot(pmx_write_nonmem(m), error = TRUE)
   expect_snapshot(pmx_write_mrgsolve(m), error = TRUE)
 })
+
+test_that("an ODE model is written with DEFOBS on its observed compartment (#148)", {
+  m <- pmx_read_mrgsolve(corpus_file("onecmt-oral-mm", "model.cpp"))
+
+  w <- pmx_write_nonmem(m)
+
+  expect_true("$MODEL COMP=(DEPOT) COMP=(CENT, DEFOBS)" %in% w$text)
+  expect_true("S2 = V" %in% w$text)
+  expect_faithful(w)
+})
