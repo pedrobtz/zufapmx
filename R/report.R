@@ -36,12 +36,7 @@ pmx_report <- function(comparison, file = NULL, max_points = 20) {
       "model"
     )
   }
-  if (
-    !is.null(file) &&
-      (!is.character(file) || length(file) != 1 || is.na(file) || !nzchar(file))
-  ) {
-    zupmxio_abort("`file` must be a path or NULL.", "model")
-  }
+  check_path_or_null(file)
   check_count(max_points, 0, .Machine$integer.max)
 
   x <- comparison

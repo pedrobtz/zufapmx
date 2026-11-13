@@ -537,6 +537,30 @@ check_choice <- function(
   arg
 }
 
+check_flag <- function(x, name = deparse(substitute(x))) {
+  if (!is.logical(x) || length(x) != 1 || is.na(x)) {
+    zupmxio_abort(
+      sprintf("`%s` must be TRUE or FALSE.", name),
+      "model",
+      call = sys.call(-1)
+    )
+  }
+}
+
+# A path to write to, or NULL for none.
+check_path_or_null <- function(x, name = deparse(substitute(x))) {
+  if (
+    !is.null(x) &&
+      (!is.character(x) || length(x) != 1 || is.na(x) || !nzchar(x))
+  ) {
+    zupmxio_abort(
+      sprintf("`%s` must be a path or NULL.", name),
+      "model",
+      call = sys.call(-1)
+    )
+  }
+}
+
 check_file <- function(file) {
   if (
     !is.character(file) ||

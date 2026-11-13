@@ -35,15 +35,8 @@
 #' identical(pmx_read_json(file), model)
 pmx_write_json <- function(model, file = NULL, pretty = TRUE) {
   check_model(model)
-  if (
-    !is.null(file) &&
-      (!is.character(file) || length(file) != 1 || is.na(file) || !nzchar(file))
-  ) {
-    zupmxio_abort("`file` must be a path or NULL.", "model")
-  }
-  if (!is.logical(pretty) || length(pretty) != 1 || is.na(pretty)) {
-    zupmxio_abort("`pretty` must be TRUE or FALSE.", "model")
-  }
+  check_path_or_null(file)
+  check_flag(pretty)
   json_require()
   text <- zujson::json_write(json_utf8(json_model(model)), pretty = pretty)
   if (is.null(file)) {
