@@ -3,7 +3,7 @@ pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   articles/validating-a-translation: validating-a-translation.html
-last_built: 2026-11-13T06:23Z
+last_built: 2026-11-13T06:25Z
 urls:
   reference: https://pedrobtz.github.io/zupmxio/reference
   article: https://pedrobtz.github.io/zupmxio/articles
