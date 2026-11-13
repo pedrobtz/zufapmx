@@ -630,7 +630,7 @@ read_model <- function(source, ...) {
       parts$provenance$losses,
       paste(
         "values kept from earlier records by variables assigned only",
-        "inside IF (D14)"
+        "inside IF"
       )
     )
     parts$provenance$fidelity <- "lossy"

@@ -129,7 +129,7 @@ test_that("dosing attributes and IF blocks in $PK read (#54, #106)", {
   expect_true(is_call(unclass(m)$individual[[5]], "if"))
   expect_contains(
     unclass(m)$provenance$losses,
-    "values kept from earlier records by variables assigned only inside IF (D14)"
+    "values kept from earlier records by variables assigned only inside IF"
   )
 })
 

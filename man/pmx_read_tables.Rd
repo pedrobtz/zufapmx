@@ -45,7 +45,7 @@ to case.
 
 The prediction column should be \code{PRED}, NONMEM's population prediction:
 the comparison simulates the model's typical subject, every random
-effect at zero (design Q1). NONMEM prints a fixed number of significant
+effect at zero; individual predictions are not compared. NONMEM prints a fixed number of significant
 digits, 5 by default; the reader records each value's precision, and
 the comparison accepts a prediction that rounds to that value. Fortran's
 exponent forms (\verb{1.2D+00}, \code{1.2345-100}) are read too.

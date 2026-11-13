@@ -113,3 +113,9 @@ test_that("an error in a writer's read-back that is not a refusal propagates (#1
   expect_false(inherits(err, "zupmxio_write_error"))
   expect_equal(conditionMessage(err), "reader bug")
 })
+
+test_that("an accessor's error names the function the user called (#171)", {
+  err <- tryCatch(pmx_fidelity(list()), error = function(e) e)
+  expect_s3_class(err, "zupmxio_model_error")
+  expect_identical(conditionCall(err)[[1]], quote(pmx_fidelity))
+})

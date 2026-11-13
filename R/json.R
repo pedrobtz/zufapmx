@@ -4,7 +4,7 @@
 #' `pmx_read_json()` reads one back. The document holds the model's seven
 #' components as data, so a model read from JSON is the model that was
 #' written: the same parameters, statements, provenance and all. It is
-#' zupmxio's own representation, not a file standard (design D3).
+#' zupmxio's own representation, not a file standard.
 #'
 #' Statements and expressions are R code in strings (`"cl <- tcl *
 #' exp(eta.cl)"`), constants are numbers. JSON has no infinity, so
