@@ -291,7 +291,7 @@ tables <- pmx_read_tables(table)
 tables
 #> <zupmxio tables> 1 subject, 1 dose and 8 observation records
 #> Prediction: `PRED`, 5 significant digits.
-#> From file1ab36df9f778.tab.
+#> From file1b464f180d87.tab.
 pmx_compare(tables, mrg)
 #> <zupmxio comparison> pass
 #> a: NONMEM table output, column `PRED` (5 significant digits)
