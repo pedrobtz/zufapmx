@@ -22,6 +22,15 @@ It outranks this file: `CLAUDE.md` orients, the design doc decides. Its
 decisions marked (C) and its open questions (§15) are still the maintainer's
 to confirm.
 
+## Assurance
+
+@.claude/shared/assurance.md
+
+`.agents/assurance.md` records how this package meets that standard: its
+kinds, required checks, boundaries with their oracles, and limits with
+their straddling tests. CI holds it to the standard (`assurance.yaml`).
+A stage that adds a boundary or a limit adds its row.
+
 ## Current state
 
 The readers, writers and the comparison harness are in place; the
