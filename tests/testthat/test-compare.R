@@ -776,3 +776,28 @@ test_that("a NONMEM model with estimates compares with its translations (#182)",
   expect_true(pmx_compare(m, pmx_write_mrgsolve(m), d)$pass)
   expect_true(pmx_compare(m, pmx_write_rxode2(m), d)$pass)
 })
+
+test_that("an observation before a dose at the same time is its pre-dose value (#184)", {
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  m <- read_ctl(ctl_advan1())
+  k <- 4 / 50
+  # A trough at 12, recorded before the second dose at 12.
+  c6 <- 2 * exp(-6 * k)
+  c12 <- 2 * exp(-12 * k)
+  c18 <- c12 * exp(-6 * k) + 2 * exp(-6 * k)
+  df <- data.frame(
+    ID = 1,
+    TIME = c(0, 6, 12, 12, 18),
+    AMT = c(100, 0, 0, 100, 0),
+    EVID = c(1, 0, 0, 1, 0),
+    PRED = c(0, c6, c12, 0, c18)
+  )
+  tables <- pmx_read_tables(local_nm_table(df, digits = 9))
+
+  for (engine in c("rxode2", "mrgsolve")) {
+    cmp <- pmx_compare(tables, m, engines = c(NA, engine))
+    expect_true(cmp$pass, label = engine)
+  }
+})

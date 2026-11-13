@@ -224,6 +224,9 @@ compare_tables <- function(t, side, at, tol, atol) {
     addl = r$addl,
     ss = r$ss
   )
+  if (side$engine == "rxode2") {
+    data$time <- rxode2_predose_times(data)
+  }
   covariates <- m$provenance$covariates
   extra <- setdiff(names(r), c(names(data), "pred", "resolution"))
   for (cov in covariates) {
@@ -271,6 +274,25 @@ compare_tables <- function(t, side, at, tol, atol) {
   )
 }
 
+
+# An observation recorded before a dose at the same time is the value
+# before that dose, in NONMEM and in mrgsolve, which keep record order.
+# rxode2 gives the value after it, so for rxode2 such an observation is
+# taken a hair earlier: 1e-9 of its time, far inside any tolerance (#184).
+rxode2_predose_times <- function(data) {
+  time <- data$time
+  n <- nrow(data)
+  for (i in which(data$evid == 0)) {
+    later <- seq_len(n) > i &
+      data$id == data$id[[i]] &
+      data$time == time[[i]] &
+      data$evid == 1
+    if (any(later)) {
+      time[[i]] <- time[[i]] - 1e-9 * max(1, abs(time[[i]]))
+    }
+  }
+  time
+}
 
 compare_sides <- function(sides, design, tol, atol) {
   models <- lapply(sides, function(s) unclass(s$model))
