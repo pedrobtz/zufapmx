@@ -288,7 +288,8 @@ rxode2_lincmt_aliases <- function(lower) {
       v = "v2",
       q = c("q", "q3"),
       vp = "v3",
-      q2 = "q4",
+      # The writer spells ADVAN12's Q4 as Q2, which linCmt() reads (#176).
+      q2 = c("q4", "q2"),
       vp2 = "v4",
       ka = "ka"
     ))

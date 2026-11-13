@@ -261,3 +261,34 @@ test_that("a combined residual with EPS(1) proportional writes (#129)", {
   expect_faithful(back)
   expect_true("Y = F * (1 + EPS(1)) + EPS(2)" %in% back$text)
 })
+
+test_that("ADVAN12 is written under names rxode2's linCmt() reads (#176)", {
+  m <- read_ctl(c(
+    "$PROBLEM advan12",
+    "$SUBROUTINES ADVAN12 TRANS4",
+    "$PK",
+    "CL = THETA(1) * EXP(ETA(1))",
+    "V2 = THETA(2)",
+    "Q3 = THETA(3)",
+    "V3 = THETA(4)",
+    "Q4 = THETA(5)",
+    "V4 = THETA(6)",
+    "KA = THETA(7)",
+    "S2 = V2",
+    "$ERROR",
+    "Y = F * (1 + EPS(1))",
+    "$THETA (0, 5) (0, 1.3) (0, 0.8) (0, 23) (0, 0.9) (0, 2.2) (0, 0.2)",
+    "$OMEGA 0.09",
+    "$SIGMA 0.04"
+  ))
+
+  w <- pmx_write_rxode2(m)
+
+  expect_faithful(w)
+  expect_false(any(grepl("Q3|Q4", w$text)))
+
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  expect_true(pmx_compare(m, w, pmx_design(n = 1))$pass)
+})
