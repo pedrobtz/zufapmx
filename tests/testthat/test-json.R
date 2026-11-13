@@ -219,7 +219,9 @@ test_that("non-ASCII names survive JSON in any locale", {
       })
     }
     b <- body(f)
-    b[[3]][[2]][[2]][[3]][[3]][[2]][[2]] <- as.name(name)
+    # In a C locale R warns that it cannot translate the name, and makes
+    # it `po<U+00EF>ds`; the round trip is what is tested here.
+    b[[3]][[2]][[2]][[3]][[3]][[2]][[2]] <- suppressWarnings(as.name(name))
     body(f) <- b
     pmx_read_rxode2(f)
   }
@@ -237,11 +239,76 @@ test_that("non-ASCII names survive JSON in any locale", {
       expect_identical(json_round_trip(m), m, label = locale)
       # A name that is a JSON key: the endpoint.
       # As a reader holds it: through a symbol, so in the native encoding.
-      native <- as.character(as.name(name))
+      native <- as.character(suppressWarnings(as.name(name)))
       e <- unclass(model_onecmt_mm())
       names(e$observations) <- native
       e <- do.call(new_model, e)
       expect_identical(json_round_trip(e), e, label = paste(locale, "key"))
     }
+  }
+})
+
+test_that("components of the wrong JSON type are parse errors (#151)", {
+  skip_if_no_engine("zujson")
+  good <- pmx_write_json(model_onecmt_mm(), pretty = FALSE)
+  cases <- c(
+    parameters = '{"zufapmx":"model","version":1,"parameters":5}',
+    random_effects = sub(
+      '"random_effects":\\{.*?"iov":\\{[^}]*\\}\\}',
+      '"random_effects":"x"',
+      good,
+      perl = TRUE
+    ),
+    structure = sub(
+      '"structure":\\{[^}]*\\{[^}]*\\}\\}',
+      '"structure":"x"',
+      good,
+      perl = TRUE
+    ),
+    individual = sub(
+      '"individual":\\[[^]]*\\]',
+      '"individual":{"a":1}',
+      good,
+      perl = TRUE
+    )
+  )
+  cases[["parameters"]] <- sub(
+    '"zufapmx"',
+    '"zupmxio"',
+    cases[["parameters"]],
+    fixed = TRUE
+  )
+  for (case in names(cases)) {
+    expect_false(identical(cases[[case]], good), label = case)
+    file <- withr::local_tempfile(fileext = ".json")
+    writeLines(cases[[case]], file)
+    expect_error(
+      pmx_read_json(file),
+      class = "zupmxio_parse_error",
+      label = case
+    )
+  }
+})
+
+test_that("JSON counts straddle the integer range without a warning (#141)", {
+  skip_if_no_engine("zujson")
+  good <- pmx_write_json(model_twocmt_oral(), pretty = FALSE)
+  read_text <- function(text) {
+    file <- withr::local_tempfile(fileext = ".json")
+    writeLines(text, file)
+    pmx_read_json(file)
+  }
+  big <- .Machine$integer.max
+  for (v in c(big - 1, big, big + 1)) {
+    text <- sub('"version":1', sprintf('"version":%.0f', v), good, fixed = TRUE)
+    expect_no_warning(
+      expect_error(read_text(text), class = "zupmxio_parse_error"),
+      message = NULL
+    )
+    text <- sub('"ncmt":2', sprintf('"ncmt":%.0f', v), good, fixed = TRUE)
+    expect_no_warning(expect_error(
+      read_text(text),
+      class = "zupmxio_parse_error"
+    ))
   }
 })

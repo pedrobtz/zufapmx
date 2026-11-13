@@ -57,6 +57,10 @@ compare_side <- function(x, requested, exclude) {
     x
   }
   source <- unclass(model)$provenance$format
+  original <- compare_source(x, model, source, requested, exclude)
+  if (!is.null(original)) {
+    return(original)
+  }
   candidates <- if (!is.na(requested)) {
     requested
   } else {
@@ -101,6 +105,37 @@ compare_side <- function(x, requested, exclude) {
   engine_error(candidates[[1]], call = NULL)
 }
 
+# A model's own source, when its engine may run it (D4) and the text still
+# reads back as the model: then the comparison runs what the user wrote,
+# so a reader's error cannot hide in both sides (D26, #170). A model edited
+# since it was read runs through a writer instead.
+compare_source <- function(x, model, source, requested, exclude) {
+  text <- unclass(model)$provenance$source
+  if (
+    inherits(x, "zupmxio_written") ||
+      is.null(text) ||
+      !source %in% engine_names ||
+      source %in% exclude ||
+      !(is.na(requested) || requested == source) ||
+      !engine_available(source)
+  ) {
+    return(NULL)
+  }
+  back <- tryCatch(text_model(text, source), zupmxio_error = function(e) NULL)
+  if (
+    is.null(back) || !same_content(model_content(back), model_content(model))
+  ) {
+    return(NULL)
+  }
+  list(
+    engine = source,
+    text = text,
+    model = back,
+    origin = sprintf("%s source, simulated as read", source),
+    provenance = unclass(x)$provenance
+  )
+}
+
 engine_require <- function(engine) {
   if (!engine_available(engine)) {
     engine_error(engine, call = NULL)
@@ -142,10 +177,15 @@ engine_simulate <- function(side, data, etas) {
       rxode2 = engine_rxode2(side$text, data, etas),
       mrgsolve = engine_mrgsolve(side$text, data, etas)
     ),
+    # The package's own conditions (a refusal, an engine error) pass as
+    # they are; only an engine's own failure becomes an engine error.
     zupmxio_error = function(e) stop(e),
     error = function(e) engine_error(side$engine, e, call = NULL)
   )
-  names(out) <- tolower(names(out))
+  # Engines spell id and time in either case; the endpoint is matched as
+  # spelled, so a variable `y` beside endpoint `Y` is not read (#152).
+  folded <- tolower(names(out)) %in% c("id", "time")
+  names(out)[folded] <- tolower(names(out)[folded])
   if (!"id" %in% names(out) && length(unique(data$id)) == 1) {
     # rxode2 leaves out the id of a single subject.
     out$id <- rep(data$id[[1]], nrow(out))
@@ -159,7 +199,7 @@ engine_simulate <- function(side, data, etas) {
     k <- sprintf("%d|%.15g", as.integer(id), time)
     paste(k, stats::ave(seq_along(k), k, FUN = seq_along))
   }
-  column <- tolower(endpoint)
+  column <- endpoint
   if (!column %in% names(out)) {
     return(rep(NA_real_, nrow(obs)))
   }
@@ -198,7 +238,7 @@ engine_rxode2 <- function(text, data, etas) {
 }
 
 engine_mrgsolve <- function(text, data, etas) {
-  mod <- mrgsolve_compiled(text)
+  mod <- engine_mrgsolve_compiled(text)
   mod <- mrgsolve::zero_re(mod)
   mod <- mrgsolve::update(
     mod,
@@ -224,7 +264,7 @@ engine_mrgsolve <- function(text, data, etas) {
 # one name are then the same code.
 engine_cache <- new.env(parent = emptyenv())
 
-mrgsolve_compiled <- function(text) {
+engine_mrgsolve_compiled <- function(text) {
   dir <- file.path(tempdir(), "zupmxio-mrgsolve")
   dir.create(dir, showWarnings = FALSE)
   path <- tempfile(tmpdir = dir, fileext = ".cpp")

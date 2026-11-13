@@ -35,17 +35,34 @@ test_that("random closed-form models round-trip through JSON", {
   }
 })
 
-test_that("random closed-form models simulate the same on both engines", {
+test_that("every closed form simulates the same on both engines (#159)", {
   skip_on_cran()
   skip_if_no_engine("rxode2")
   skip_if_no_engine("mrgsolve")
   withr::local_seed(20261114)
   design <- pmx_design(n = 2, seed = 3)
+  # Every ADVAN, and each depot model with and without lag and F1.
+  cases <- list(
+    list(1L, FALSE),
+    list(2L, FALSE),
+    list(2L, TRUE),
+    list(3L, FALSE),
+    list(4L, FALSE),
+    list(4L, TRUE),
+    list(11L, FALSE),
+    list(12L, FALSE),
+    list(12L, TRUE)
+  )
 
-  for (k in 1:6) {
-    spec <- random_closed_model()
+  for (case in cases) {
+    spec <- random_closed_model(advan = case[[1]], with_lag = case[[2]])
     m <- read_ctl(spec$lines)
-    label <- sprintf("model %d (ADVAN%d)", k, spec$advan)
+    label <- sprintf(
+      "ADVAN%d%s",
+      spec$advan,
+      if (case[[2]]) " with lag" else ""
+    )
+    expect_equal(!is.na(spec$lag), case[[2]], label = label)
     expect_true(pmx_compare(m, pmx_write_rxode2(m), design)$pass, label = label)
     expect_true(
       pmx_compare(m, pmx_write_mrgsolve(m), design)$pass,

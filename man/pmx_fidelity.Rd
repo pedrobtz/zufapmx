@@ -44,6 +44,7 @@ pmx_losses(written)
 }
 \seealso{
 Other writers:
+\code{\link[=pmx_write_json]{pmx_write_json()}},
 \code{\link[=pmx_write_mrgsolve]{pmx_write_mrgsolve()}},
 \code{\link[=pmx_write_nonmem]{pmx_write_nonmem()}},
 \code{\link[=pmx_write_rxode2]{pmx_write_rxode2()}}

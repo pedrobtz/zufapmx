@@ -17,7 +17,7 @@ test_that("an .ext whose omega does not fit the model's blocks is refused", {
   expect_refused(pmx_read_nonmem(ctl, "ext"), "a 1 by 1 matrix")
 })
 
-test_that("an .ext without rows or without a final row is refused", {
+test_that("an .ext without rows or without a final row is refused (#94)", {
   ext <- fixture_lines("run1.ext")
   expect_refused(
     pmx_read_nonmem(local_run("ext", ext[1]), "ext"),
@@ -39,7 +39,7 @@ test_that("an .ext without rows or without a final row is refused", {
   )
 })
 
-test_that("unreadable XML, or XML without an estimation, is refused", {
+test_that("unreadable XML, or XML without an estimation, is refused (#68, #94)", {
   skip_if_no_engine("zuxml")
   expect_refused(pmx_read_nonmem(local_run("xml", "<a"), "xml"), "the XML")
   expect_refused(
@@ -62,7 +62,7 @@ test_that("a missing output file named by `estimates` is a model error", {
   )
 })
 
-test_that("$NMXML reads run.xml through zuxml", {
+test_that("$NMXML reads run.xml through zuxml (#94)", {
   skip_if_no_engine("zuxml")
   xml <- normalizePath(
     test_path("fixtures", "nonmem", "run1.xml"),
@@ -86,7 +86,7 @@ test_that("$NMXML reads run.xml through zuxml", {
   expect_equal(basename(unclass(m)$provenance$estimates), "run1.xml")
 })
 
-test_that("$NMEXT keeps a correlated omega as one block", {
+test_that("$NMEXT keeps a correlated omega as one block (#94)", {
   ext <- normalizePath(
     test_path("fixtures", "nonmem", "run2.ext"),
     winslash = "/"
@@ -108,7 +108,7 @@ test_that("$NMEXT keeps a correlated omega as one block", {
   expect_length(unclass(m)$random_effects$omega, 1)
 })
 
-test_that("estimates are found next to a control stream in a dotted directory", {
+test_that("estimates are found next to a control stream in a dotted directory (#40)", {
   dir <- file.path(withr::local_tempdir(), "runs.v2")
   dir.create(dir)
   file.copy(test_path("fixtures", "nonmem", c("run1.ctl", "run1.ext")), dir)

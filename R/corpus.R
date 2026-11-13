@@ -18,6 +18,7 @@
 #'     \item{source}{Where the model comes from, and its licence.}
 #'     \item{path}{The entry's directory.}
 #'   }
+#' @family comparison
 #' @export
 #' @examples
 #' corpus <- zupmxio_corpus()

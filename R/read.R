@@ -273,7 +273,54 @@ record_at <- function(name, line) structure(name, line = line)
 
 record_line <- function(record) attr(record, "line") %||% NA_integer_
 
+# A derivative, a dosing attribute, a scale or an initial amount takes the
+# value its names have where it is assigned, in every format. The
+# representation holds it apart from the statements, so a later assignment
+# of a name it reads would change its meaning; such a model is refused
+# (#146). `captured(x)` says whether statement `x` is one; `fail(name, x)`
+# raises the refusal.
+refuse_later_reads <- function(stmts, captured, fail) {
+  is_captured <- vapply(
+    stmts,
+    function(x) is_call(x, "<-") && isTRUE(captured(x)),
+    logical(1)
+  )
+  for (i in which(is_captured)) {
+    later <- stmts[seq_along(stmts) > i & !is_captured]
+    # Assignments only: rxode2's `~` and `label()` lines assign nothing.
+    later <- Filter(function(y) is_call(y, "<-") || is_call(y, "if"), later)
+    hit <- intersect(all.vars(stmts[[i]][[3]]), stmt_targets(later))
+    if (length(hit) > 0) {
+      fail(hit[[1]], stmts[[i]])
+    }
+  }
+}
+
+# A refusal of a reassignment after a capture, in a record of a file.
+later_read_error <- function(file, record) {
+  function(name, x) {
+    parse_error(
+      file,
+      record_line(record),
+      NA_integer_,
+      seen = name,
+      message = sprintf(
+        "not translated: `%s` is assigned after `%s` reads it in %s",
+        name,
+        expr_text(x[[2]]),
+        record
+      ),
+      call = NULL
+    )
+  }
+}
+
 split_ode <- function(stmts, compartments, derivative_of, file, record) {
+  refuse_later_reads(
+    stmts,
+    function(x) !is.null(derivative_of(x)),
+    later_read_error(file, record)
+  )
   derivatives <- list()
   statements <- list()
   for (x in stmts) {
@@ -513,7 +560,7 @@ residual_form <- function(e, prediction = NULL) {
 # refuse them inside an `if` (where the representation cannot hold them) and
 # refuse reading them as variables. `reserved(name)` says whether a name is
 # one of them.
-check_dosing_names <- function(individual, reserved, file, record) {
+refuse_dosing_reads <- function(individual, reserved, file, record) {
   for (x in individual) {
     for (y in nested_statements(x)) {
       target <- if (is_call(y, "<-")) expr_text(y[[2]])
@@ -583,7 +630,7 @@ read_model <- function(source, ...) {
       parts$provenance$losses,
       paste(
         "values kept from earlier records by variables assigned only",
-        "inside IF (D14)"
+        "inside IF"
       )
     )
     parts$provenance$fidelity <- "lossy"
@@ -594,6 +641,11 @@ read_model <- function(source, ...) {
       parts$structure$statements,
       assigned = stmt_targets(parts$individual)
     )
+  }
+  format <- parts$provenance$format
+  constants <- format_constants[[format]]
+  if (length(constants) > 0) {
+    parts <- model_map(parts, function(x) substitute_constants(x, constants))
   }
   parts$provenance$covariates <- model_covariates(source, parts)
   tryCatch(
@@ -630,6 +682,97 @@ explicit_zero <- function(stmts, assigned = character()) {
   out
 }
 
+# Names each format defines, which a model can read but which are not
+# covariates: record, dose and solver state (#149). NM-TRAN's CALLFL is a
+# directive that changes when $PK runs.
+format_builtins <- list(
+  nonmem = c(
+    "ICALL",
+    "NEWIND",
+    "IREP",
+    "CALLFL",
+    "MIXNUM",
+    "MIXEST",
+    "COMACT",
+    "COMSAV",
+    "MODE",
+    "PCMT",
+    "MNEXT",
+    "MPAST",
+    "MNOW",
+    "NTHETA",
+    "NETA",
+    "NEPS",
+    "IERPRD",
+    "ID",
+    "EVID",
+    "AMT",
+    "RATE",
+    "CMT",
+    "MDV",
+    "II",
+    "SS",
+    "ADDL",
+    "DV",
+    "PRED",
+    "RES",
+    "WRES"
+  ),
+  mrgsolve = c(
+    "ID",
+    "EVID",
+    "CMT",
+    "AMT",
+    "II",
+    "SS",
+    "ADDL",
+    "RATE",
+    "NEWIND",
+    "SS_ADVANCE",
+    "self"
+  ),
+  rxode2 = c(
+    "tad",
+    "tafd",
+    "tlast",
+    "tfirst",
+    "podo",
+    "dose",
+    "dosenum",
+    "newind",
+    "id",
+    "evid",
+    "amt",
+    "cmt",
+    "ii",
+    "ss",
+    "addl",
+    "rate",
+    "dur"
+  )
+)
+
+# Constants a format names, as numbers: C++ booleans are 1 and 0.
+format_constants <- list(
+  mrgsolve = c(M_PI = pi, M_E = exp(1), true = 1, false = 0),
+  rxode2 = c(pi = pi)
+)
+
+substitute_constants <- function(x, constants) {
+  if (is.symbol(x)) {
+    name <- as.character(x)
+    return(if (name %in% names(constants)) constants[[name]] else x)
+  }
+  if (is.call(x)) {
+    if (is_call(x, "<-")) {
+      x[[3]] <- substitute_constants(x[[3]], constants)
+    } else {
+      x[-1] <- lapply(as.list(x)[-1], substitute_constants, constants)
+    }
+  }
+  x
+}
+
 # Free symbols of a model about to be built: what it reads but does not
 # define. Undeclared THETA, ETA and EPS indices are refused; the rest are
 # covariates, recorded in provenance. `t` is time (D15).
@@ -643,7 +786,36 @@ model_covariates <- function(source, parts) {
     unique(unlist(lapply(model_expressions(parts), all.vars))),
     defined
   )
-  undeclared <- grep("^(THETA|ETA|EPS)[0-9]+$", free, value = TRUE)
+  # A format's built-in names are not data the model reads: they change
+  # with the record, the solver or the dose, so none is a covariate (#149).
+  builtin <- intersect(
+    c(free, stmt_targets(parts$individual)),
+    format_builtins[[parts$provenance$format]]
+  )
+  if (length(builtin) > 0) {
+    parse_error(
+      source,
+      NA_integer_,
+      NA_integer_,
+      seen = builtin[[1]],
+      message = sprintf(
+        "not translated: `%s`, a name %s gives a meaning of its own",
+        builtin[[1]],
+        parts$provenance$format
+      ),
+      call = NULL
+    )
+  }
+  # Residual parameters too: Y = F + EPS(3) beside one $SIGMA (#30).
+  residual <- setdiff(
+    unlist(lapply(parts$observations, function(o) o$residual$parameters)),
+    defined
+  )
+  undeclared <- grep(
+    "^(THETA|ETA|EPS)[0-9]+$",
+    union(free, residual),
+    value = TRUE
+  )
   if (length(undeclared) > 0) {
     parse_error(
       source,

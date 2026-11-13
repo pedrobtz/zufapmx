@@ -1,5 +1,35 @@
 # zupmxio 0.0.0.9000
 
+* Readers refuse more models whose meaning they could not keep:
+  - a name reassigned after a derivative, dosing attribute or scale reads
+    it, whose value the representation could not hold (#146);
+  - a format's built-in names (`NEWIND`, `ICALL`, `EVID`, `tad`, ...) read
+    as covariates, and NM-TRAN's `CALLFL` (#149); `pi`, `M_PI` and C++
+    `true` and `false` read as numbers;
+  - omega and sigma blocks that are not positive semi-definite (#150);
+  - a NONMEM ODE model scaling a compartment it does not observe, since
+    without `DEFOBS` NONMEM observes compartment 1 (#148);
+  - an undeclared `EPS(n)` in a residual model (#30), unknown mrgsolve
+    `@options` (#154), and `$PKMODEL advan = 2.9` (#155).
+
+* `pmx_write_nonmem()` marks the observed compartment of an ODE model with
+  `DEFOBS` (#148), and `pmx_write_rxode2()` writes ADVAN12 under names
+  rxode2 simulates (#176).
+
+* `pmx_read_mrgsolve()` reads `$INIT` compartments (#153), `$PARAM
+  @covariates` (#154) and multi-line `/* */` comments (#68).
+
+* `pmx_compare()` simulates a model's own rxode2 function or mrgsolve file
+  when it can (#170), keeps the caller's random numbers (#162), matches the
+  endpoint column exactly (#152), and documents the errors it raises
+  (#163). Against tables, each value keeps its own printed precision, so a
+  fixed-format small value no longer loosens the rest (#147); EVID 2
+  records reach the engines (#169); and tables without observations fail
+  with a reason (#156).
+
+* `pmx_read_json()` raises only parse errors for malformed documents
+  (#151).
+
 * The package is renamed zupmxio, from zufapmx (design D24). Condition
   classes are `zupmxio_*_error` and the corpus is `zupmxio_corpus()`; the
   `pmx_*` functions keep their names.

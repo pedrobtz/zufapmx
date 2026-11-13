@@ -123,8 +123,10 @@ test_that("correlated sigma, expression residuals and IOV are refused", {
   m <- model_twocmt_oral()
   re <- unclass(m)$random_effects
   re$sigma <- list(model_block(c("e1", "e2"), c(0.04, 0.01)))
+  obs <- unclass(m)$observations
+  obs$cp$residual$parameters <- "e1"
   expect_error(
-    pmx_write_rxode2(model_with(m, random_effects = re)),
+    pmx_write_rxode2(model_with(m, random_effects = re, observations = obs)),
     class = "zupmxio_write_error"
   )
 
@@ -166,7 +168,7 @@ test_that("fidelity tolerates a parser that is off by one ulp", {
   expect_false(same_content(list(NA_real_), list(1)))
 })
 
-test_that("fidelity is equivalent only through known reparameterisations", {
+test_that("fidelity is equivalent only through known reparameterisations (#32)", {
   m <- corpus_rxode2_model("twocmt-oral")
   parts <- unclass(m)
 
@@ -186,7 +188,7 @@ test_that("fidelity is equivalent only through known reparameterisations", {
   )
 })
 
-test_that("variables linCmt() would read as parameters are renamed", {
+test_that("variables linCmt() would read as parameters are renamed (#55)", {
   m <- read_ctl(c(
     "$PROBLEM x",
     "$SUBROUTINES ADVAN3 TRANS4",
@@ -217,7 +219,7 @@ test_that("variables linCmt() would read as parameters are renamed", {
   )
 })
 
-test_that("a sigma variance is written as its standard deviation", {
+test_that("a sigma variance is written as its standard deviation (#90)", {
   parts <- unclass(model_twocmt_oral())
   parts$random_effects$sigma[[1]]$estimate <- matrix(
     0.0625,
@@ -227,7 +229,7 @@ test_that("a sigma variance is written as its standard deviation", {
   expect_true("    eps.prop <- c(0, 0.25)" %in% text)
 })
 
-test_that("a power residual model round-trips through pow()", {
+test_that("a power residual model round-trips through pow() (#105)", {
   m <- pmx_read_rxode2(function() {
     ini({
       tcl <- 4
@@ -260,4 +262,35 @@ test_that("a combined residual with EPS(1) proportional writes (#129)", {
   back <- pmx_write_nonmem(text_model(w$text, "rxode2"))
   expect_faithful(back)
   expect_true("Y = F * (1 + EPS(1)) + EPS(2)" %in% back$text)
+})
+
+test_that("ADVAN12 is written under names rxode2's linCmt() reads (#176)", {
+  m <- read_ctl(c(
+    "$PROBLEM advan12",
+    "$SUBROUTINES ADVAN12 TRANS4",
+    "$PK",
+    "CL = THETA(1) * EXP(ETA(1))",
+    "V2 = THETA(2)",
+    "Q3 = THETA(3)",
+    "V3 = THETA(4)",
+    "Q4 = THETA(5)",
+    "V4 = THETA(6)",
+    "KA = THETA(7)",
+    "S2 = V2",
+    "$ERROR",
+    "Y = F * (1 + EPS(1))",
+    "$THETA (0, 5) (0, 1.3) (0, 0.8) (0, 23) (0, 0.9) (0, 2.2) (0, 0.2)",
+    "$OMEGA 0.09",
+    "$SIGMA 0.04"
+  ))
+
+  w <- pmx_write_rxode2(m)
+
+  expect_faithful(w)
+  expect_false(any(grepl("Q3|Q4", w$text)))
+
+  skip_on_cran()
+  skip_if_no_engine("rxode2")
+  skip_if_no_engine("mrgsolve")
+  expect_true(pmx_compare(m, w, pmx_design(n = 1))$pass)
 })

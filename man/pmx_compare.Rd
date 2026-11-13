@@ -93,6 +93,21 @@ point by point, because their numbers of random effects differ, fail
 with a \code{reason} and no predictions.
 }
 
+\section{Errors}{
+
+A comparison never fails by raising an error, but these do raise one:
+\itemize{
+\item \code{zupmxio_engine_error}: an engine is not installed, or fails, including
+on a written text that does not compile.
+\item \code{zupmxio_write_error}: no engine's writer can hold a model that has to
+be written to run.
+\item \code{zupmxio_model_error}: an argument is invalid; a model has more than
+one endpoint; the design doses a compartment a model lacks; the design
+(or the tables) holds no value for a model's covariate; a table
+record names a compartment the model lacks.
+}
+}
+
 \examples{
 \dontshow{if (requireNamespace("rxode2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 path <- system.file(
@@ -112,6 +127,7 @@ cmp
 
 Other comparison:
 \code{\link[=pmx_design]{pmx_design()}},
-\code{\link[=pmx_report]{pmx_report()}}
+\code{\link[=pmx_report]{pmx_report()}},
+\code{\link[=zupmxio_corpus]{zupmxio_corpus()}}
 }
 \concept{comparison}

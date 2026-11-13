@@ -330,7 +330,8 @@ check_written <- function(x) {
   if (!inherits(x, "zupmxio_written")) {
     zupmxio_abort(
       sprintf("Expected a written model, not %s.", class(x)[[1]]),
-      "model"
+      "model",
+      call = sys.call(-1)
     )
   }
 }

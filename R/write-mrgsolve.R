@@ -30,7 +30,7 @@ pmx_write_mrgsolve <- function(model) {
   m <- unclass(model)
   losses <- character()
 
-  check_writable(m)
+  refuse_unwritable(m)
   if (any(!is.na(m$parameters$estimate))) {
     losses <- c(
       losses,

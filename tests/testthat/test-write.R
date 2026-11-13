@@ -1,4 +1,4 @@
-test_that("writers refuse what their format cannot hold, and say who can", {
+test_that("writers refuse what their format cannot hold, and say who can (#68, #89)", {
   writers <- list(
     rxode2 = pmx_write_rxode2,
     nonmem = pmx_write_nonmem,

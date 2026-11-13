@@ -39,7 +39,7 @@
       $INPUT ID TIME EVID AMT RATE CMT DV
       $DATA data.csv IGNORE=@
       $SUBROUTINES ADVAN13 TOL=9
-      $MODEL COMP=(DEPOT) COMP=(CENTRAL)
+      $MODEL COMP=(DEPOT) COMP=(CENTRAL, DEFOBS)
       $PK
       KA = THETA(1)
       VM = THETA(2) * EXP(ETA(1))
@@ -61,7 +61,7 @@
       $SIGMA 0.04
       # nonmem, fidelity: equivalent
 
-# writer refusals name the construct and where to take it
+# writer refusals name the construct and where to take it (#121)
 
     Code
       pmx_write_nonmem(m)

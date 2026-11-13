@@ -1,4 +1,4 @@
-test_that("expected.csv has one row per design time and the right columns", {
+test_that("expected.csv has one row per design time and the right columns (#69)", {
   corpus <- zupmxio_corpus()
 
   for (i in seq_len(nrow(corpus))) {
@@ -46,7 +46,7 @@ test_that("each entry's mrgsolve model reproduces its expected.csv", {
   }
 })
 
-test_that("a missing or short output never counts as agreement", {
+test_that("a missing or short output never counts as agreement (#29, #121)", {
   expect_equal(corpus_max_rel_dev(NULL, c(1, 2)), Inf)
   expect_equal(corpus_max_rel_dev(1, c(1, 1)), Inf)
   expect_equal(corpus_max_rel_dev(c(1, NA), c(1, 2)), Inf)

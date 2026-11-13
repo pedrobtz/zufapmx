@@ -38,6 +38,18 @@
 #' point by point, because their numbers of random effects differ, fail
 #' with a `reason` and no predictions.
 #'
+#' @section Errors:
+#' A comparison never fails by raising an error, but these do raise one:
+#'
+#' * `zupmxio_engine_error`: an engine is not installed, or fails, including
+#'   on a written text that does not compile.
+#' * `zupmxio_write_error`: no engine's writer can hold a model that has to
+#'   be written to run.
+#' * `zupmxio_model_error`: an argument is invalid; a model has more than
+#'   one endpoint; the design doses a compartment a model lacks; the design
+#'   (or the tables) holds no value for a model's covariate; a table
+#'   record names a compartment the model lacks.
+#'
 #' @param a,b The models to compare: each a model read by a `pmx_read_*()`
 #'   function, or a model written by a `pmx_write_*()` function. One of them
 #'   can be tables from [pmx_read_tables()]; see below.
@@ -92,6 +104,9 @@ pmx_compare <- function(
   check_comparable(a, "a")
   check_comparable(b, "b")
   check_design(design)
+  # The engines draw from R's stream as they simulate; the caller's stream
+  # is left as it was (#162).
+  restore_rng(environment())
   check_tolerance(tol, positive = TRUE)
   check_tolerance(atol, positive = FALSE)
   engines <- check_engines(engines)
@@ -210,7 +225,7 @@ compare_tables <- function(t, side, at, tol, atol) {
     ss = r$ss
   )
   covariates <- m$provenance$covariates
-  extra <- setdiff(names(r), c(names(data), "pred"))
+  extra <- setdiff(names(r), c(names(data), "pred", "resolution"))
   for (cov in covariates) {
     col <- extra[toupper(extra) == toupper(cov)]
     if (length(col) == 0) {
@@ -232,8 +247,11 @@ compare_tables <- function(t, side, at, tol, atol) {
     ncol(omega),
     dimnames = list(NULL, colnames(omega))
   )
-  model <- engine_simulate(side, data, etas)
   obs <- r[r$evid == 0, ]
+  if (nrow(obs) == 0) {
+    return(compare_failure("The tables hold no observation records."))
+  }
+  model <- engine_simulate(side, data, etas)
   table <- obs$pred
   points <- compare_points(
     "table",
@@ -242,7 +260,7 @@ compare_tables <- function(t, side, at, tol, atol) {
     if (at == "a") model else table,
     tol,
     atol,
-    resolution = table_resolution(table, t$digits)
+    resolution = obs$resolution * (1 + 1e-9)
   )
   list(
     pass = nrow(points) > 0 && all(points$pass),
@@ -253,15 +271,6 @@ compare_tables <- function(t, side, at, tol, atol) {
   )
 }
 
-# Half a unit in the last printed digit of each table value: a prediction
-# that rounds to the table's value agrees with it.
-table_resolution <- function(x, digits) {
-  if (is.na(digits)) {
-    return(rep(0, length(x)))
-  }
-  e <- ifelse(x == 0 | !is.finite(x), 0, floor(log10(abs(x))))
-  0.5 * 10^(e - digits + 1) * (1 + 1e-9)
-}
 
 compare_sides <- function(sides, design, tol, atol) {
   models <- lapply(sides, function(s) unclass(s$model))
@@ -380,6 +389,34 @@ omega_root <- function(omega) {
     )
   }
   e$vectors %*% diag(sqrt(pmax(e$values, 0)), length(e$values)) %*% t(e$vectors)
+}
+
+# Put the random number state back when `env` (a caller's frame) exits.
+restore_rng <- function(env) {
+  globals <- globalenv()
+  had <- exists(".Random.seed", envir = globals, inherits = FALSE)
+  old <- if (had) get(".Random.seed", envir = globals, inherits = FALSE)
+  kind <- RNGkind()
+  do.call(
+    on.exit,
+    list(
+      substitute(
+        {
+          RNGkind(KIND[[1]], KIND[[2]], KIND[[3]])
+          if (HAD) {
+            assign(".Random.seed", OLD, envir = globalenv())
+          } else if (
+            exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+          ) {
+            rm(".Random.seed", envir = globalenv())
+          }
+        },
+        list(KIND = kind, HAD = had, OLD = old)
+      ),
+      add = TRUE
+    ),
+    envir = env
+  )
 }
 
 with_seed <- function(seed, expr) {
@@ -546,9 +583,9 @@ print.zupmxio_comparison <- function(x, ...) {
   w <- x$worst
   if (!is.null(w)) {
     cat(sprintf(
-      "Worst: %s, subject %d, time %s: %s against %s (abs %s, rel %s).\n",
+      "Worst: %s, subject %s, time %s: %s against %s (abs %s, rel %s).\n",
       w$regimen,
-      w$id,
+      format(w$id),
       format(w$time),
       format(w$a, digits = 8),
       format(w$b, digits = 8),

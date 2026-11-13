@@ -36,8 +36,9 @@ pmx_write_rxode2 <- function(model) {
 
   m <- rxode2_write_sd_from_sigma(m)
   m <- rxode2_write_lincmt_parameters(m)
+  m <- rxode2_write_lincmt_numbering(m)
   m <- rxode2_write_free_lincmt(m)
-  check_writable(m, one_endpoint = FALSE)
+  refuse_unwritable(m, one_endpoint = FALSE)
   # The record's time in individual statements (D15) has no rxode2
   # spelling: rxode2 evaluates every statement in continuous time.
   for (x in m$individual) {
@@ -72,7 +73,7 @@ pmx_write_rxode2 <- function(model) {
   )
 
   back <- read_back(
-    rxode2_read_body(body(eval(rxode2_parse_text(text))), "written"),
+    rxode2_read_body(body(eval(rxode2_write_parse_text(text))), "written"),
     "rxode2"
   )
   new_written(
@@ -157,6 +158,36 @@ rxode2_write_lincmt_parameters <- function(m) {
     m$individual
   )
   m
+}
+
+# NONMEM's ADVAN12 numbering (V2 central, Q3 and Q4 to V3 and V4) is one
+# linCmt() refuses: "can find peripheral volume but not distributional
+# clearance". With V2 central it reads the clearances as Q and Q2, so they
+# are renamed (#176).
+rxode2_write_lincmt_numbering <- function(m) {
+  s <- m$structure
+  if (
+    !identical(s$type, "closed") || !all(c("q", "q2") %in% names(s$parameters))
+  ) {
+    return(m)
+  }
+  q <- s$parameters[c("q", "q2")]
+  if (!identical(unname(tolower(q)), c("q3", "q4"))) {
+    return(m)
+  }
+  to <- ifelse(q == toupper(q), c("Q", "Q2"), c("q", "q2"))
+  taken <- unique(c(
+    m$parameters$name,
+    stmt_targets(m$individual),
+    unlist(lapply(model_expressions(m), all.vars))
+  ))
+  if (any(to %in% taken)) {
+    return(m)
+  }
+  map <- stats::setNames(unname(to), unname(q))
+  m$parameters$name <- map[m$parameters$name] %|NA|% m$parameters$name
+  m$structure$parameters[c("q", "q2")] <- unname(to)
+  model_rename(m, map)
 }
 
 # Names linCmt() reads as parameters. In a closed form, any other variable
@@ -264,12 +295,12 @@ rxode2_write_values <- function(values, fixed) {
 
 rxode2_write_model <- function(m) {
   s <- m$structure
-  lines <- rxode2_stmt_lines(m$individual)
+  lines <- rxode2_write_stmt_lines(m$individual)
 
   if (identical(s$type, "ode")) {
     lines <- c(
       lines,
-      rxode2_stmt_lines(s$statements),
+      rxode2_write_stmt_lines(s$statements),
       vapply(
         s$compartments,
         function(cmt) {
@@ -352,14 +383,14 @@ rxode2_write_residual <- function(residual, endpoint) {
   )
 }
 
-rxode2_stmt_lines <- function(stmts) {
+rxode2_write_stmt_lines <- function(stmts) {
   unlist(lapply(stmts, function(x) {
     if (is_call(x, "if")) expr_deparse(x) else expr_line(x)
   }))
 }
 
 # Written text as R code; a syntax error is a refusal of the text.
-rxode2_parse_text <- function(text) {
+rxode2_write_parse_text <- function(text) {
   tryCatch(
     parse(text = text, keep.source = FALSE)[[1]],
     error = function(e) {

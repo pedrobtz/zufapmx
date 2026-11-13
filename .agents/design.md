@@ -192,7 +192,9 @@ engines = NULL)`:
    written rxode2 or mrgsolve model runs as written, on its own format's
    engine, so the text under test is the text simulated; the other side
    then runs on the other engine. A writer that refuses a model moves it
-   to the next engine. (Settled 2026-11-12, Stage 7.)
+   to the next engine. (Settled 2026-11-12, Stage 7.) A model read from an
+   rxode2 function or an mrgsolve file runs that source on its own engine
+   when D4 allows it and the source still reads back as the model (D26).
 2. Builds the design: a typical subject (all etas zero) and `n` subjects
    with etas drawn from omega under a fixed seed, over a fixed regimen
    set: a single dose, an infusion, multiple doses with interval and
@@ -520,6 +522,22 @@ decides it and the maintainer may overturn it.
   `zupmxnca`); renaming RFC 0047's `zufaode` is for that RFC. Functions keep
   the `pmx_*` prefix, which now matches the sub-family. Supersedes D16 for
   this package; it was renamed from `zufapmx` before any release.
+- **D25 (M), 2026-11-13.** A NONMEM ODE model observes its `DEFOBS`
+  compartment, or compartment 1 without one, as NONMEM does without data.
+  A scale `S<n>` on another compartment observes it only through the data
+  set's `CMT`, which a model does not hold, so the reader refuses it with
+  its position. The writer always marks the observed compartment with
+  `DEFOBS`. Before, the reader took `S2` to mean compartment 2 was
+  observed, and the writer relied on it (#148). nonmem2rx ignores `DEFOBS`
+  (nlmixr2/nonmem2rx#289), so it is not an oracle for this.
+- **D26 (M), 2026-11-13.** `pmx_compare()` simulates a model's own source
+  when it has one: the rxode2 and mrgsolve readers keep the text they read
+  in `provenance$source`. When D4 lets the model run on its own engine and
+  the text reads back as the same model, that side runs the text, not a
+  re-writing, so a reader's error shows in the comparison instead of
+  sitting in both sides. A model edited since it was read, or a source
+  that does not read back on its own (an `$NMEXT` path relative to its
+  file), runs through a writer as before (#170).
 
 ## 14. Later versions, in the order they are expected
 

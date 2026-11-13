@@ -32,7 +32,7 @@
       Dosing: depot lag
       Endpoints: cp (proportional)
 
-# the representation's structure is stable
+# the representation's structure is stable (#93)
 
     Code
       str_full(unclass(model_twocmt_oral()))

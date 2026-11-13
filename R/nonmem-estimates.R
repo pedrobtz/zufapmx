@@ -2,9 +2,6 @@
 # zuxml, the .ext file, or the .lst report. Each reader returns
 # list(theta, omega, sigma): a numeric vector and two full matrices.
 
-# A seam for tests: zuxml is optional, and run.xml falls back to .ext.
-has_zuxml <- function() requireNamespace("zuxml", quietly = TRUE)
-
 nm_attach_estimates <- function(model, file, source) {
   stem <- tools::file_path_sans_ext(file)
   paths <- c(
@@ -14,7 +11,7 @@ nm_attach_estimates <- function(model, file, source) {
   )
 
   if (source == "auto") {
-    source <- if (file.exists(paths[["xml"]]) && has_zuxml()) {
+    source <- if (file.exists(paths[["xml"]]) && engine_available("zuxml")) {
       "xml"
     } else if (file.exists(paths[["ext"]])) {
       "ext"
@@ -29,7 +26,7 @@ nm_attach_estimates <- function(model, file, source) {
   if (!file.exists(path)) {
     zupmxio_abort(sprintf("No %s file at `%s`.", source, path), "model")
   }
-  if (source == "xml" && !has_zuxml()) {
+  if (source == "xml" && !engine_available("zuxml")) {
     engine_error("zuxml", call = NULL)
   }
   est <- switch(

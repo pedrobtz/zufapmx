@@ -3,8 +3,10 @@
 # A random closed-form model: an ADVAN, positive parameter values, etas on
 # some parameters, a residual model, and for a depot a lag and a
 # bioavailability. Returns the control stream and what it holds.
-random_closed_model <- function() {
-  advan <- sample(c(1L, 2L, 3L, 4L, 11L, 12L), 1)
+# `advan` and `with_lag` (TRUE for a lag and bioavailability) can be fixed,
+# so a test can cover every structure rather than sample them (#159).
+random_closed_model <- function(advan = NULL, with_lag = NULL) {
+  advan <- advan %||% sample(c(1L, 2L, 3L, 4L, 11L, 12L), 1)
   form <- closed_forms[[as.character(advan)]]
   names <- unname(form$names)
   values <- signif(exp(stats::runif(length(names), log(0.2), log(60))), 4)
@@ -30,7 +32,7 @@ random_closed_model <- function() {
   dosing <- character()
   lag <- NA
   bio <- NA
-  if (depot && stats::runif(1) < 0.5) {
+  if (depot && (with_lag %||% (stats::runif(1) < 0.5))) {
     lag <- signif(stats::runif(1, 0.1, 1), 3)
     bio <- signif(stats::runif(1, 0.3, 1), 3)
     k <- length(names)

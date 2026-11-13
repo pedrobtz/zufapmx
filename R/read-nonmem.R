@@ -319,7 +319,22 @@ nm_compartments <- function(r, file) {
     function(w) "DEFOBS" %in% toupper(w[-1]),
     logical(1)
   ))
-  list(names = comp_names, defobs = if (length(defobs) == 1) defobs else 1L)
+  if (length(defobs) > 1) {
+    parse_error(
+      file,
+      r$line[[1]],
+      1L,
+      seen = "DEFOBS",
+      expected = "DEFOBS on one compartment",
+      call = NULL
+    )
+  }
+  # Without DEFOBS, NONMEM observes compartment 1 (#148).
+  list(
+    names = comp_names,
+    defobs = if (length(defobs) == 1) defobs else 1L,
+    explicit = length(defobs) == 1
+  )
 }
 
 # $THETA: one row per theta, in order across records.
@@ -526,6 +541,13 @@ nm_pk <- function(stmts, compartments, file, record) {
     }
     dosing[[cmt]][[attr]] <<- value
   }
+  refuse_later_reads(
+    stmts,
+    function(x) {
+      is.symbol(x[[2]]) && grepl(predpp, as.character(x[[2]]))
+    },
+    later_read_error(file, record)
+  )
   for (x in stmts) {
     target <- if (is_call(x, "<-")) x[[2]]
     name <- if (is.symbol(target)) as.character(target) else ""
@@ -553,7 +575,7 @@ nm_pk <- function(stmts, compartments, file, record) {
       individual[[length(individual) + 1]] <- x
     }
   }
-  check_dosing_names(
+  refuse_dosing_reads(
     individual,
     function(n) grepl(predpp, n) | grepl("^A_0\\(", n),
     file,
@@ -654,9 +676,26 @@ nm_prediction <- function(scale, compartments, defobs, closed, file, record) {
       call = NULL
     )
   }
-  if (length(scaled) == 1) {
-    # nm_pk() has checked that S<n> names a compartment.
-    defobs <- as.integer(scaled)
+  if (length(scaled) == 1 && as.integer(scaled) != defobs) {
+    # F is the observed compartment over its own scale; a scale elsewhere
+    # observes another compartment only through the data's CMT, which a
+    # model does not hold (#148).
+    parse_error(
+      file,
+      record_line(record),
+      NA_integer_,
+      seen = paste0("S", scaled),
+      message = sprintf(
+        paste(
+          "S%s scales compartment %s, but the model observes compartment %d;",
+          "mark the observed compartment with DEFOBS in $MODEL"
+        ),
+        scaled,
+        scaled,
+        defobs
+      ),
+      call = NULL
+    )
   }
   observed <- as.symbol(compartments[[defobs]])
   if (length(scaled) == 1) {

@@ -19,7 +19,7 @@ test_that("parse errors carry the file, position and tokens", {
   expect_snapshot(cat(conditionMessage(err)))
 })
 
-test_that("a parse error can explain itself instead of listing tokens", {
+test_that("a parse error can explain itself instead of listing tokens (#46)", {
   err <- tryCatch(
     parse_error(
       "run1.ctl",

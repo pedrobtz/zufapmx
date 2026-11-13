@@ -5,7 +5,7 @@
     Output
       run1.ctl:12:5: found `ELSEIF`, expected `ELSE` or `ENDIF`
 
-# a parse error can explain itself instead of listing tokens
+# a parse error can explain itself instead of listing tokens (#46)
 
     Code
       cat(conditionMessage(err))

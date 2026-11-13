@@ -14,9 +14,11 @@ pmx_read_tables(file, prediction = "PRED")
 \value{
 A \code{zupmxio_tables} object: a list with \code{records}, a data frame
 with columns \code{id}, \code{time}, \code{evid}, \code{amt}, \code{cmt}, \code{rate}, \code{ii}, \code{addl},
-\code{ss} and \code{pred} followed by the table's other columns under their own
-names; \code{prediction}, the column read as \code{pred}; \code{digits}, the
-significant digits of the prediction column; and \code{files}.
+\code{ss}, \code{pred} and \code{resolution} (half a unit in the last place each
+prediction is printed to), followed by the table's other columns under
+their own names; \code{prediction}, the column read as \code{pred}; \code{digits}, the
+fewest significant digits a non-zero prediction is printed with; and
+\code{files}.
 }
 \description{
 Reads the files a NONMEM \verb{$TABLE} record writes, to compare a
@@ -36,16 +38,18 @@ The records need \code{ID}, \code{TIME} and the prediction column. \code{AMT}, \
 \code{MDV}, \code{CMT}, \code{RATE}, \code{II}, \code{ADDL} and \code{SS} are read when present, with
 NONMEM's defaults when not. Without \code{EVID}, a record with a positive
 \code{AMT} is a dose and any other record with \code{MDV} 0 (or no \code{MDV}) is an
-observation. Records that are neither are dropped, and \code{EVID} 3 and 4
-(resets) are refused. Every other column is kept, so the model's
+observation. Other records (\code{EVID} 2) are kept: a time-varying covariate
+can change on one, and the engines read it there, as NONMEM does. \code{EVID}
+3 and 4 (resets) are refused. Every other column is kept, so the model's
 covariates can come from the table. Column names match without regard
 to case.
 
 The prediction column should be \code{PRED}, NONMEM's population prediction:
 the comparison simulates the model's typical subject, every random
-effect at zero (design Q1). NONMEM prints a fixed number of significant
-digits, 5 by default; the reader records it, and the comparison accepts
-a prediction that rounds to the table's value.
+effect at zero; individual predictions are not compared. NONMEM prints a fixed number of significant
+digits, 5 by default; the reader records each value's precision, and
+the comparison accepts a prediction that rounds to that value. Fortran's
+exponent forms (\verb{1.2D+00}, \code{1.2345-100}) are read too.
 
 Tables are read with the zucsv package when it is installed, and with
 base R otherwise; both give the same result.

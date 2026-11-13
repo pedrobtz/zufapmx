@@ -116,7 +116,11 @@ pmx_omega <- function(model, values = c("estimate", "init")) {
 #' @export
 pmx_ode <- function(model) {
   check_model(model)
-  if (identical(model$structure$type, "ode")) model$structure$derivatives
+  if (identical(model$structure$type, "ode")) {
+    model$structure$derivatives
+  } else {
+    NULL
+  }
 }
 
 #' @export
@@ -230,6 +234,7 @@ validate_model <- function(model) {
   )
   validate_dosing(model$dosing, compartments)
   validate_observations(model$observations)
+  validate_residual_parameters(model)
   validate_assignments(model, compartments)
   model
 }
@@ -270,11 +275,11 @@ validate_assignments <- function(model, compartments) {
       amounts[[1]]
     )
   }
-  check_zero_start(individual)
-  check_zero_start(ode_code, stmt_targets(individual))
+  validate_zero_start(individual)
+  validate_zero_start(ode_code, stmt_targets(individual))
 }
 
-check_zero_start <- function(stmts, assigned = character()) {
+validate_zero_start <- function(stmts, assigned = character()) {
   for (x in stmts) {
     if (is_call(x, "if")) {
       unset <- setdiff(stmt_targets(list(x)), assigned)
@@ -381,6 +386,14 @@ validate_block <- function(block) {
       paste(block$names, collapse = ", ")
     )
   }
+  # A covariance matrix: semi-definite, so a variance fixed at zero is
+  # allowed and a negative one, or a correlation past 1, is not (#150).
+  if (!block_semidefinite(m)) {
+    model_abort(
+      "The block for %s is not positive semi-definite.",
+      paste(block$names, collapse = ", ")
+    )
+  }
   est <- block$estimate
   if (
     !is.null(est) && (!identical(dim(est), dim(m)) || !isSymmetric(unname(est)))
@@ -390,6 +403,11 @@ validate_block <- function(block) {
       paste(block$names, collapse = ", ")
     )
   }
+}
+
+block_semidefinite <- function(m) {
+  values <- eigen(unname(m), symmetric = TRUE, only.values = TRUE)$values
+  all(values >= -sqrt(.Machine$double.eps) * max(abs(values), 1))
 }
 
 # Returns the structure's compartment names.
@@ -441,6 +459,32 @@ validate_dosing <- function(x, compartments) {
       model_abort("`%s` is not a dosing attribute.", bad[[1]])
     }
     lapply(Filter(Negate(is.null), x[[cmt]]), expr_check)
+  }
+}
+
+# A residual model's parameters are its sigmas, or for rxode2 standard
+# deviations it declares as parameters or computes: never a name nothing
+# declares (#30's EPS(3) beside one $SIGMA).
+validate_residual_parameters <- function(model) {
+  # rxode2 also takes a standard deviation the model computes
+  # (`addSd <- ...; Cc ~ add(addSd)`).
+  declared <- c(
+    unlist(lapply(model$random_effects$sigma, `[[`, "names")),
+    model$parameters$name,
+    stmt_targets(c(model$individual, model$structure$statements))
+  )
+  for (endpoint in names(model$observations)) {
+    unknown <- setdiff(
+      model$observations[[endpoint]]$residual$parameters,
+      declared
+    )
+    if (length(unknown) > 0) {
+      model_abort(
+        "The residual model of `%s` uses `%s`, which no sigma or parameter declares.",
+        endpoint,
+        unknown[[1]]
+      )
+    }
   }
 }
 
@@ -497,6 +541,30 @@ check_choice <- function(
   arg
 }
 
+check_flag <- function(x, name = deparse(substitute(x))) {
+  if (!is.logical(x) || length(x) != 1 || is.na(x)) {
+    zupmxio_abort(
+      sprintf("`%s` must be TRUE or FALSE.", name),
+      "model",
+      call = sys.call(-1)
+    )
+  }
+}
+
+# A path to write to, or NULL for none.
+check_path_or_null <- function(x, name = deparse(substitute(x))) {
+  if (
+    !is.null(x) &&
+      (!is.character(x) || length(x) != 1 || is.na(x) || !nzchar(x))
+  ) {
+    zupmxio_abort(
+      sprintf("`%s` must be a path or NULL.", name),
+      "model",
+      call = sys.call(-1)
+    )
+  }
+}
+
 check_file <- function(file) {
   if (
     !is.character(file) ||
@@ -545,7 +613,16 @@ model_inputs <- function(m) {
 # `observations = FALSE` leave those parts as they are, for a caller that
 # renamed them itself or keeps the old names as aliases.
 model_rename <- function(m, map, individual = TRUE, observations = TRUE) {
-  rename <- function(x) rename_symbols(x, map)
+  model_map(
+    m,
+    function(x) rename_symbols(x, map),
+    individual = individual,
+    observations = observations
+  )
+}
+
+# Apply `rename` to every expression of a model.
+model_map <- function(m, rename, individual = TRUE, observations = TRUE) {
   if (individual) {
     m$individual <- lapply(m$individual, rename)
   }

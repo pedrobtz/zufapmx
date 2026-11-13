@@ -31,3 +31,10 @@ set of known-equivalent translations to compare against.
 corpus <- zupmxio_corpus()
 corpus[, c("id", "structure", "formats")]
 }
+\seealso{
+Other comparison:
+\code{\link[=pmx_compare]{pmx_compare()}},
+\code{\link[=pmx_design]{pmx_design()}},
+\code{\link[=pmx_report]{pmx_report()}}
+}
+\concept{comparison}

@@ -1,6 +1,6 @@
 # Helpers every writer shares: renaming symbols, printing expressions and
 # numbers, indenting, closed-form names, the refusals no writer avoids
-# (check_writable()) and their fields, and reading a writer's text back.
+# (refuse_unwritable()) and their fields, and reading a writer's text back.
 
 expr_line <- function(x) {
   paste(expr_deparse(x), collapse = " ")
@@ -54,7 +54,7 @@ bounded_values <- function(lower, value, upper) {
 
 # What no writer can hold yet: inter-occasion variability, transformed
 # endpoints, and (for NONMEM and mrgsolve) other than one endpoint.
-check_writable <- function(m, one_endpoint = TRUE) {
+refuse_unwritable <- function(m, one_endpoint = TRUE) {
   if (isTRUE(m$random_effects$iov$present)) {
     write_error(
       "inter-occasion variability",
@@ -189,6 +189,7 @@ sigma_from_sd <- function(m) {
       }
       row <- m$parameters[m$parameters$name == sd_name, ]
       if (nrow(row) != 1) {
+        # A standard deviation the model computes has no sigma form.
         write_error(
           sprintf(
             "the residual parameter `%s`, which is not a fixed effect",
