@@ -821,7 +821,7 @@ mrg_nonmem <- function(b, file) {
     )
   }
   est <- if (b$name == "NMXML") {
-    if (!has_zuxml()) {
+    if (!engine_available("zuxml")) {
       engine_error("zuxml", call = NULL)
     }
     nm_estimates_xml(path)
@@ -903,7 +903,7 @@ mrg_main <- function(stmts, compartments, rename, file, record) {
     paste(file_names, collapse = "|"),
     paste(file_names, collapse = "|")
   )
-  check_dosing_names(individual, function(n) grepl(pattern, n), file, record)
+  refuse_dosing_reads(individual, function(n) grepl(pattern, n), file, record)
   list(individual = individual, dosing = dosing)
 }
 

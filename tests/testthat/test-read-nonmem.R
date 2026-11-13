@@ -205,7 +205,7 @@ test_that("auto prefers run.xml through zuxml", {
 })
 
 test_that("auto falls back to .ext without zuxml", {
-  local_mocked_bindings(has_zuxml = function() FALSE)
+  local_mocked_bindings(engine_available = function(engine) engine != "zuxml")
   ctl <- test_path("fixtures", "nonmem", "run1.ctl")
 
   m <- pmx_read_nonmem(ctl)

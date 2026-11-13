@@ -271,11 +271,11 @@ validate_assignments <- function(model, compartments) {
       amounts[[1]]
     )
   }
-  check_zero_start(individual)
-  check_zero_start(ode_code, stmt_targets(individual))
+  validate_zero_start(individual)
+  validate_zero_start(ode_code, stmt_targets(individual))
 }
 
-check_zero_start <- function(stmts, assigned = character()) {
+validate_zero_start <- function(stmts, assigned = character()) {
   for (x in stmts) {
     if (is_call(x, "if")) {
       unset <- setdiff(stmt_targets(list(x)), assigned)

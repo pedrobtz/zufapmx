@@ -124,8 +124,10 @@ land; see `.agents/design.md` (§4).
   `rxode2_read_`/`rxode2_write_`; code more than one format uses has a
   neutral name in a shared file (`closed_forms`, `sigma_from_sd()`,
   `model_rename()`). `check_*()` validates an argument, `validate_*()` a
-  model component, `expr_check()`/`stmt_check()` an expression, and the
-  condition constructors are `*_error()`. Each format keeps one table per
+  model component, `refuse_*()` raises a reader's or writer's refusal of
+  what a format cannot hold, `expr_check()`/`stmt_check()` an expression,
+  and the condition constructors are `*_error()`. Optional packages are
+  probed with `engine_available()`, the one seam tests mock. Each format keeps one table per
   spelling (`nm_dosing_prefixes`), read inverted by `invert_names()`.
 - **Writers** ([R/write-rxode2.R](R/write-rxode2.R),
   [R/write-nonmem.R](R/write-nonmem.R)) convert residual error between

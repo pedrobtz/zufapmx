@@ -201,7 +201,7 @@ engine_rxode2 <- function(text, data, etas) {
 }
 
 engine_mrgsolve <- function(text, data, etas) {
-  mod <- mrgsolve_compiled(text)
+  mod <- engine_mrgsolve_compiled(text)
   mod <- mrgsolve::zero_re(mod)
   mod <- mrgsolve::update(
     mod,
@@ -227,7 +227,7 @@ engine_mrgsolve <- function(text, data, etas) {
 # one name are then the same code.
 engine_cache <- new.env(parent = emptyenv())
 
-mrgsolve_compiled <- function(text) {
+engine_mrgsolve_compiled <- function(text) {
   dir <- file.path(tempdir(), "zupmxio-mrgsolve")
   dir.create(dir, showWarnings = FALSE)
   path <- tempfile(tmpdir = dir, fileext = ".cpp")

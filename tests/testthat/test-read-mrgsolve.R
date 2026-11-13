@@ -317,7 +317,7 @@ test_that("$NMEXT resolves paths as mrgsolve does and numbers etas in file order
 })
 
 test_that("$NMXML needs zuxml", {
-  local_mocked_bindings(has_zuxml = function() FALSE)
+  local_mocked_bindings(engine_available = function(engine) engine != "zuxml")
   xml <- normalizePath(
     test_path("fixtures", "nonmem", "run1.xml"),
     winslash = "/"

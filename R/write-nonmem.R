@@ -34,7 +34,7 @@ pmx_write_nonmem <- function(model, estimates = c("final", "initial")) {
   m <- unclass(model)
   losses <- character()
 
-  check_writable(m)
+  refuse_unwritable(m)
   has_estimates <- any(!is.na(m$parameters$estimate)) ||
     any(vapply(
       c(m$random_effects$omega, m$random_effects$sigma),

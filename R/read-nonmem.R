@@ -575,7 +575,7 @@ nm_pk <- function(stmts, compartments, file, record) {
       individual[[length(individual) + 1]] <- x
     }
   }
-  check_dosing_names(
+  refuse_dosing_reads(
     individual,
     function(n) grepl(predpp, n) | grepl("^A_0\\(", n),
     file,

@@ -560,7 +560,7 @@ residual_form <- function(e, prediction = NULL) {
 # refuse them inside an `if` (where the representation cannot hold them) and
 # refuse reading them as variables. `reserved(name)` says whether a name is
 # one of them.
-check_dosing_names <- function(individual, reserved, file, record) {
+refuse_dosing_reads <- function(individual, reserved, file, record) {
   for (x in individual) {
     for (y in nested_statements(x)) {
       target <- if (is_call(y, "<-")) expr_text(y[[2]])
