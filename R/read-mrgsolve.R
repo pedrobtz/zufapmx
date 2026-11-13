@@ -623,16 +623,30 @@ mrg_pkmodel <- function(b, file) {
   } else {
     strsplit(trimws(args$cmt), "[[:space:],]+")[[1]]
   }
+  # Whole numbers: as.integer() would read advan = 2.9 as ADVAN2 (#155).
+  whole <- function(x) {
+    is.numeric(x) && length(x) == 1 && is.finite(x) && x == round(x)
+  }
   if (!is.null(args$advan)) {
-    advan <- as.integer(args$advan)
-  } else {
-    ncmt <- as.integer(args$ncmt %||% 1L)
-    if (is.na(ncmt) || !ncmt %in% 1:3) {
+    if (!whole(args$advan)) {
       parse_error(
         file,
         b$line[[1]],
         1L,
-        seen = sprintf("ncmt = %s", args$ncmt),
+        seen = sprintf("advan = %s", format(args$advan)),
+        expected = "advan 1, 2, 3, 4, 11 or 12",
+        call = NULL
+      )
+    }
+    advan <- as.integer(args$advan)
+  } else {
+    ncmt <- args$ncmt %||% 1L
+    if (!whole(ncmt) || !ncmt %in% 1:3) {
+      parse_error(
+        file,
+        b$line[[1]],
+        1L,
+        seen = sprintf("ncmt = %s", format(args$ncmt)),
         expected = "ncmt 1, 2 or 3",
         call = NULL
       )

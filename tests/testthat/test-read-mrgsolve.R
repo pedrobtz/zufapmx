@@ -678,3 +678,22 @@ test_that("a name reassigned after a derivative or dosing macro reads it is refu
   ok[5:6] <- ode[6:5]
   expect_s3_class(read_cpp(ok), "zupmxio_model")
 })
+
+test_that("$PKMODEL advan and ncmt are whole numbers (#155)", {
+  pk <- function(opts) {
+    c(
+      "$PARAM CL = 4, V = 50, KA = 1",
+      sprintf("$PKMODEL %s", opts),
+      "$SIGMA 0.04",
+      "$TABLE",
+      "double IPRED = CENT / V;",
+      "double Y = IPRED * (1 + EPS(1));"
+    )
+  }
+  expect_refused(read_cpp(pk("advan = 2.9, trans = 2")), seen = "advan = 2.9")
+  expect_refused(read_cpp(pk("ncmt = 1.5, depot = TRUE")), seen = "ncmt = 1.5")
+  expect_s3_class(
+    read_cpp(pk("advan = 2, trans = 2, cmt = \"DEPOT CENT\"")),
+    "zupmxio_model"
+  )
+})
